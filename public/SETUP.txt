@@ -1,0 +1,16 @@
+Fablead ERP — First-time installation
+=====================================
+
+1. Upload all files to your server (document root = /public folder).
+2. Create an empty MySQL database.
+3. Open in your browser:
+
+   https://YOUR-DOMAIN.com/setup
+
+4. Follow the 5-step wizard (database, URL, license, install).
+5. Log in with the default admin (change password immediately).
+
+Author / seller: set LICENSE_SERVER_URL and LICENSE_SECRET in .env.example
+before you zip the product for CodeCanyon buyers.
+
+Full guide: README.md and docs/SETUP.md

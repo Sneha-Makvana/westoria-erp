@@ -1,0 +1,2406 @@
+@extends('layout.app')
+
+@section('title', 'Row Material List')
+
+@section('content')
+    <style>
+        .sorting_1 {
+            display: flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+        }
+
+        /* .category-width{
+                    width: 207px;
+                } */
+
+        #filterCategory,
+        #filterBrand {
+            width: 100% !important;
+        }
+
+        .table-scroll-top {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .table-scroll-top div {
+            height: 1px;
+        }
+
+        .table-scroll-top {
+            display: none;
+        }
+
+        /* Word wrapping + compact desktop layout */
+        table.datanew {
+            table-layout: auto !important;
+            width: 100% !important;
+        }
+
+        table.datanew td,
+        table.datanew th {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            vertical-align: middle;
+            padding: 10px 8px !important;
+        }
+
+        /* Keep short-value columns compact so extra blank gaps are reduced */
+        table.datanew thead th:nth-child(3),
+        table.datanew tbody td:nth-child(3),
+        table.datanew thead th:nth-child(5),
+        table.datanew tbody td:nth-child(5),
+        table.datanew thead th:nth-child(7),
+        table.datanew tbody td:nth-child(7),
+        table.datanew thead th:nth-child(8),
+        table.datanew tbody td:nth-child(8) {
+            width: 1%;
+            white-space: nowrap !important;
+        }
+
+        /* Long text columns should wrap cleanly */
+        table.datanew tbody td:nth-child(1),
+        table.datanew tbody td:nth-child(4),
+        table.datanew tbody td:nth-child(6),
+        table.datanew tbody td:nth-child(9) {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            line-height: 1.3;
+        }
+
+
+        @media (min-width: 1200px) {
+            .category-width {
+                width: 207px;
+            }
+
+            /* .product-toolbar {
+                flex-wrap: nowrap;
+            }
+
+            .product-toolbar-filters {
+                flex-wrap: nowrap;
+            }
+
+            .product-toolbar-filters .form-group,
+            .product-toolbar-filters .category-width {
+                flex: 0 0 207px;
+                max-width: 207px;
+            } */
+        }
+
+        @media screen and (max-width: 1199px) {
+            .table-scroll-top {
+                display: block;
+                -webkit-overflow-scrolling: touch !important;
+                /* smooth scrolling on iOS */
+            }
+
+            select#filterCategory {
+                font-size: 12px !important;
+            }
+
+            select#filterBrand {
+                font-size: 12px !important;
+                width: 164px !important;
+            }
+
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .form-control-sm {
+                min-height: calc(1.5em + .5rem + 2px);
+                padding: .25rem .5rem;
+                font-size: 13px !important;
+                border-radius: .2rem;
+            }
+
+            .search-set {
+                margin-right: 1rem !important;
+            }
+        }
+
+        .dataTables_filter,
+        .dataTables_length,
+        .dataTables_info,
+        .dataTables_paginate {
+            display: none !important;
+        }
+
+        .dataTables_wrapper .row:first-child {
+            display: none !important;
+        }
+
+        .dataTables_wrapper {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        .pagination .page-item .page-link {
+            background-color: #5d6d7e;
+            color: #fff;
+            border: none;
+            margin: 0 4px;
+            padding: 6px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            background-color: #fff;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-item:first-child .page-link:hover,
+        .pagination .page-item:last-child .page-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            background-color: #fff;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-item:first-child .page-link:hover,
+        .pagination .page-item:last-child .page-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #ff9f43 !important;
+            color: #fff;
+        }
+
+        .pagination .page-item .page-link:hover {
+            background-color: #4a5766;
+            color: #fff;
+        }
+
+        .pagination .page-item.active .page-link:hover {
+            background-color: #e68a35 !important;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background-color: #fff !important;
+            color: #dee2e6 !important;
+            border: 1px solid #dee2e6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background-color: #fff !important;
+            color: #dee2e6 !important;
+            border: 1px solid #dee2e6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+
+        .product-toolbar {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .product-toolbar-filters {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .product-toolbar-search {
+            flex: 1 1 320px;
+            min-width: 220px;
+            max-width: 260px;
+        }
+ .product-toolbar-filters .form-group {
+            flex: 0 0 180px;
+ }
+        /* .product-toolbar-filters .form-group,
+        .product-toolbar-filters .category-width {
+            flex: 1 1 200px;
+            min-width: 180px;
+            max-width: 260px;
+        }
+
+        .product-toolbar-filters .select2-container {
+            width: 100% !important;
+        } */
+
+        .search-input input {
+            padding-left: 35px !important;
+            border-radius: 5px;
+            width: 100%;
+        }
+
+        .search-input {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .btn-searchset {
+            position: absolute;
+            left: 10px;
+            z-index: 10;
+            padding: 0;
+            top: 7px !important;
+        }
+
+        .product-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+
+        .product-toolbar-actions .btn {
+            white-space: nowrap;
+        }
+
+        /* Desktop: show all columns normally */
+        @media (min-width: 1200px) {
+            .product-toolbar {
+                flex-wrap: nowrap;
+                align-items: flex-end;
+            }
+
+            .product-toolbar-filters {
+                flex-wrap: nowrap;
+            }
+
+            .product-toolbar-actions {
+                margin-left: auto;
+                flex-wrap: nowrap;
+            }
+
+            table.datanew thead th,
+            table.datanew tbody td {
+                display: table-cell !important;
+            }
+
+            /* Hide the Details toggle column on desktop */
+            table.datanew thead th.details-column,
+            table.datanew tbody td:nth-child(2) {
+                display: none !important;
+            }
+
+            /* Desktop column sizing to avoid extra white gaps */
+            table.datanew thead th:nth-child(1),
+            table.datanew tbody td:nth-child(1) {
+                width: 28% !important;
+            }
+
+            table.datanew thead th:nth-child(3),
+            table.datanew tbody td:nth-child(3) {
+                width: 8% !important;
+            }
+
+            table.datanew thead th:nth-child(4),
+            table.datanew tbody td:nth-child(4) {
+                width: 14% !important;
+            }
+
+            table.datanew thead th:nth-child(5),
+            table.datanew tbody td:nth-child(5) {
+                width: 8% !important;
+            }
+
+            table.datanew thead th:nth-child(6),
+            table.datanew tbody td:nth-child(6) {
+                width: 14% !important;
+            }
+
+            table.datanew thead th:nth-child(7),
+            table.datanew tbody td:nth-child(7) {
+                width: 10% !important;
+            }
+
+            table.datanew thead th:nth-child(8),
+            table.datanew tbody td:nth-child(8) {
+                width: 8% !important;
+            }
+
+            table.datanew thead th:nth-child(9),
+            table.datanew tbody td:nth-child(9) {
+                width: 10% !important;
+            }
+        }
+
+        /* Mobile: hide non-essential columns, show Details toggle */
+        /* Mobile: hide non-essential columns, show Details toggle */
+        @media (max-width: 1199px) {
+
+            table.datanew thead th:nth-child(n+3),
+            table.datanew tbody td:nth-child(n+3) {
+                display: none !important;
+            }
+
+            table.datanew thead th.details-column,
+            table.datanew tbody td:nth-child(2) {
+                display: table-cell !important;
+                text-align: center;
+                vertical-align: top !important;
+                width: 60px;
+                min-width: 60px;
+                max-width: 60px;
+                white-space: nowrap !important;
+                word-break: keep-all !important;
+                writing-mode: horizontal-tb !important;
+            }
+
+            .toggle-details i {
+                font-size: 18px;
+            }
+
+            /* Add these styles for product name wrapping */
+            table.datanew tbody td:first-child {
+                display: flex !important;
+                align-items: center !important;
+                min-width: 0 !important;
+                max-width: calc(100vw - 100px) !important;
+            }
+
+            table.datanew tbody td:first-child > div {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            table.datanew tbody td:first-child a.product-img {
+                flex: 0 0 40px !important;
+                margin: 0 !important;
+            }
+
+            table.datanew tbody td:first-child a {
+                display: flex !important;
+                align-items: center !important;
+                text-align: left !important;
+                max-width: 100% !important;
+                word-wrap: normal !important;
+                word-break: normal !important;
+                overflow-wrap: normal !important;
+                white-space: normal !important;
+                line-height: 1.3 !important;
+            }
+
+            /* For the product name text specifically */
+            table.datanew tbody td:first-child a[style*="font-weight: 500"] {
+                display: block !important;
+                flex: 1 1 auto !important;
+                min-width: 0 !important;
+                max-width: calc(100% - 70px) !important;
+                margin-left: 8px !important;
+                font-size: 14px !important;
+                word-break: normal !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+                hyphens: none !important;
+            }
+
+            table.datanew tbody td:first-child a.product-name {
+                display: block !important;
+                overflow: visible !important;
+                text-overflow: unset !important;
+            }
+
+            .product-toolbar {
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .product-toolbar-filters {
+                width: 100%;
+                gap: 10px;
+            }
+
+            .product-toolbar-filters .form-group,
+            .product-toolbar-filters .category-width {
+                flex: 1 1 calc(50% - 5px);
+                min-width: 150px;
+                max-width: none;
+            }
+
+            .product-toolbar-search {
+                flex: 1 1 100%;
+                min-width: 100%;
+            }
+
+            .product-toolbar-actions {
+                width: 100%;
+                margin-left: 0;
+                justify-content: space-between;
+            }
+
+            #exportAllChallan,
+            #exportPdf {
+                width: 48% !important;
+                flex: 0 0 48% !important;
+                max-width: 48% !important;
+                min-width: 48% !important;
+                margin: 0 !important;
+                padding: 6px 0px !important;
+                font-size: 13px !important;
+            }
+
+            #exportAllChallan i,
+            #exportPdf i {
+                font-size: 12px !important;
+                margin-right: 4px !important;
+            }
+        }
+
+        /* Tablet specific fixes */
+        @media screen and (min-width: 769px) and (max-width: 1199px) {
+
+            /* Ensure table is properly responsive */
+            .table-responsive {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            /* Make sure details column is visible and properly sized */
+            table.datanew thead th.details-column,
+            table.datanew tbody td:nth-child(2) {
+                display: table-cell !important;
+                width: 60px !important;
+                min-width: 60px !important;
+                max-width: 60px !important;
+            }
+
+            /* Ensure toggle icon is visible and clickable */
+            .toggle-details {
+                display: inline-block !important;
+                padding: 8px !important;
+                z-index: 10 !important;
+            }
+
+            .toggle-details i {
+                font-size: 20px !important;
+                width: 24px !important;
+                height: 24px !important;
+                line-height: 24px !important;
+            }
+
+            /* Adjust product name width for tablet */
+            table.datanew tbody td:first-child a[style*="font-weight: 500"] {
+                max-width: calc(100% - 80px) !important;
+                font-size: 14px !important;
+            }
+        }
+
+        /* ===== Action Column UI Fix ===== */
+
+        table.datanew td:last-child {
+            white-space: normal !important;
+        }
+
+        /* Action column fix - keep in one row */
+        .action-buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            /* ✅ Prevent wrapping */
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            /* ✅ Keep buttons in one line */
+        }
+
+        .action-buttons .btn {
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .icon-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            background: #f5f5f5;
+        }
+
+        .icon-btn:hover {
+            background: #ececec;
+        }
+
+        .mobile-toggle-btn-table {
+            background: #ff9f43;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .mobile-toggle-btn-table.minus {
+            background: #dc3545;
+        }
+
+        .rowmaterial-details-content .action-buttons a {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            max-width: none !important;
+            line-height: 1 !important;
+            white-space: nowrap !important;
+        }
+
+        .rowmaterial-detail-row-simple {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .rowmaterial-detail-row-simple:last-child {
+            border-bottom: 0;
+        }
+
+        .rowmaterial-detail-label-simple {
+            font-weight: 600;
+            color: #595b5d;
+            font-size: 14px;
+        }
+
+        .rowmaterial-detail-value-simple {
+            color: #1b2850;
+            font-size: 14px;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .rowmaterial-mobile-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .rowmaterial-details-row {
+            display: none;
+        }
+
+        .rowmaterial-details-row.show {
+            display: table-row;
+        }
+
+        @media (max-width: 1199px) {
+            table.datanew {
+                table-layout: fixed !important;
+                width: 100% !important;
+            }
+
+            table.datanew thead th:nth-child(n+3),
+            table.datanew tbody td:nth-child(n+3) {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: hidden !important;
+            }
+
+            table.datanew thead th.details-column,
+            table.datanew tbody td:nth-child(2) {
+                display: table-cell !important;
+                text-align: center;
+                vertical-align: middle !important;
+                width: 50px !important;
+                min-width: 50px !important;
+                max-width: 50px !important;
+            }
+
+            table.datanew tbody td:first-child {
+                max-width: calc(100vw - 100px) !important;
+            }
+
+            table.datanew tbody td:first-child > div {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            table.datanew tbody td:first-child a.product-img {
+                flex: 0 0 40px !important;
+                margin: 0 !important;
+            }
+
+            table.datanew tbody td:first-child a {
+                display: flex !important;
+                align-items: center !important;
+                text-align: left !important;
+                max-width: 100% !important;
+                word-wrap: normal !important;
+                word-break: normal !important;
+                overflow-wrap: normal !important;
+                white-space: normal !important;
+                line-height: 1.3 !important;
+            }
+
+            table.datanew tbody td:first-child a[style*="font-weight: 500"] {
+                display: inline-block !important;
+                max-width: calc(100% - 70px) !important;
+                margin-left: 8px !important;
+                font-size: 14px !important;
+                word-break: normal !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+            }
+
+            table.datanew tbody tr.rowmaterial-details-row td {
+                display: table-cell !important;
+                padding: 12px 10px !important;
+                background: #f8f9fb !important;
+            }
+
+            .rowmaterial-mobile-actions {
+                justify-content: flex-start;
+            }
+        }
+
+        #quantityHistoryModal .modal-content {
+            max-height: 85vh;
+        }
+
+        #quantityHistoryModal .modal-body,
+        #quantityHistoryModal #quantityHistoryContent {
+            max-height: calc(85vh - 130px);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #quantityHistoryModal .quantity-history-close {
+            border: 0;
+            background: transparent;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            line-height: 1;
+            color: #000;
+            opacity: 1;
+        }
+
+        #quantityHistoryModal .quantity-history-close:hover {
+            background: #ea5455;
+            color: #fff;
+        }
+
+        /* Action dropdown styling */
+        .rm-action-dropdown {
+            display: inline-flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .rm-action-dropdown .action-menu-toggle {
+            align-items: center;
+            background: #fff;
+            border: 1px solid #d7dde8;
+            border-radius: 4px;
+            color: #1b2850;
+            display: inline-flex;
+            height: 28px;
+            justify-content: center;
+            padding: 0;
+            width: 34px;
+        }
+
+        .rm-action-dropdown .action-menu-toggle:hover,
+        .rm-action-dropdown .action-menu-toggle:focus {
+            background: #f8fafc;
+            border-color: #b8c2d2;
+            color: #1b2850;
+        }
+
+        .rm-action-menu {
+            border: 1px solid #e8ebed;
+            border-radius: 6px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+            min-width: 160px;
+            padding: 6px;
+            z-index: 9999999;
+        }
+
+        .rm-action-menu-floating {
+            position: fixed !important;
+            z-index: 9999999 !important;
+        }
+
+        .rm-action-menu .dropdown-item {
+            align-items: center;
+            border-radius: 4px;
+            color: #344054;
+            display: flex;
+            font-size: 12px;
+            gap: 8px;
+            padding: 7px 8px;
+            width: 100%;
+        }
+
+        .rm-action-menu .dropdown-item i {
+            color: #667085;
+            font-size: 13px;
+            text-align: center;
+            width: 15px;
+        }
+
+        .rm-action-menu .dropdown-item.text-danger,
+        .rm-action-menu .dropdown-item.text-danger i {
+            color: #ea5455 !important;
+        }
+
+        .rm-action-menu .dropdown-item:hover {
+            background: #f4f6f8;
+            color: #1b2850;
+        }
+
+        .rm-filter-backdrop,
+        .rm-filter-sheet {
+            display: none;
+        }
+
+        /* Mobile and Tablet layout (Customer / Product style) */
+        @media (max-width: 1199.98px) {
+            .rm-page.content {
+                padding: 6px 6px 90px !important;
+                overflow-x: hidden !important;
+            }
+            @media (min-width: 768px) {
+                .rm-page.content {
+                    padding: 12px 16px 90px !important;
+                }
+            }
+            .rm-page > .page-header,
+            .rm-page .table-responsive,
+            .rm-page .table-scroll-top {
+                display: none !important;
+            }
+            .rm-m-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 8px;
+                padding: 12px 10px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+            .rm-m-title {
+                margin-left: 2px;
+                font-size: 15px;
+                font-weight: 600;
+                color: #1b2850;
+                white-space: nowrap;
+            }
+            .rm-m-new {
+                display: inline-flex !important;
+                align-items: center;
+                height: 30px;
+                margin: 0 !important;
+                padding: 0 10px !important;
+                border: 1px solid #1b2850 !important;
+                border-radius: 8px !important;
+                background: #1b2850 !important;
+                color: #fff !important;
+                font-size: 12px !important;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+
+            .rm-page > .card {
+                background: transparent !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            .rm-page > .card > .card-body {
+                padding: 0 !important;
+            }
+            .rm-page .product-toolbar {
+                margin: 0 0 8px !important;
+                padding: 10px 12px !important;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+            .rm-page .product-toolbar-filters {
+                display: flex !important;
+                flex-direction: column;
+                gap: 8px;
+                width: 100% !important;
+            }
+            .rm-page .product-toolbar-search {
+                display: flex !important;
+                align-items: center;
+                gap: 8px;
+                max-width: 100% !important;
+                width: 100% !important;
+                flex: 1 1 100% !important;
+            }
+            .rm-page .product-toolbar-search > label {
+                display: none !important;
+            }
+            .rm-page .product-toolbar-search .search-input {
+                flex: 1 1 auto;
+                min-width: 0;
+                width: auto !important;
+                margin: 0 !important;
+            }
+            .rm-page .search-input input {
+                height: 40px !important;
+                border-radius: 10px !important;
+                font-size: 13px;
+                width: 100% !important;
+            }
+            .rm-page .btn-searchset {
+                top: 50% !important;
+                transform: translateY(-50%);
+            }
+            .rm-filter-toggle {
+                position: relative;
+                flex: 0 0 38px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 38px;
+                height: 38px;
+                padding: 0;
+                border: 0;
+                border-radius: 50%;
+                background: #f05a6a;
+                color: #fff;
+                font-size: 15px;
+                box-shadow: 0 2px 6px rgba(240, 90, 106, .35);
+                cursor: pointer;
+            }
+            .rm-filter-toggle.has-active {
+                background: #e8334a;
+            }
+            .rm-filter-count {
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                min-width: 18px;
+                height: 18px;
+                padding: 0 5px;
+                border-radius: 999px;
+                background: #1b2850;
+                color: #fff;
+                font-size: 11px;
+                line-height: 18px;
+                text-align: center;
+            }
+
+            .rm-filter-backdrop {
+                display: block;
+                position: fixed;
+                inset: 0;
+                z-index: 1040;
+                background: rgba(16, 24, 40, .45);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity .2s ease;
+            }
+            .rm-filter-sheet {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1045;
+                display: flex;
+                flex-direction: column;
+                max-height: 85vh;
+                background: #fff;
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -8px 24px rgba(16, 24, 40, .18);
+                transform: translateY(105%);
+                transition: transform .25s ease;
+            }
+            body.rm-filter-open .rm-filter-backdrop {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            body.rm-filter-open .rm-filter-sheet {
+                transform: translateY(0);
+            }
+            body.rm-filter-open {
+                overflow: hidden;
+            }
+            body.rm-filter-open .mobile-bottom-nav,
+            body.rm-filter-open .floating-calculator-wrapper {
+                display: none !important;
+            }
+            .rm-filter-sheet-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 18px;
+                border-bottom: 1px solid #eef0f4;
+                font-size: 18px;
+                font-weight: 600;
+                color: #1b2850;
+            }
+            .rm-filter-sheet-close {
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: #2f6fd8;
+                font-size: 20px;
+                cursor: pointer;
+            }
+            .rm-filter-sheet-body {
+                flex: 1 1 auto;
+                overflow-y: auto;
+                padding: 4px 18px;
+            }
+            .rm-filter-sheet-body .category-width {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                flex: none !important;
+                margin: 0 !important;
+                padding: 12px 0 !important;
+                border-bottom: 1px solid #eef0f4;
+            }
+            .rm-filter-sheet-body .form-label {
+                display: block;
+                margin: 0 0 6px !important;
+                font-size: 14px !important;
+                color: #344054 !important;
+            }
+            .rm-filter-sheet-body .select2-container {
+                width: 100% !important;
+            }
+            .rm-filter-sheet-body .select2-container .select2-selection--single {
+                height: 40px !important;
+                border-radius: 8px !important;
+                border-color: #e4e7ec !important;
+            }
+            .rm-filter-sheet-body .select2-container .select2-selection--single .select2-selection__rendered {
+                line-height: 40px !important;
+            }
+            .rm-filter-sheet-body .select2-container .select2-selection--single .select2-selection__arrow {
+                height: 38px !important;
+            }
+            .rm-filter-sheet-foot {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+                border-top: 1px solid #eef0f4;
+            }
+            .rm-filter-clear,
+            .rm-filter-apply {
+                height: 46px;
+                border: 0;
+                border-radius: 24px;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+            .rm-filter-clear {
+                background: #eef0f4;
+                color: #475467;
+            }
+            .rm-filter-apply {
+                background: #e8334a;
+                color: #fff;
+            }
+            body.rm-filter-open .select2-container--open .select2-dropdown {
+                z-index: 1060;
+            }
+
+            .rm-page .product-toolbar-actions {
+                display: flex !important;
+                width: 100% !important;
+                margin: 4px 0 0 !important;
+                gap: 8px;
+            }
+            .rm-page #exportAllChallan,
+            .rm-page #exportPdf {
+                flex: 1 1 calc(50% - 4px) !important;
+                width: calc(50% - 4px) !important;
+                height: 36px !important;
+                border-radius: 8px !important;
+                font-size: 13px !important;
+                font-weight: 600;
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                margin: 0 !important;
+            }
+
+            .rm-card-list {
+                display: flex !important;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .rm-card {
+                display: grid;
+                grid-template-columns: 44px minmax(0, 1fr);
+                column-gap: 10px;
+                row-gap: 8px;
+                padding: 12px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+            .rm-img {
+                width: 44px;
+                height: 44px;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #f3f4f6;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .rm-img img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .rm-body {
+                min-width: 0;
+            }
+            .rm-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .rm-name {
+                font-size: 14px;
+                font-weight: 700;
+                color: #1b2850 !important;
+                text-transform: uppercase;
+                line-height: 1.3;
+                min-width: 0;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .rm-price {
+                font-size: 14px;
+                font-weight: 700;
+                color: #1b2850;
+                white-space: nowrap;
+            }
+            .rm-badges {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 4px 6px;
+                margin-top: 5px;
+            }
+            .rm-badge {
+                font-size: 10px;
+                font-weight: 600;
+                padding: 2px 8px;
+                border-radius: 12px;
+                white-space: nowrap;
+            }
+            .rm-badge.is-ok {
+                background: #e7f8ef;
+                color: #12a150;
+            }
+            .rm-badge.is-low {
+                background: #fdecec;
+                color: #e5483d;
+            }
+            .rm-tag {
+                font-size: 11px;
+                color: #8b93a7;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .rm-foot {
+                grid-column: 1 / -1;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding-top: 8px;
+                border-top: 1px dashed #eceef3;
+            }
+            .rm-stat {
+                min-width: 0;
+            }
+            .rm-stat span {
+                display: block;
+                font-size: 11px;
+                color: #8b93a7;
+            }
+            .rm-stat strong {
+                display: block;
+                font-size: 12px;
+                color: #1b2850;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 75px;
+            }
+            .rm-stat.is-qty {
+                cursor: pointer;
+            }
+            .rm-cat strong {
+                max-width: 90px;
+            }
+            @media (min-width: 768px) {
+                .rm-foot {
+                    gap: 24px !important;
+                }
+                .rm-stat strong,
+                .rm-cat strong {
+                    max-width: none !important;
+                }
+            }
+            .rm-acts {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                flex-shrink: 0;
+            }
+            .rm-acts .rm-action-dropdown {
+                width: auto;
+            }
+            .rm-acts .action-menu-toggle {
+                width: 32px !important;
+                height: 32px !important;
+                border: 0 !important;
+                background: transparent !important;
+                color: #8b93a7 !important;
+                font-size: 17px;
+                box-shadow: none !important;
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                padding: 0 !important;
+            }
+            .rm-acts .action-menu-toggle i {
+                transform: rotate(90deg);
+            }
+            .rm-acts .btn-history {
+                display: inline-flex;
+                align-items: center;
+                height: 28px;
+                padding: 0 8px;
+                border-radius: 6px;
+                font-size: 11.5px;
+                font-weight: 600;
+                background: #eef4ff;
+                color: #3b6fd8 !important;
+                border: 0;
+                white-space: nowrap;
+            }
+            .rm-empty {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                padding: 32px 12px;
+                background: #fff;
+                border-radius: 12px;
+                color: #8a92a6;
+                font-size: 13px;
+            }
+            .rm-empty i {
+                font-size: 28px;
+                color: #d0d5dd;
+            }
+
+            .rm-page .pagination-controls {
+                margin-top: 10px !important;
+                padding: 10px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+                gap: 8px;
+            }
+            .rm-page .pagination-controls > .d-flex {
+                flex-wrap: wrap;
+                justify-content: center;
+                margin-bottom: 0 !important;
+                font-size: 12px;
+            }
+
+            :root[data-theme="dark"] .rm-m-head,
+            :root[data-theme="dark"] .rm-page .product-toolbar,
+            :root[data-theme="dark"] .rm-card,
+            :root[data-theme="dark"] .rm-empty,
+            :root[data-theme="dark"] .rm-page .pagination-controls,
+            :root[data-theme="dark"] .rm-filter-sheet {
+                background: #1e293b;
+            }
+            :root[data-theme="dark"] .rm-m-title,
+            :root[data-theme="dark"] .rm-name,
+            :root[data-theme="dark"] .rm-price,
+            :root[data-theme="dark"] .rm-stat strong,
+            :root[data-theme="dark"] .rm-filter-sheet-head,
+            :root[data-theme="dark"] .rm-filter-sheet-body .form-label {
+                color: #f8fafc !important;
+            }
+            :root[data-theme="dark"] .rm-filter-sheet-close {
+                color: #93c5fd;
+            }
+            :root[data-theme="dark"] .rm-filter-sheet-head {
+                border-bottom-color: #334155;
+            }
+            :root[data-theme="dark"] .rm-filter-sheet-body .category-width {
+                border-bottom-color: #334155;
+            }
+            :root[data-theme="dark"] .rm-filter-sheet-foot {
+                border-top-color: #334155;
+            }
+            :root[data-theme="dark"] .rm-filter-clear {
+                background: #334155;
+                color: #cbd5e1;
+            }
+            :root[data-theme="dark"] .rm-foot {
+                border-top-color: #334155;
+            }
+        }
+    </style>
+    @if (session('error'))
+        <div class="alert alert-danger" id="error-message">
+            {{ session('error') }}
+        </div>
+
+        <style>
+            .fade-out {
+                opacity: 1;
+                transition: opacity 0.5s ease-out;
+            }
+
+            .fade-out.hidden {
+                opacity: 0;
+            }
+        </style>
+
+        <script>
+            setTimeout(function() {
+                let alert = document.getElementById('error-message');
+                if (alert) {
+                    alert.classList.add('hidden'); // Triggers the fade-out transition
+                    // Remove the element from DOM after fadeout (optional)
+                    setTimeout(function() {
+                        alert.style.display = 'none';
+                    }, 500); // match the CSS transition duration (0.5s)
+                }
+            }, 4000);
+        </script>
+    @endif
+
+    <!-- Quantity History Modal -->
+    <div class="modal fade" id="quantityHistoryModal" tabindex="-1" aria-labelledby="quantityHistoryLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quantityHistoryLabel">Quantity History</h5>
+                    <button type="button" class="close quantity-history-close" data-dismiss="modal" data-bs-dismiss="modal"
+                        aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="quantityHistoryContent">
+                    <!-- History content will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content rm-page">
+        <div class="rm-m-head d-xl-none">
+            <div class="rm-m-title">All Row Materials</div>
+            @if (app('hasPermission')(49, 'add'))
+                <a href="{{ route('row_material.add') }}" class="btn btn-sm rm-m-new">
+                    <i class="fas fa-plus me-1"></i> New Row Material
+                </a>
+            @endif
+        </div>
+
+        <div class="rm-filter-backdrop d-xl-none" id="rmFilterBackdrop"></div>
+        <div class="rm-filter-sheet d-xl-none" id="rmFilterSheet" role="dialog" aria-modal="true" aria-labelledby="rmFilterSheetTitle">
+            <div class="rm-filter-sheet-head">
+                <span id="rmFilterSheetTitle">Filter By</span>
+                <button type="button" class="rm-filter-sheet-close" id="rmFilterSheetClose" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="rm-filter-sheet-body" id="rmFilterSheetBody"></div>
+            <div class="rm-filter-sheet-foot">
+                <button type="button" class="rm-filter-clear" id="rmFilterClear">Clear</button>
+                <button type="button" class="rm-filter-apply" id="rmFilterApply">Apply</button>
+            </div>
+        </div>
+
+        <div class="page-header d-none d-xl-flex">
+            <div class="page-title">
+                <h4>All Row Materials</h4>
+                <!--<h6>Manage your products</h6>-->
+            </div>
+            <div class="page-btn">
+                @if (app('hasPermission')(49, 'add'))
+                    <a href="{{ route('row_material.add') }}" class="btn btn-sm btn-added">
+                        <i class="fas fa-plus me-1"></i> New Row Material
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="product-toolbar">
+                    <div class="product-toolbar-filters">
+                        <div class="product-toolbar-search">
+                            <label for="search-input" class="form-label mb-1">Search</label>
+                            <div class="search-input">
+                                <a class="btn btn-searchset">
+                                    <img src="{{ env('ImagePath') . 'admin/assets/img/icons/search-white.svg' }}" alt="img">
+                                </a>
+                                <input type="text" id="search-input" class="form-control" placeholder="Search...">
+                            </div>
+                            <button type="button" id="rmFilterToggle" class="rm-filter-toggle d-xl-none" aria-label="Filters" aria-expanded="false">
+                                <i class="fas fa-filter"></i>
+                                <span class="rm-filter-count d-none" id="rmFilterCount">0</span>
+                            </button>
+                        </div>
+                        <div class="form-group mb-0 category-width">
+                            <label for="filterCategory" class="form-label mb-1">Category</label>
+                            <select id="filterCategory" class="form-control form-control-sm select-filter">
+                                <option value="">All Categories</option>
+                                @foreach ($categories as $category)
+                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-0 category-width">
+                            <label for="filterBrand" class="form-label mb-1">Brand</label>
+                            <select id="filterBrand" class="form-control form-control-sm select-filter">
+                                <option value="">All Brands</option>
+                                @foreach ($brands as $brand)
+                                    <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+
+
+                    <div class="product-toolbar-actions">
+                        @if (app('hasPermission')(1, 'view'))
+                        <button id="exportAllChallan" class="btn btn-sm btn-success">
+                            <i class="fas fa-file-excel me-1"></i> Excel
+                        </button>
+                        <button id="exportPdf" class="btn btn-sm btn-danger">
+                            <i class="fas fa-file-pdf me-1"></i> PDF
+                        </button>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="table-scroll-top">
+                    <div></div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table  datanew">
+                        <thead>
+                            <tr>
+                                <th>Material Name</th>
+                                <th class="details-column">Details</th>
+                                <th>SKU</th>
+                                <th>Category </th>
+                                <th>Unit</th>
+                                <th>Brand</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th style="width: 145px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="rm-card-list d-xl-none" id="rowMaterialCardList"></div>
+
+                <div
+                    class="pagination-controls d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+                    <div class="d-flex align-items-center mb-3 mb-md-0">
+                        <span class="me-2" style="font-size: 14px; color: #555;">Show per page :</span>
+                        <select id="per-page-select" class="form-select form-select-sm"
+                            style="width: auto; border: 1px solid #ddd;">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="ms-3" style="font-size: 14px; color: #555;">
+                            <span id="pagination-from">0</span> - <span id="pagination-to">0</span> of <span
+                                id="pagination-total">0</span> items
+                        </span>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0" id="pagination-numbers">
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+    </div>
+@endsection
+
+@push('js')
+    <script>
+        function normalizeSubAdminId(value) {
+            if (!value || value === 'null' || value === 'undefined') {
+                return '';
+            }
+            return value;
+        }
+
+        function downloadBase64File(base64Content, fileName, mimeType) {
+            const byteCharacters = atob(base64Content);
+            const byteNumbers = new Array(byteCharacters.length);
+
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {
+                type: mimeType || 'application/octet-stream'
+            });
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = blobUrl;
+            link.download = fileName || 'download';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        }
+
+        $(document).ready(function() {
+
+            var authToken = localStorage.getItem("authToken");
+            var table = $('.datanew').DataTable({
+                "destroy": true,
+                "bFilter": false,
+                "paging": false,
+                "info": false,
+                "searching": false,
+                "ordering": false,
+                "dom": 't'
+            });
+
+            let currentPage = 1;
+            let lastPage = 1;
+            let perPage = 10;
+            let searchQuery = '';
+            const selectedSubAdminId = normalizeSubAdminId(localStorage.getItem('selectedSubAdminId'));
+
+            // Initialize Select2 for custom class
+            $('.select-filter').select2();
+
+            // Define the function FIRST
+            function fetchProducts(page = 1) {
+                var categoryId = $('#filterCategory').val();
+                var brandId = $('#filterBrand').val();
+
+                $.ajax({
+                    url: "/api/get-row-materials",
+                    type: "GET",
+                    dataType: "json",
+                    headers: {
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    data: {
+                        page: page,
+                        per_page: perPage,
+                        search: searchQuery,
+                        category_id: categoryId,
+                        brand_id: brandId,
+                        sub_branch_id: selectedSubAdminId
+                    },
+                    success: function(response) {
+                        if (response.status) {
+                            let products = response.data;
+                            let currencySymbol = response.currencySymbol || '₹';
+                            let currencyPosition = response.currencyPosition || 'left';
+                            let tableBody = [];
+                            let mobileCards = [];
+
+                            let lowStockThreshold = response.lowStockThreshold || 0;
+                            let pagination = response.pagination || null;
+
+                            if (pagination) {
+                                currentPage = pagination.current_page;
+                                lastPage = pagination.last_page;
+                                updatePaginationUI(pagination);
+                            }
+
+                            // Function to capitalize first letter of each word
+                            function capitalizeWords(str) {
+                                if (!str || str.trim() === '') return 'N/A';
+                                return str.replace(/\b\w/g, function(char) {
+                                    return char.toUpperCase();
+                                });
+                            }
+                            if (!window.rowMaterialDataMap) {
+                                window.rowMaterialDataMap = {};
+                            }
+
+                            $.each(products, function(index, product) {
+                                let productName = capitalizeWords(product.name || product.row_materialname || 'N/A');
+                                let sku = product.SKU || 'N/A';
+                                let quantity = product.quantity ?? 'N/A';
+                                let categoryName = capitalizeWords(product.category ? product
+                                    .category.name : "N/A");
+                                let unitName = capitalizeWords(product.unit ? product.unit
+                                    .unit_name : "N/A");
+                                let brandName = capitalizeWords(product.brand ? product.brand
+                                    .name : "N/A");
+
+                                let detailsToggle = `
+                                    <button type="button" class="mobile-toggle-btn-table" onclick="toggleRowMaterialRowDetails('${product.id}')" data-row-material-id="${product.id}">
+                                        <span class="toggle-icon">+</span>
+                                    </button>
+                                `;
+
+                                let productImage =
+                                    '{{ env('ImagePath') . 'admin/assets/img/product/noimage.png' }}';
+                                const ImagePath = "{{ env('ImagePath') . 'storage/' }}";
+                                if (product.images) {
+                                    let imagesArray = typeof product.images === "string" ? JSON
+                                        .parse(product.images) : product.images;
+                                    if (Array.isArray(imagesArray) && imagesArray.length > 0) {
+                                        productImage = `${ImagePath}${imagesArray[0]}`;
+                                    }
+                                }
+
+                                let formattedPrice = 'N/A';
+                                if (product.price !== undefined && product.price !== null &&
+                                    product.price !== '') {
+                                    let priceVal = parseFloat(product.price).toLocaleString(
+                                        undefined, {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        });
+                                    if (currencyPosition === 'left') {
+                                        formattedPrice = currencySymbol + priceVal;
+                                    } else {
+                                        formattedPrice = priceVal + currencySymbol;
+                                    }
+                                }
+
+                                const isLowStock = quantity !== 'N/A' && parseInt(quantity) <=
+                                    lowStockThreshold;
+                                let quantityDisplay =
+                                    `<span class="quantity-history" data-id="${product.id}" style="cursor:pointer; border: 1px solid #ececec; padding: 4px 8px; border-radius: 4px; display: inline-block; color: ${isLowStock ? '#ea5455' : 'inherit'}; font-weight: ${isLowStock ? '600' : '400'};">${quantity}</span>`;
+                                if (isLowStock) {
+                                    quantityDisplay +=
+                                        ` <span class="badge bg-danger ms-1">Low Stock</span>`;
+                                }
+
+                                window.rowMaterialDataMap[product.id] = {
+                                    productName: productName,
+                                    sku: sku,
+                                    categoryName: categoryName,
+                                    unitName: unitName,
+                                    brandName: brandName,
+                                    formattedPrice: formattedPrice,
+                                    quantityDisplay: quantityDisplay
+                                };
+
+                                mobileCards.push(buildRowMaterialCard(product, {
+                                    productName: productName,
+                                    sku: sku,
+                                    quantity: quantity,
+                                    categoryName: categoryName,
+                                    unitName: unitName,
+                                    brandName: brandName,
+                                    formattedPrice: formattedPrice,
+                                    isLowStock: isLowStock,
+                                    productImage: productImage
+                                }));
+
+                                tableBody.push([
+                                    `<div style="display: flex; align-items: center;">
+                                        <a href="/row-material-detail/${product.id}" class="product-img mb-1">
+                                            <img src="${productImage}" alt="product" style="max-width: 60px;">
+                                        </a>
+                                        <a href="/row-material-detail/${product.id}" style="color: #1b2850; font-weight: 500; margin-left: 8px;">
+                                            ${productName}
+                                        </a>
+                                    </div>`,
+                                    detailsToggle,
+                                    sku,
+                                    categoryName,
+                                    unitName,
+                                    brandName,
+                                    formattedPrice,
+                                    quantityDisplay,
+                                    // createdAt,
+                                    `<div class="action-buttons">
+                                                @if (app('hasPermission')(49, 'view'))
+                                                 <a class=" btn btn-sm btn-primary" style="color:white; font-size: 13px;" href="/material-inventory-view/${product.id}">
+                                                    History
+                                                </a>
+                                                @endif
+                                                @if (app('hasPermission')(49, 'view'))
+                                                <a class="icon-btn" href="/row-material-detail/${product.id}">
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 9C11.206 9.00524 10.4459 9.32299 9.88447 9.88447C9.32299 10.4459 9.00524 11.206 9 12C9 13.642 10.358 15 12 15C13.641 15 15 13.642 15 12C15 10.359 13.641 9 12 9Z" fill="#092C4C"/>
+        <path d="M12 5C4.36704 5 2.07304 11.617 2.05204 11.684L1.94604 12L2.05105 12.316C2.07305 12.383 4.36704 19 12 19C19.633 19 21.927 12.383 21.948 12.316L22.054 12L21.949 11.684C21.927 11.617 19.633 5 12 5ZM12 17C6.64904 17 4.57604 13.154 4.07404 12C4.57804 10.842 6.65204 7 12 7C17.351 7 19.424 10.846 19.926 12C19.422 13.158 17.348 17 12 17Z" fill="#092C4C"/>
+        </svg>
+                                                </a>
+                                                @endif
+                                                @if (app('hasPermission')(49, 'edit'))
+                                                <a class="icon-btn" href="/edit-row-material/${product.id}">
+                                                    <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15.045 5.401C15.423 5.023 15.631 4.521 15.631 3.987C15.631 3.453 15.423 2.951 15.045 2.573L13.459 0.987001C13.081 0.609001 12.579 0.401001 12.045 0.401001C11.511 0.401001 11.009 0.609001 10.632 0.986001L0 11.585V16H4.413L15.045 5.401ZM12.045 2.401L13.632 3.986L12.042 5.57L10.456 3.985L12.045 2.401ZM2 14V12.415L9.04 5.397L10.626 6.983L3.587 14H2ZM0 18H16V20H0V18Z" fill="#092C4C"/>
+        </svg>
+                                                </a>
+                                                @endif
+                                                @if (app('hasPermission')(49, 'delete'))
+                                                <a class="confirm-text delete-product" data-id="${product.id}" href="javascript:void(0);">
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M5 20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V8H21V6H17V4C17 3.46957 16.7893 2.96086 16.4142 2.58579C16.0391 2.21071 15.5304 2 15 2H9C8.46957 2 7.96086 2.21071 7.58579 2.58579C7.21071 2.96086 7 3.46957 7 4V6H3V8H5V20ZM9 4H15V6H9V4ZM8 8H17V20H7V8H8Z" fill="#092C4C"/>
+                                            <path d="M9 10H11V18H9V10ZM13 10H15V18H13V10Z" fill="#092C4C"/>
+                                        </svg>
+                                                </a>
+                                                @endif
+                                                </div>
+                                                `
+                                ]);
+                            });
+                            $('tr.rowmaterial-details-row').remove();
+                            table.clear().rows.add(tableBody).draw();
+                            renderRowMaterialCards(mobileCards.join(''), 'No products found');
+
+                            // Sync top scrollbar
+                            const topScroll = document.querySelector('.table-scroll-top');
+                            const tableResponsive = document.querySelector('.table-responsive');
+                            const tableElement = document.querySelector('.datanew');
+
+                            if (topScroll && tableResponsive && tableElement) {
+                                const topInnerDiv = topScroll.querySelector('div');
+                                topInnerDiv.style.width = tableElement.scrollWidth + 'px';
+
+                                topScroll.onscroll = () => {
+                                    tableResponsive.scrollLeft = topScroll.scrollLeft;
+                                };
+                                tableResponsive.onscroll = () => {
+                                    topScroll.scrollLeft = tableResponsive.scrollLeft;
+                                };
+                            }
+
+                        } else {
+                            table.clear().draw();
+                            $(".datanew tbody").html('<tr><td colspan="9">No products found</td></tr>');
+                            renderRowMaterialCards('', 'No products found');
+                            $('#pagination-from').text(0);
+                            $('#pagination-to').text(0);
+                            $('#pagination-total').text(0);
+                            $('#pagination-numbers').html('');
+                            $('.pagination-controls').hide();
+                        }
+                    },
+                    error: function() {
+                        alert("Error fetching products.");
+                        renderRowMaterialCards('', 'Error fetching raw materials.');
+                    }
+                });
+            }
+
+            function escapeHtmlText(str) {
+                if (!str) return '';
+                return String(str).replace(/[&<>"']/g, function(m) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+                });
+            }
+
+            function buildRowMaterialCard(product, data) {
+                const detailUrl = `/row-material-detail/${product.id}`;
+                const name = escapeHtmlText(data.productName);
+                const category = escapeHtmlText(data.categoryName);
+                const brand = escapeHtmlText(data.brandName);
+                const unit = escapeHtmlText(data.unitName);
+                const sku = escapeHtmlText(data.sku);
+                const isLow = data.isLowStock;
+                const price = data.formattedPrice !== 'N/A' ? data.formattedPrice : '';
+
+                let actionMenu = `
+                    <div class="dropdown rm-action-dropdown">
+                        <button class="btn action-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Actions">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end rm-action-menu">
+                            @if (app('hasPermission')(49, 'view'))
+                                <a class="dropdown-item" href="${detailUrl}">
+                                    <i class="fas fa-eye me-2"></i> View
+                                </a>
+                                <a class="dropdown-item" href="/material-inventory-view/${product.id}">
+                                    <i class="fas fa-history me-2"></i> History
+                                </a>
+                            @endif
+                            @if (app('hasPermission')(49, 'edit'))
+                                <a class="dropdown-item" href="/edit-row-material/${product.id}">
+                                    <i class="fas fa-edit me-2"></i> Edit
+                                </a>
+                            @endif
+                            @if (app('hasPermission')(49, 'delete'))
+                                <a class="dropdown-item text-danger delete-product" data-id="${product.id}" href="javascript:void(0);">
+                                    <i class="fas fa-trash me-2"></i> Delete
+                                </a>
+                            @endif
+                        </div>
+                    </div>
+                `;
+
+                return `
+                    <div class="rm-card">
+                        <a href="${detailUrl}" class="rm-img">
+                            <img src="${data.productImage}" alt="${name}" loading="lazy" onerror="this.src='{{ env('ImagePath') . 'admin/assets/img/product/noimage.png' }}'">
+                        </a>
+                        <div class="rm-body">
+                            <div class="rm-top">
+                                <a href="${detailUrl}" class="rm-name">${name}</a>
+                                ${price ? `<span class="rm-price">${price}</span>` : ''}
+                            </div>
+                            <div class="rm-badges">
+                                <span class="rm-badge ${isLow ? 'is-low' : 'is-ok'}">${isLow ? 'LOW STOCK' : 'IN STOCK'}</span>
+                                ${sku && sku !== 'N/A' ? `<span class="rm-tag">SKU: ${sku}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="rm-foot">
+                            <div class="rm-stat is-qty quantity-history" data-id="${product.id}" title="View Quantity History">
+                                <span>Qty</span>
+                                <strong class="${isLow ? 'text-danger' : ''}">${data.quantity}</strong>
+                            </div>
+                            <div class="rm-stat">
+                                <span>Unit</span>
+                                <strong>${unit && unit !== '' ? unit : 'N/A'}</strong>
+                            </div>
+                            <div class="rm-stat">
+                                <span>Brand</span>
+                                <strong>${brand && brand !== '' ? brand : 'N/A'}</strong>
+                            </div>
+                            <div class="rm-stat rm-cat">
+                                <span>Category</span>
+                                <strong>${category && category !== '' ? category : 'N/A'}</strong>
+                            </div>
+                            <div class="rm-acts">
+                                ${actionMenu}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderRowMaterialCards(html, emptyText) {
+                $('#rowMaterialCardList').html(html || `<div class="rm-empty"><i class="fas fa-box-open"></i><span>${escapeHtmlText(emptyText || 'No raw materials found')}</span></div>`);
+            }
+
+            function positionRmActionMenu(dropdownEl) {
+                const $dropdown = $(dropdownEl);
+                const $menu = $dropdown.data('floating-menu') || $dropdown.find('.rm-action-menu');
+                const button = $dropdown.find('.action-menu-toggle')[0];
+
+                if (!$menu.length || !button) return;
+
+                const rect = button.getBoundingClientRect();
+                const menuEl = $menu[0];
+                const menuWidth = menuEl.offsetWidth || 160;
+                const menuHeight = menuEl.offsetHeight || 160;
+                const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                const gap = 4;
+
+                let left = rect.right - menuWidth;
+                left = Math.max(8, Math.min(left, viewportWidth - menuWidth - 8));
+
+                let top = rect.bottom + gap;
+                if (top + menuHeight > viewportHeight - 8) {
+                    top = Math.max(8, rect.top - menuHeight - gap);
+                }
+
+                $menu.css({
+                    left: `${left}px`,
+                    position: 'fixed',
+                    top: `${top}px`,
+                    transform: 'none',
+                    zIndex: 9999999
+                });
+            }
+
+            $(document).on('show.bs.dropdown', '.rm-action-dropdown', function() {
+                const $dropdown = $(this);
+                const $menu = $dropdown.find('.rm-action-menu');
+                if (!$menu.length) return;
+                $dropdown.data('floating-menu', $menu);
+                $dropdown.data('menu-parent', $menu.parent());
+                $dropdown.data('menu-next', $menu.next());
+                $menu.addClass('rm-action-menu-floating').appendTo('body');
+            });
+
+            $(document).on('shown.bs.dropdown', '.rm-action-dropdown', function() {
+                positionRmActionMenu(this);
+            });
+
+            $(document).on('hidden.bs.dropdown', '.rm-action-dropdown', function() {
+                const $dropdown = $(this);
+                const $menu = $dropdown.data('floating-menu');
+                const $parent = $dropdown.data('menu-parent');
+                const $next = $dropdown.data('menu-next');
+
+                if ($menu && $menu.length && $parent && $parent.length) {
+                    $menu.removeClass('rm-action-menu-floating').removeAttr('style');
+                    if ($next && $next.length && $.contains($parent[0], $next[0])) {
+                        $menu.insertBefore($next);
+                    } else {
+                        $parent.append($menu);
+                    }
+                }
+                $dropdown.removeData('floating-menu menu-parent menu-next');
+            });
+
+            $(window).on('scroll resize', function() {
+                $('.rm-action-dropdown.show').each(function() {
+                    positionRmActionMenu(this);
+                });
+            });
+
+            function updatePaginationUI(pagination) {
+                let from = (pagination.current_page - 1) * pagination.per_page + 1;
+                let to = pagination.current_page * pagination.per_page;
+
+                if (to > pagination.total) {
+                    to = pagination.total;
+                }
+                if (pagination.total === 0) {
+                    from = 0;
+                }
+
+                $('#pagination-from').text(from);
+                $('#pagination-to').text(to);
+                $('#pagination-total').text(pagination.total);
+
+                let paginationHtml = '';
+                const totalPages = pagination.last_page;
+                const currentPage = pagination.current_page;
+                const visiblePageCount = 2;
+                let startPage = Math.floor((currentPage - 1) / visiblePageCount) * visiblePageCount + 1;
+                let endPage = Math.min(totalPages, startPage + visiblePageCount - 1);
+
+                paginationHtml += `
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link rowmaterial-page-link" href="javascript:void(0);" data-page="${currentPage - 1}">Previous</a>
+                    </li>
+                `;
+
+                if (startPage > 1) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link rowmaterial-page-link" href="javascript:void(0);" data-page="${startPage - 1}" data-action="prev-group">..</a>
+                        </li>
+                    `;
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link rowmaterial-page-link" href="javascript:void(0);" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                }
+
+                if (endPage < totalPages) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link rowmaterial-page-link" href="javascript:void(0);" data-page="${endPage + 1}" data-action="next-group">..</a>
+                        </li>
+                    `;
+                }
+
+                paginationHtml += `
+                    <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link rowmaterial-page-link" href="javascript:void(0);" data-page="${currentPage + 1}">Next</a>
+                    </li>
+                `;
+
+                $('#pagination-numbers').html(paginationHtml);
+                $('.pagination-controls').toggle(pagination.total > 0);
+            }
+
+            $(document).on('click', '.quantity-history', function() {
+                const productId = $(this).data('id');
+
+                $.ajax({
+                    url: `/api/product-quantity-history/${productId}`,
+                    type: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    success: function(res) {
+                        if (res.status) {
+                            let content = `<h5>${res.product}</h5><ul class="list-group">`;
+                            res.history.forEach(item => {
+                                content += `
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>${item.type}</strong> - ${item.note}<br>
+                                                <small>${item.date}</small>
+                                            </div>
+                                        <span class="badge bg-${item.type === 'Added' ? 'success' : 'danger'} px-4 py-2 small">${item.quantity}</span>
+                                        </li>
+                                    `;
+                            });
+                            content += `</ul>`;
+                            $('#quantityHistoryContent').html(content);
+                            $('#quantityHistoryModal').modal('show');
+                        } else {
+                            alert(res.message || "Failed to load quantity history.");
+                        }
+                    },
+                    error: function() {
+                        alert("Error fetching quantity history.");
+                    }
+                });
+            });
+
+            // Initial fetch
+            fetchProducts(currentPage);
+
+            // Handle search input
+            $('#search-input').on('keyup', function() {
+                searchQuery = $(this).val();
+                fetchProducts(1);
+            });
+
+            // Handle page number clicks
+            $(document).on('click', '.rowmaterial-page-link', function(e) {
+                e.preventDefault();
+                let page = $(this).data('page');
+                let action = $(this).data('action');
+
+                if (action === 'next-group') {
+                    if (page && page <= lastPage) {
+                        fetchProducts(page);
+                    }
+                    return;
+                }
+
+                if (action === 'prev-group') {
+                    let prevStartPage = Math.max(1, page - 2);
+                    if (prevStartPage >= 1 && prevStartPage <= lastPage) {
+                        fetchProducts(prevStartPage);
+                    }
+                    return;
+                }
+
+                if (page && page !== currentPage && page >= 1 && page <= lastPage) {
+                    fetchProducts(page);
+                }
+            });
+
+            // Handle per-page change
+            $('#per-page-select').on('change', function() {
+                perPage = $(this).val();
+                fetchProducts(1);
+            });
+
+            // Filter change
+            $('#filterCategory, #filterBrand').on('change', function() {
+                fetchProducts(1);
+            });
+
+            (function initPhoneFilterSheet() {
+                const sheetBody = document.getElementById('rmFilterSheetBody');
+                const toolbarFilters = document.querySelector('.product-toolbar-filters');
+                const toggle = document.getElementById('rmFilterToggle');
+                if (!sheetBody || !toolbarFilters || !toggle) return;
+                const phoneQuery = window.matchMedia('(max-width: 1199.98px)');
+
+                function placeFilterFields() {
+                    const fields = phoneQuery.matches
+                        ? toolbarFilters.querySelectorAll(':scope > .category-width')
+                        : sheetBody.querySelectorAll('.category-width');
+                    fields.forEach(function (field) {
+                        (phoneQuery.matches ? sheetBody : toolbarFilters).appendChild(field);
+                    });
+                    if (!phoneQuery.matches) closeSheet();
+                }
+                function openSheet() {
+                    placeFilterFields();
+                    document.body.classList.add('rm-filter-open');
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+                function closeSheet() {
+                    document.body.classList.remove('rm-filter-open');
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+                function updateCount() {
+                    const n = ['#filterCategory', '#filterBrand'].filter(function (sel) {
+                        return !!$(sel).val();
+                    }).length;
+                    $('#rmFilterCount').text(n).toggleClass('d-none', n === 0);
+                    $(toggle).toggleClass('has-active', n > 0);
+                }
+
+                toggle.addEventListener('click', openSheet);
+                ['rmFilterSheetClose', 'rmFilterApply', 'rmFilterBackdrop'].forEach(function (id) {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('click', closeSheet);
+                });
+                $('#rmFilterClear').on('click', function () {
+                    $('#filterCategory').val('').trigger('change.select2').trigger('change');
+                    $('#filterBrand').val('').trigger('change.select2').trigger('change');
+                    updateCount();
+                });
+                $('#filterCategory, #filterBrand').on('change', updateCount);
+                window.addEventListener('resize', placeFilterFields);
+                placeFilterFields();
+                updateCount();
+            })();
+        })
+
+
+        $(document).on('click', '.delete-product', function() {
+            var productId = $(this).data('id'); // Get product ID
+            var authToken = localStorage.getItem("authToken");
+            Swal.fire({
+                title: "Are you sure?",
+                text: "You won't be able to revert this!",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                confirmButtonColor: "#ff9f43", // Confirm button color (orange)
+                cancelButtonColor: "#6c757d", // Cancel button color (gray)
+                confirmButtonText: "Yes, delete it!"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/api/delete-row-material/${productId}`, // Adjust based on your route
+                        type: 'POST',
+                        headers: {
+                            "Authorization": "Bearer " + authToken,
+                        },
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr(
+                                'content') // CSRF token for security
+                        },
+                        success: function(response) {
+                            if (response.status) {
+                                Swal.fire({
+                                    title: "Deleted!",
+                                    text: response.message,
+                                    icon: "success",
+                                    confirmButtonColor: "#ff9f43",
+                                    confirmButtonText: "OK"
+                                });
+
+                                $(`.delete-product[data-id="${productId}"]`).closest('tr')
+                                    .remove();
+                            } else {
+                                // Use response.error here, fallback to response.message just in case
+                                Swal.fire("Error!", response.error || response.message ||
+                                    "Unknown error", "error");
+                            }
+                        },
+
+                        error: function(xhr) {
+                            // Parse the JSON error message sent by API in HTTP error response
+                            let message = "Something went wrong!";
+                            if (xhr.responseJSON && xhr.responseJSON.error) {
+                                message = xhr.responseJSON.error;
+                            }
+                            // Swal.fire("Error!", message, "error");
+                            Swal.fire({
+                                title: "Error!",
+                                text: message,
+                                icon: "error",
+                                confirmButtonColor: "#ff9f43", // custom orange color
+                                confirmButtonText: "OK"
+                            });
+
+                        }
+                    });
+                }
+            });
+        });
+
+        $('#exportAllChallan').click(function() {
+            let selectedCategory = $('#filterCategory').val() || '';
+            let selectedBrand = $('#filterBrand').val() || '';
+            const selectedSubAdminId = normalizeSubAdminId(localStorage.getItem("selectedSubAdminId"));
+            let authToken = localStorage.getItem("authToken");
+
+            let url =
+                `/api/export-row-material?category_id=${selectedCategory}&brand_id=${selectedBrand}&selectedSubAdminId=${selectedSubAdminId}`;
+
+            $.ajax({
+                url: url,
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + authToken
+                },
+
+                beforeSend: function() {
+                    Swal.fire({
+                        title: "Exporting Excel...",
+                        text: "Please wait while we generate your file.",
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+                },
+
+                success: function(response) {
+                    Swal.close();
+
+                    if (response.status && (response.file_content || response.file_url)) {
+                        Swal.fire({
+                            icon: "success",
+                            title: "Excel Exported!",
+                            text: "Click the button below to download your Excel file.",
+                            showConfirmButton: true,
+                            confirmButtonColor: "#28a745",
+                            confirmButtonText: "Download File"
+                        }).then(() => {
+                            if (response.file_content) {
+                                downloadBase64File(
+                                    response.file_content,
+                                    response.file_name || "RowMaterials.xlsx",
+                                    response.mime_type
+                                );
+                                return;
+                            }
+
+                            let link = document.createElement('a');
+                            link.href = response.file_url;
+                            link.download = response.file_name || "RowMaterials.xlsx";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Export Failed!",
+                            text: "Unable to export Excel file. Please try again."
+                        });
+                    }
+                },
+
+                error: function(xhr, status, error) {
+                    Swal.close();
+                    console.error("Export failed:", error);
+
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: "Export failed. Please try again."
+                    });
+                }
+            });
+        });
+
+
+        $('#exportPdf').click(function() {
+            let selectedCategory = $('#filterCategory').val() || '';
+            let selectedBrand = $('#filterBrand').val() || '';
+            const selectedSubAdminId = normalizeSubAdminId(localStorage.getItem("selectedSubAdminId"));
+            let authToken = localStorage.getItem("authToken");
+
+            let url =
+                `/api/export-row-material-pdf?category_id=${selectedCategory}&brand_id=${selectedBrand}&selectedSubAdminId=${selectedSubAdminId}`;
+
+            $.ajax({
+                url: url,
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + authToken
+                },
+
+                beforeSend: function() {
+                    Swal.fire({
+                        title: "Generating PDF...",
+                        text: "Please wait",
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+                },
+
+                success: function(response) {
+                    Swal.close();
+
+                    if (response.status && (response.file_content || response.file_url)) {
+                        Swal.fire({
+                            icon: "success",
+                            title: "PDF Generated Successfully!",
+                            text: "Your product PDF is ready.",
+                            showConfirmButton: true,
+                            confirmButtonColor: "#28a745",
+                            confirmButtonText: "Download PDF"
+                        }).then(() => {
+                            if (response.file_content) {
+                                downloadBase64File(
+                                    response.file_content,
+                                    response.file_name || "RowMaterials.pdf",
+                                    response.mime_type
+                                );
+                                return;
+                            }
+
+                            let link = document.createElement('a');
+                            link.href = response.file_url;
+                            link.download = response.file_name || "RowMaterials.pdf";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Failed!",
+                            text: "Could not generate the PDF. Please try again."
+                        });
+                    }
+                },
+
+                error: function(xhr, status, error) {
+                    Swal.close();
+                    console.error("Export PDF failed:", error);
+
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: "Export PDF failed. Please try again."
+                    });
+                }
+            });
+        });
+
+
+        function buildRowMaterialExpandableRowContent(product, actionButtons) {
+            return `
+                <td colspan="9" class="rowmaterial-details-content">
+                    <div class="rowmaterial-detail-row-simple">
+                        <span class="rowmaterial-detail-label-simple">SKU:</span>
+                        <span class="rowmaterial-detail-value-simple">${product.sku}</span>
+                    </div>
+                    <div class="rowmaterial-detail-row-simple">
+                        <span class="rowmaterial-detail-label-simple">Category:</span>
+                        <span class="rowmaterial-detail-value-simple">${product.categoryName}</span>
+                    </div>
+                    <div class="rowmaterial-detail-row-simple">
+                        <span class="rowmaterial-detail-label-simple">Unit:</span>
+                        <span class="rowmaterial-detail-value-simple">${product.unitName}</span>
+                    </div>
+                    <div class="rowmaterial-detail-row-simple">
+                        <span class="rowmaterial-detail-label-simple">Brand:</span>
+                        <span class="rowmaterial-detail-value-simple">${product.brandName}</span>
+                    </div>
+                    <div class="rowmaterial-detail-row-simple">
+                        <span class="rowmaterial-detail-label-simple">Price:</span>
+                        <span class="rowmaterial-detail-value-simple" style="font-weight: bold; color: #ff9f43;">${product.formattedPrice}</span>
+                    </div>
+                    <div class="rowmaterial-detail-row-simple">
+                        <span class="rowmaterial-detail-label-simple">Quantity:</span>
+                        <span class="rowmaterial-detail-value-simple">${product.quantityDisplay}</span>
+                    </div>
+                    <div class="rowmaterial-mobile-actions">
+                        ${actionButtons || ''}
+                    </div>
+                </td>
+            `;
+        }
+
+        window.toggleRowMaterialRowDetails = function(productId) {
+            const btn = $(`.mobile-toggle-btn-table[data-row-material-id="${productId}"]`);
+            if (btn.length === 0) return;
+
+            const row = btn.closest('tr');
+            let detailsRow = row.next(`tr.rowmaterial-details-row[data-row-material-id="${productId}"]`);
+            const icon = btn.find('.toggle-icon');
+
+            if (detailsRow.length === 0) {
+                const productData = window.rowMaterialDataMap && window.rowMaterialDataMap[productId];
+                if (!productData) return;
+
+                const actionButtons = row.find('td:last').html();
+                detailsRow = $('<tr>')
+                    .addClass('rowmaterial-details-row')
+                    .attr('data-row-material-id', productId)
+                    .html(buildRowMaterialExpandableRowContent(productData, actionButtons));
+                row.after(detailsRow);
+            }
+
+            if (detailsRow.hasClass('show')) {
+                detailsRow.removeClass('show');
+                btn.removeClass('minus');
+                icon.text('+');
+            } else {
+                detailsRow.addClass('show');
+                btn.addClass('minus');
+                icon.text('−');
+            }
+        };
+    </script>
+@endpush

@@ -1,0 +1,8722 @@
+@extends('layout.app')
+
+@section('title', 'Sales List')
+
+@section('content')
+    <style>
+        /* Status Badge Styles */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: capitalize;
+            display: inline-block;
+            color: white !important;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Payment Status Colors - Using only 4 colors */
+        .status-pending {
+            background-color: #ea5455 !important;
+            /* Danger - Red */
+        }
+
+        .status-completed {
+            background-color: #28c76f !important;
+            /* Success - Green */
+        }
+
+        .status-partially {
+            background-color: #f90 !important;
+            /* Info - Teal */
+        }
+
+        /* Payment Method Colors - Using only 4 colors */
+        .status-cash {
+            background-color: #f90 !important;
+            /* Info - Teal */
+        }
+
+        .status-online {
+            background-color: #28c76f !important;
+            /* Success - Green */
+        }
+
+        .status-emi {
+            background-color: #ea5455 !important;
+            /* Danger - Red */
+        }
+
+        .status-cash_online {
+            background-color: #28c76f !important;
+            /* Success - Green */
+        }
+
+        a.btn.btn-sm.btn-success.me-2 {
+            color: white;
+            border: none;
+            padding: 4px;
+            font-size: 11px;
+        }
+
+        /* Quotation / Sales badges - Light Theme */
+        .status-quotation {
+            background-color: rgba(255, 159, 67, 0.12) !important;
+            color: #d35400 !important; /* Darker orange */
+            font-weight: 700 !important;
+        }
+
+        .status-sales {
+            background-color: rgba(40, 199, 111, 0.12) !important;
+            color: #1b9950 !important; /* Darker green */
+            font-weight: 700 !important;
+        }
+
+        .status-advance_receipt {
+            background-color: rgba(115, 103, 240, 0.12) !important;
+            color: #4b42b3 !important; /* Darker purple */
+            font-weight: 700 !important;
+        }
+
+        .status-rental {
+            background-color: rgba(27, 40, 80, 0.12) !important;
+            color: #1b2850 !important; /* Dark navy */
+            font-weight: 700 !important;
+        }
+
+        /* Unknown/Other payment method */
+        .status-other {
+            background-color: #8f99a2 !important;
+            /* Gray */
+        }
+
+        .status-emi-pill {
+            background-color: #1b2850 !important;
+        }
+
+        /* Mobile View Status Styles */
+        .mobile-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            text-transform: capitalize;
+            font-weight: 500;
+            color: white !important;
+            display: inline-block;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .table-scroll-top {
+            display: none;
+        }
+
+        /* For Customer Name column */
+        .datanew td:nth-child(4) {
+            white-space: normal !important;
+            word-wrap: break-word;
+            max-width: 200px;
+            text-transform: capitalize;
+            /* optional */
+        }
+
+        /* For Biller column */
+        .datanew td:nth-child(10) {
+            max-width: 260px;
+        }
+
+        .biller-wrap {
+            display: inline-block;
+            max-width: 260px;
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .sales-action-cell {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .sales-quick-print {
+            align-items: center;
+            background: #fff;
+            border: 1px solid #d7dde8;
+            border-radius: 4px;
+            color: #1b2850;
+            display: inline-flex;
+            height: 28px;
+            justify-content: center;
+            padding: 0;
+            width: 34px;
+        }
+
+        .sales-quick-print:hover,
+        .sales-quick-print:focus {
+            background: #fff4ea;
+            border-color: #ff9f43;
+            color: #ff9f43;
+        }
+
+        .sales-action-dropdown {
+            display: inline-flex;
+            justify-content: center;
+            width: auto;
+        }
+
+        .sales-action-dropdown .action-menu-toggle {
+            align-items: center;
+            background: #fff;
+            border: 1px solid #d7dde8;
+            border-radius: 4px;
+            color: #1b2850;
+            display: inline-flex;
+            height: 28px;
+            justify-content: center;
+            padding: 0;
+            width: 34px;
+        }
+
+        .sales-action-dropdown .action-menu-toggle:hover,
+        .sales-action-dropdown .action-menu-toggle:focus {
+            background: #f8fafc;
+            border-color: #b8c2d2;
+            color: #1b2850;
+        }
+
+        .sales-action-menu {
+            box-sizing: border-box;
+            border: 1px solid #e8ebed;
+            border-radius: 6px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+            max-width: 180px;
+            min-width: 168px;
+            overflow-x: hidden;
+            padding: 6px;
+            width: 180px;
+            z-index: 999999999999;
+        }
+
+        .sales-action-menu-floating {
+            position: fixed !important;
+            z-index: 999999999999 !important;
+            bottom: auto !important;
+            right: auto !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+        }
+
+        .sales-action-menu .dropdown-item {
+            align-items: center;
+            border-radius: 4px;
+            color: #344054;
+            display: flex;
+            font-size: 12px;
+            gap: 8px;
+            padding: 7px 8px;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .sales-action-menu .dropdown-item i {
+            color: #667085;
+            font-size: 13px;
+            text-align: center;
+            width: 15px;
+        }
+
+        .sales-action-menu .dropdown-item.text-danger,
+        .sales-action-menu .dropdown-item.text-danger i {
+            color: #ea5455 !important;
+        }
+
+        .sales-action-menu .dropdown-item:hover {
+            background: #f4f6f8;
+            color: #1b2850;
+        }
+
+        .payment-history-list .list-group-item {
+            border: 1px solid #d9dee7;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            padding: 14px 16px;
+        }
+
+        .payment-history-entry {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .payment-history-meta {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 2px;
+            line-height: 1.45;
+        }
+
+        .payment-history-amount {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1b2850;
+            white-space: nowrap;
+        }
+
+        .payment-history-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .payment-history-summary .list-group-item {
+            border: 1px solid #d9dee7;
+            margin-bottom: 0;
+        }
+
+        #editPaymentHistoryModal .modal-dialog {
+            max-width: 620px;
+            width: calc(100% - 32px);
+        }
+
+        .payment-edit-form .form-label {
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #3b3f49;
+        }
+
+        .payment-edit-summary-box {
+            border: 1px solid #d9dee7;
+            background: #f8f9fb;
+            border-radius: 3px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .datanew td:last-child {
+            text-align: center;
+            white-space: nowrap;
+        }
+
+
+        .form-control {
+            color: #595b5d !important;
+            /* Bootstrap's default placeholder/input text color */
+        }
+
+        .dataTables_filter,
+        .dataTables_length,
+        .dataTables_info,
+        .dataTables_paginate {
+            display: none !important;
+        }
+
+        .dataTables_wrapper .row:first-child {
+            display: none !important;
+        }
+
+        .dataTables_wrapper {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        .custom-select2 .select2-container--default .select2-selection--single {
+            height: 31px !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 4px !important;
+        }
+
+        .custom-select2 .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 30px !important;
+            font-size: 14px !important;
+            color: #595b5d !important;
+            padding-left: 8px !important;
+        }
+
+        .custom-select2 .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+        }
+
+        .form-group {
+            margin-bottom: 8px !important;
+        }
+
+        /* Mobile View Styles */
+        .mobile-order-card {
+            display: none;
+        }
+
+        .order-mobile-summary {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+        .order-mobile-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .order-mobile-customer {
+            display: none;
+            font-size: 12px;
+            color: #595b5d;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+
+
+
+
+
+        /* Responsive breakpoints for all screen sizes */
+
+        /* Extra small devices (phones, less than 576px) */
+        @media screen and (max-width: 575.98px) {
+            .table-responsive {
+                display: block !important;
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
+                width: 100% !important;
+            }
+
+            .mobile-order-card {
+                display: none;
+            }
+
+            #order-table,
+            #order-table_wrapper,
+            .datanew {
+                font-size: 11px;
+                width: 100% !important;
+                max-width: 100% !important;
+                table-layout: fixed;
+            }
+
+            .datanew th,
+            .datanew td {
+                padding: 6px 3px;
+            }
+
+            .datanew th:nth-child(1),
+            .datanew td:nth-child(1) {
+                width: calc(100% - 56px) !important;
+            }
+
+            .order-mobile-customer {
+                display: block;
+            }
+
+            .datanew th:nth-child(2),
+            .datanew td:nth-child(2) {
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                /* text-align: center; */
+                display: table-cell !important;
+            }
+
+            /* Show only Order Number and Details */
+            .datanew th:nth-child(3),
+            .datanew td:nth-child(3),
+            .datanew th:nth-child(4),
+            .datanew td:nth-child(4),
+            .datanew th:nth-child(5),
+            .datanew td:nth-child(5),
+            .datanew th:nth-child(6),
+            .datanew td:nth-child(6),
+            .datanew th:nth-child(7),
+            .datanew td:nth-child(7),
+            .datanew th:nth-child(8),
+            .datanew td:nth-child(8),
+            .datanew th:nth-child(9),
+            .datanew td:nth-child(9),
+            .datanew th:nth-child(10),
+            .datanew td:nth-child(10) {
+                display: none;
+            }
+
+            .datanew th:nth-child(n+3),
+            .datanew td:nth-child(n+3) {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+            }
+        }
+
+        /* Center Details column */
+        .datanew th:nth-child(2),
+        .datanew td:nth-child(2) {
+            text-align: right;
+        }
+
+        /* Small devices (landscape phones, 576px and up) */
+        @media screen and (min-width: 576px) and (max-width: 767.98px) {
+            .table-responsive {
+                display: block !important;
+                overflow-x: hidden;
+                width: 100% !important;
+            }
+
+            .mobile-order-card {
+                display: none;
+            }
+
+            #order-table,
+            #order-table_wrapper,
+            .datanew {
+                font-size: 12px;
+                width: 100% !important;
+                max-width: 100% !important;
+                table-layout: fixed;
+            }
+
+            .datanew th,
+            .datanew td {
+                padding: 8px 4px;
+            }
+
+            .datanew th:nth-child(1),
+            .datanew td:nth-child(1) {
+                width: calc(100% - 56px) !important;
+            }
+
+            .order-mobile-customer {
+                display: block;
+            }
+
+            .datanew th:nth-child(2),
+            .datanew td:nth-child(2) {
+                width: 56px !important;
+                min-width: 56px !important;
+                max-width: 56px !important;
+                /* text-align: center; */
+                display: table-cell !important;
+            }
+
+            /* Show only Order Number and Details */
+            .datanew th:nth-child(3),
+            .datanew td:nth-child(3),
+            .datanew th:nth-child(4),
+            .datanew td:nth-child(4),
+            .datanew th:nth-child(5),
+            .datanew td:nth-child(5),
+            .datanew th:nth-child(6),
+            .datanew td:nth-child(6),
+            .datanew th:nth-child(7),
+            .datanew td:nth-child(7),
+            .datanew th:nth-child(8),
+            .datanew td:nth-child(8),
+            .datanew th:nth-child(9),
+            .datanew td:nth-child(9),
+            .datanew th:nth-child(10),
+            .datanew td:nth-child(10) {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+            }
+
+            .datanew th:nth-child(11),
+            .datanew td:nth-child(11) {
+                display: none !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+            }
+
+            /* Center Details column */
+            .datanew th:nth-child(2),
+            .datanew td:nth-child(2) {
+                /* text-align: center; */
+            }
+        }
+
+        /* Medium devices (tablets, 768px and up) */
+        @media screen and (min-width: 768px) and (max-width: 991.98px) {
+            .table-responsive {
+                display: block !important;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .mobile-order-card {
+                display: none;
+            }
+
+            #order-table,
+            #order-table_wrapper,
+            .datanew {
+                min-width: 980px;
+            }
+
+            .datanew {
+                font-size: 13px;
+            }
+
+            .datanew th,
+            .datanew td {
+                padding: 8px 6px;
+            }
+
+            /* Hide Details column (2nd column) on 768px and above */
+            .datanew th:nth-child(2),
+            .datanew td:nth-child(2) {
+                display: none;
+            }
+
+            /* Hide expandable rows on larger screens */
+            .order-details-row {
+                display: none !important;
+            }
+        }
+
+        /* Large devices (desktops, 992px and up) */
+        @media screen and (min-width: 992px) and (max-width: 1199.98px) {
+            .table-responsive {
+                display: block !important;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .mobile-order-card {
+                display: none;
+            }
+
+            .datanew {
+                font-size: 14px;
+            }
+
+            .datanew th,
+            .datanew td {
+                padding: 10px 8px;
+            }
+
+            /* Hide Details column (2nd column) on 768px and above */
+            .datanew th:nth-child(2),
+            .datanew td:nth-child(2) {
+                display: none;
+            }
+
+            /* Hide expandable rows on larger screens */
+            .order-details-row {
+                display: none !important;
+            }
+        }
+
+        /* Extra large devices (large desktops, 1200px and up) */
+        @media screen and (min-width: 1200px) {
+            .table-responsive {
+                display: block !important;
+            }
+
+            .mobile-order-card {
+                display: none;
+            }
+
+            .datanew {
+                font-size: 14px;
+            }
+
+            .datanew th,
+            .datanew td {
+                padding: 12px 10px;
+            }
+
+            /* Hide Details column (2nd column) on 768px and above */
+            .datanew th:nth-child(2),
+            .datanew td:nth-child(2) {
+                display: none;
+            }
+
+            /* Hide expandable rows on larger screens */
+            .order-details-row {
+                display: none !important;
+            }
+        }
+
+        /* Expandable row details - available for all screen sizes */
+        .order-details-row {
+            display: none;
+        }
+
+        .order-details-row.show {
+            display: table-row;
+        }
+
+
+        /* Toggle button styles - available for all screen sizes */
+        .mobile-toggle-btn-table {
+            background: #ff9f43;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1;
+            padding: 0;
+            flex-shrink: 0;
+            appearance: none;
+            transition: all 0.3s;
+        }
+
+        .mobile-toggle-btn-table .toggle-icon {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            line-height: 1;
+            font-size: 20px;
+            font-weight: 700;
+            font-family: Arial, sans-serif;
+            color: inherit;
+            pointer-events: none;
+            transform: translateY(-1px);
+        }
+
+        .mobile-toggle-btn-table:hover {
+            background: #ff8c2e;
+        }
+
+        .mobile-toggle-btn-table.minus {
+            background: #dc3545;
+        }
+
+        .mobile-toggle-btn-table.minus:hover {
+            background: #c82333;
+        }
+
+        /* Expandable content styles - available for all screen sizes */
+        .order-details-content {
+            padding: 15px;
+            background: #fff;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .order-details-list {
+            margin-bottom: 15px;
+        }
+
+        .order-detail-row-simple {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .order-detail-row-simple:last-of-type {
+            border-bottom: none;
+        }
+
+        .order-detail-label-simple {
+            font-weight: 600;
+            color: #595b5d;
+            font-size: 14px;
+            flex: 0 1 auto;
+            min-width: 120px;
+        }
+
+        .order-detail-value-simple {
+            color: #1b2850;
+            font-size: 14px;
+            text-align: right;
+            flex: 1 1 auto;
+            word-break: break-word;
+        }
+
+        .mobile-action-buttons-simple {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .emi-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            padding: 4px 2px 0;
+        }
+
+        .emi-info-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e5eaf2;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 8px 24px rgba(27, 40, 80, 0.04);
+            min-height: 74px;
+        }
+
+        .emi-info-label {
+            font-size: 11px;
+            color: #74809a;
+            display: block;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .emi-info-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1b2850;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .emi-summary-panel {
+            background: linear-gradient(135deg, #1b2850 0%, #25376f 100%);
+            color: #fff;
+            border-radius: 18px;
+            padding: 18px 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 18px 35px rgba(27, 40, 80, 0.16);
+        }
+
+        .emi-summary-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .emi-summary-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.72;
+            margin-bottom: 4px;
+        }
+
+        .emi-summary-order {
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .emi-summary-customer {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .emi-summary-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .emi-summary-pill i {
+            font-size: 12px;
+        }
+
+        .emi-schedule-panel {
+            background: #f8fafc;
+            border: 1px solid #e5eaf2;
+            border-radius: 18px;
+            padding: 16px;
+        }
+
+        .emi-schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .emi-schedule-header h6 {
+            margin-bottom: 0;
+            font-weight: 800;
+            color: #1b2850;
+        }
+
+        .emi-next-due {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6c757d;
+            background: #fff;
+            border: 1px solid #e5eaf2;
+            padding: 6px 10px;
+            border-radius: 999px;
+        }
+
+        .emi-schedule-panel .table {
+            margin-bottom: 0;
+            overflow: hidden;
+            border-radius: 14px;
+        }
+
+        .emi-schedule-panel .table thead th {
+            background: #edf1f7;
+            color: #49566f;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid #dde4ef !important;
+            white-space: nowrap;
+        }
+
+        .emi-schedule-panel .table tbody td {
+            font-size: 13px;
+            color: #354052;
+            vertical-align: middle;
+        }
+
+        .emi-schedule-panel .table tbody tr:hover {
+            background: #f6f9fe;
+        }
+
+        .emi-schedule-panel .badge {
+            min-width: 76px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .emi-schedule-panel .table td:nth-child(3),
+        .emi-schedule-panel .table td:nth-child(4),
+        .emi-schedule-panel .table td:nth-child(5) {
+            white-space: nowrap;
+        }
+
+        .emi-action-btn {
+            background: #1b2850;
+            color: #fff !important;
+            border: none;
+        }
+
+        .emi-action-btn:hover {
+            background: #111a33;
+            color: #fff !important;
+        }
+
+        .btn-icon-mobile,
+        button.btn-icon-mobile {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #1b2850;
+            background: transparent;
+            transition: all 0.3s;
+            border: 2px solid #1b2850;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        button.btn-icon-mobile {
+            border: 2px solid #1b2850;
+            background: transparent;
+        }
+
+        .btn-icon-mobile:hover {
+            background: #1b2850;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .btn-icon-mobile i {
+            font-size: 16px;
+        }
+
+        .btn-icon-mobile.btn-history i {
+            font-size: 18px;
+        }
+
+        .btn-icon-mobile.btn-view i,
+        .btn-icon-mobile.btn-edit i,
+        .btn-icon-mobile.btn-download i,
+        .btn-icon-mobile.btn-print i,
+        .btn-icon-mobile.btn-delete i,
+        .btn-icon-mobile.btn-payment i {
+            font-size: 16px;
+        }
+
+        /* Additional responsive adjustments for larger screens */
+        @media screen and (min-width: 992px) {
+            .order-details-content {
+                padding: 20px;
+            }
+
+            .order-detail-label-simple,
+            .order-detail-value-simple {
+                font-size: 15px;
+            }
+
+            .btn-icon-mobile {
+                width: 42px;
+                height: 42px;
+            }
+
+            .btn-icon-mobile i {
+                font-size: 17px;
+            }
+        }
+
+        .mobile-order-header-row {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #1b2850;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .mobile-order-header-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .mobile-order-header-cell:first-child {
+            width: 68%;
+        }
+
+        .mobile-order-header-cell:last-child {
+            width: 32%;
+            text-align: center;
+        }
+
+        .mobile-order-item {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-order-row {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            margin-bottom: 10px;
+        }
+
+        .mobile-order-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .mobile-order-number {
+            font-weight: bold;
+            font-size: 16px;
+            color: #1b2850;
+            width: 68%;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            line-height: 1.35;
+        }
+
+        .mobile-order-details-cell {
+            text-align: center;
+            width: 32%;
+        }
+
+        .mobile-toggle-btn {
+            background: #ff9f43;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .mobile-toggle-btn:hover {
+            background: #ff8c2e;
+        }
+
+        .mobile-toggle-btn.minus {
+            background: #dc3545;
+        }
+
+        .mobile-toggle-btn.minus:hover {
+            background: #c82333;
+        }
+
+        .mobile-order-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .mobile-order-details.active {
+            display: block;
+        }
+
+        .mobile-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .mobile-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .mobile-detail-label {
+            font-weight: 600;
+            color: #595b5d;
+            font-size: 14px;
+            flex: 0 1 auto;
+            min-width: 120px;
+        }
+
+        .mobile-detail-value {
+            color: #1b2850;
+            font-size: 14px;
+            text-align: right;
+            flex: 1 1 auto;
+            word-break: break-word;
+        }
+
+        .mobile-action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .mobile-action-buttons a,
+        .mobile-action-buttons button {
+            padding: 8px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .mobile-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: capitalize;
+        }
+
+        .bg-lightgreen {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        /* Search input styling */
+        .search-input input {
+            padding-left: 35px !important;
+            border-radius: 5px;
+        }
+
+        .search-input {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .search-set {
+            margin-bottom: 5px;
+        }
+
+        .btn-searchset {
+            position: absolute;
+            left: 10px;
+            z-index: 10;
+            padding: 0;
+            top: 4px !important;
+        }
+
+        .download-loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 1060;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .download-loader-overlay.d-none {
+            display: none !important;
+        }
+
+        .download-loader-box {
+            width: min(460px, 100%);
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px 20px;
+            text-align: center;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+        }
+
+        .download-loader-box h4 {
+            margin: 0 0 18px 0;
+            font-size: 34px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+
+        .sales-filter-toolbar .filter-field,
+        .sales-filter-toolbar .filter-field .custom-select2,
+        .sales-filter-toolbar .filter-field .form-group,
+        .sales-filter-toolbar .filter-field .search-set {
+            margin-bottom: 2px !important;
+        }
+
+        .sales-filter-toolbar .filter-field .form-control,
+        .sales-filter-toolbar .filter-field .select2-container,
+        .sales-filter-toolbar .filter-field .search-input,
+        .sales-filter-toolbar .filter-field .filter-total-box,
+        .sales-filter-toolbar .filter-field .filter-date-input {
+            width: 100% !important;
+        }
+
+        .sales-filter-toolbar .filter-export-group {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .sales-filter-toolbar .filter-export-group .btn {
+            min-width: 74px;
+        }
+
+        .summary-export-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+        }
+
+        .summary-export-group .btn {
+            min-width: 74px;
+        }
+
+        @media screen and (min-width: 992px) and (max-width: 1199.98px) {
+            .content,
+            .card,
+            .card-body,
+            .sales-filter-toolbar {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            .sales-filter-toolbar .row {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                /* width: auto !important; */
+                margin: 0;
+            }
+
+            .sales-filter-toolbar .filter-field {
+                max-width: 100%;
+                width: 100%;
+                padding: 0 5px;
+            }
+
+            .sales-filter-toolbar .filter-field.filter-search,
+            .sales-filter-toolbar .filter-field.filter-export {
+                grid-column: span 2;
+            }
+
+            .sales-filter-toolbar .filter-export-group {
+                justify-content: flex-start;
+            }
+
+            .table-responsive {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto !important;
+                overflow-y: hidden;
+            }
+
+            .mobile-order-card {
+                display: none !important;
+            }
+        }
+
+        @media screen and (min-width: 768px) and (max-width: 991.98px) {
+            .content,
+            .card,
+            .card-body,
+            .sales-filter-toolbar {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            .sales-filter-toolbar .row {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                /* width: auto !important; */
+                margin: 0;
+            }
+
+            .sales-filter-toolbar .filter-field {
+                max-width: 100%;
+                width: 100%;
+                padding: 0 5px;
+            }
+
+            .sales-filter-toolbar .filter-field.filter-search,
+            .sales-filter-toolbar .filter-field.filter-export {
+                grid-column: span 2;
+            }
+
+            .table-responsive {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto !important;
+                overflow-y: hidden;
+            }
+        }
+
+
+        @media (max-width: 767.98px) {
+            html,
+            body {
+                overflow-x: hidden;
+            }
+
+            .content,
+            .page-header,
+            .card,
+            .card-body,
+            .sales-filter-toolbar,
+            .sales-filter-toolbar .row,
+            .table-scroll-top,
+            .table-responsive,
+            #order-table_wrapper,
+            #order-table,
+            .datanew,
+            .pagination-controls {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            .content,
+            .card,
+            .card-body,
+            .sales-filter-toolbar,
+            .table-responsive {
+                overflow-x: hidden !important;
+            }
+
+            .sales-filter-toolbar .row {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+
+            .sales-filter-toolbar .filter-field {
+                padding-left: 6px;
+                padding-right: 6px;
+            }
+
+            .download-loader-box h4 {
+                font-size: 28px;
+            }
+        }
+
+        /* Custom Pagination Styling */
+        .pagination .page-item .page-link {
+            background-color: #5d6d7e;
+            /* Dark gray for other pages */
+            color: #fff;
+            border: none;
+              margin: 0 3px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        /* Previous and Next buttons */
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            background-color: #fff;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-item:first-child .page-link:hover,
+        .pagination .page-item:last-child .page-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #ff9f43 !important;
+            /* Orange for active page */
+            color: #fff;
+        }
+
+        .pagination .page-item .page-link:hover {
+            background-color: #4a5766;
+            color: #fff;
+        }
+
+        .pagination .page-item.active .page-link:hover {
+            background-color: #e68a35 !important;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background-color: #fff !important;
+            color: #dee2e6 !important;
+            border: 1px solid #dee2e6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+
+        .summary-badges-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .summary-badge-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 34px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid;
+            font-size: 14px;
+            font-weight: 600;
+            background: #fff;
+        }
+
+        .summary-badge-box.pending {
+            color: #ea5455;
+            border-color: #f5c2c7;
+            background: #fff5f5;
+        }
+
+        .summary-badge-box.paid {
+            color: #28c76f;
+            border-color: #b7ebcd;
+            background: #effcf4;
+        }
+
+        @media screen and (max-width: 767.98px) {
+            .summary-badges-row {
+                flex-direction: column;
+                gap: 8px;
+                width: 100%;
+            }
+
+            .summary-badge-box {
+                display: flex;
+                justify-content: flex-start;
+                width: 100%;
+                max-width: 100%;
+                white-space: normal;
+                word-break: break-word;
+            }
+        }
+        /* Datepicker dark theme fix */
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget {
+            background-color: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td,
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table th {
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td.day {
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td.old,
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td.new {
+            color: #94a3b8 !important; /* muted for prev/next month dates */
+        }
+
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td.day:hover {
+            background-color: rgba(255, 159, 67, 0.15) !important;
+            color: #ffffff !important;
+        }
+
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td.active,
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td.active:hover {
+            background-color: #ff9f43 !important;
+            color: #fff !important;
+        }
+
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget table td.today::before {
+            border-bottom-color: #ff9f43 !important;
+        }
+
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget .picker-switch,
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget .prev,
+        :root[data-theme="dark"] .bootstrap-datetimepicker-widget .next {
+            color: #f8fafc !important;
+        }
+        /* Summary badge boxes - Dark theme */
+        :root[data-theme="dark"] .summary-badge-box {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .summary-badge-box.pending {
+            background: rgba(234, 84, 85, 0.12) !important;
+            border-color: rgba(234, 84, 85, 0.4) !important;
+            color: #ff6b6b !important;
+        }
+
+        :root[data-theme="dark"] .summary-badge-box.paid {
+            background: rgba(40, 199, 111, 0.12) !important;
+            border-color: rgba(40, 199, 111, 0.4) !important;
+            color: #3ddc84 !important;
+        }
+
+        /* Total box uses inline style (color:#1b2850; border-color:#c5cde0; background:#f4f6fb)
+        so we need higher specificity to beat the inline style */
+        :root[data-theme="dark"] .summary-badge-box[style*="1b2850"] {
+            background-color: rgba(255, 159, 67, 0.1) !important;
+            border-color: rgba(255, 159, 67, 0.35) !important;
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .summary-badge-box[style*="1b2850"] span:last-child {
+            color: #ff9f43 !important;
+        }
+        .summary-badge-box.total {
+            color: #1b2850;
+            border-color: #c5cde0;
+            background: #f4f6fb;
+        }
+
+        :root[data-theme="dark"] .summary-badge-box.total {
+            background: rgba(255, 159, 67, 0.1) !important;
+            border-color: rgba(255, 159, 67, 0.35) !important;
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .summary-badge-box.total span:last-child {
+            color: #ff9f43 !important;
+        }
+        /* Fix "New Bill" / btn-added button hover in dark theme */
+        :root[data-theme="dark"] .btn-added,
+        :root[data-theme="dark"] .btn-added:hover,
+        :root[data-theme="dark"] .btn-added:focus,
+        :root[data-theme="dark"] .btn-added:active {
+            background-color: #ff9f43 !important;
+            border-color: #ff9f43 !important;
+            color: #fff !important;
+            opacity: 1 !important;
+        }
+
+        :root[data-theme="dark"] .btn-added:hover {
+            background-color: #ff8c2e !important;
+            border-color: #ff8c2e !important;
+        }
+
+        /* Same fix for the Import button if it has the same issue */
+        :root[data-theme="dark"] .btn.btn-sm.btn-added:hover img,
+        :root[data-theme="dark"] .page-btn .btn:hover img {
+            filter: brightness(0) invert(1) !important;
+        }
+        /* Pagination controls - Dark theme */
+        :root[data-theme="dark"] .pagination-controls {
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .pagination-controls span {
+            color: #cbd5e1 !important;
+        }
+
+        :root[data-theme="dark"] #sales-per-page-select {
+            background-color: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.14) !important;
+            color: #f8fafc !important;
+        }
+
+        /* Regular pagination page links */
+        :root[data-theme="dark"] .pagination .page-item .page-link {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+        }
+
+        :root[data-theme="dark"] .pagination .page-item .page-link:hover {
+            background-color: #334155 !important;
+            color: #fff !important;
+        }
+
+        /* Previous/Next buttons (non-disabled) */
+        :root[data-theme="dark"] .pagination .page-item:first-child .page-link,
+        :root[data-theme="dark"] .pagination .page-item:last-child .page-link {
+            background-color: #0f172a !important;
+            color: #cbd5e1 !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        }
+
+        :root[data-theme="dark"] .pagination .page-item:first-child .page-link:hover,
+        :root[data-theme="dark"] .pagination .page-item:last-child .page-link:hover {
+            background-color: #1e293b !important;
+            color: #fff !important;
+            border-color: rgba(255, 255, 255, 0.25) !important;
+        }
+
+        /* Active page (orange) - keep as is but ensure contrast */
+        :root[data-theme="dark"] .pagination .page-item.active .page-link {
+            background-color: #ff9f43 !important;
+            color: #fff !important;
+        }
+
+        /* Disabled state - this is the "Previous" ghost button fix */
+        :root[data-theme="dark"] .pagination .page-item.disabled .page-link {
+            background-color: #0f172a !important;
+            color: #64748b !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+    </style>
+    @if (session('error'))
+        <div class="alert alert-danger" id="error-message">
+            {{ session('error') }}
+        </div>
+
+        <style>
+            .fade-out {
+                opacity: 1;
+                transition: opacity 0.5s ease-out;
+            }
+
+            .fade-out.hidden {
+                opacity: 0;
+            }
+
+        </style>
+
+        <script>
+            setTimeout(function() {
+                let alert = document.getElementById('error-message');
+                if (alert) {
+                    alert.classList.add('hidden'); // Triggers the fade-out transition
+                    // Remove the element from DOM after fadeout (optional)
+                    setTimeout(function() {
+                        alert.style.display = 'none';
+                    }, 500); // match the CSS transition duration (0.5s)
+                }
+            }, 4000);
+        </script>
+    @endif
+    <div class="content">
+        <div class="page-header">
+            <div class="page-title">
+                <h4>All Sales & Bills</h4>
+                <!-- <h6>Manage your sales</h6> -->
+            </div>
+            <div class="page-btn d-flex">
+                 @if (app('hasPermission')(2, 'add'))
+                    {{-- <a href="{{ route('sales.import') }}" class="btn btn-sm btn-added me-2">
+                        <i class="fas fa-file-import me-1"></i> Import
+                    </a> --}}
+                    <a href="{{ route('sales.add', ['sale_type' => 'sales']) }}" class="btn btn-sm btn-added"><img
+                            src="{{ env('ImagePath') . 'admin/assets/img/icons/plus.svg' }}" alt="img" class="me-1">New
+                        Sales</a>
+                @endif
+            </div>
+        </div>
+
+        <div class="sl-quick-links d-md-none">
+            <div class="sl-quick-head">
+                <div class="sl-quick-title">All Sales &amp; Bills</div>
+                @if (app('hasPermission')(2, 'add'))
+                    <div class="sl-quick-actions">
+                        {{-- <a href="{{ route('sales.import') }}" class="btn btn-sm btn-added">
+                            <i class="fas fa-file-import me-1"></i> Import
+                        </a> --}}
+                        <a href="{{ route('sales.add', ['sale_type' => 'sales']) }}" class="btn btn-sm btn-added">
+                            <i class="fas fa-plus me-1"></i> New Sales
+                        </a>
+                    </div>
+                @endif
+            </div>
+            <div id="slSummarySlot"></div>
+        </div>
+
+        @if (app('hasPermission')(2, 'add'))
+            <a href="{{ route('sales.add', ['sale_type' => 'sales']) }}" class="sl-fab-new-sale d-md-none">
+                <i class="fas fa-rupee-sign"></i> Add New Sale
+            </a>
+        @endif
+
+        <div class="sl-filter-backdrop d-md-none" id="slFilterBackdrop"></div>
+        <div class="sl-filter-sheet d-md-none" id="slFilterSheet" role="dialog" aria-modal="true" aria-labelledby="slFilterSheetTitle">
+            <div class="sl-filter-sheet-head">
+                <span id="slFilterSheetTitle">Filter By</span>
+                <button type="button" class="sl-filter-sheet-close" id="slFilterSheetClose" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="sl-filter-sheet-body" id="slFilterSheetBody"></div>
+            <div class="sl-filter-sheet-foot">
+                <button type="button" class="sl-filter-clear" id="slFilterClear">Clear</button>
+                <button type="button" class="sl-filter-apply" id="slFilterApply">Apply</button>
+            </div>
+        </div>
+
+        <div id="posBillDraftsBanner" class="alert alert-warning d-none align-items-center justify-content-between mb-3" role="alert" style="border-radius: 8px;">
+            <div>
+                <strong><i class="fas fa-file-alt me-1"></i> Saved bill drafts:</strong>
+                <span id="posBillDraftsBannerText">You have saved bill draft(s).</span>
+                <span class="d-block small text-muted mt-1">Drafts are not listed here. Open New Sales to restore and continue billing.</span>
+            </div>
+            <a href="{{ route('sales.add', ['sale_type' => 'sales']) }}" class="btn btn-sm btn-added ms-3 text-nowrap">Open Drafts</a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+
+                <!-- Top Search and Date Filter Row -->
+
+                <div class="table-top mb-3 sales-filter-toolbar">
+                    <div class="row w-100 align-items-center">
+                        <!-- Search -->
+                        <div class="col-md-2 col-12 mb-1 mb-md-0 filter-field filter-search">
+                            {{-- <div class="search-set w-100">
+                                <div class="search-path"></div>
+                                <div class="search-input d-flex align-items-center" style="width:170px;">
+                                    <a class="btn btn-searchset">
+                                        <img src="{{ env('ImagePath') . 'admin/assets/img/icons/search-white.svg' }}"
+                                            alt="img">
+                                    </a>
+                                    <input type="text" id="sales-search-input" class="form-control mb-1"
+                                        style="height:30px" placeholder="Search...">
+                                </div>
+                            </div> --}}
+                            <div class="search-set">
+                                <!-- Your existing filters -->
+                                <div class="search-input mb-2">
+                                    <a class="btn btn-searchset">
+                                        <img src="{{ env('ImagePath') . 'admin/assets/img/icons/search-white.svg' }}"
+                                            alt="img">
+                                    </a>
+                                    <input type="text" id="search-input" class="form-control" placeholder="Search..."
+                                        style="height: 30px;">
+                                </div>
+                            </div>
+                            <button type="button" id="salesFilterToggle" class="sales-filter-toggle d-md-none" aria-expanded="false" aria-label="Filters" title="Filters">
+                                <i class="fas fa-filter"></i>
+                                <span class="sales-filter-count d-none" id="salesFilterCount">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Month Filter -->
+                        <div class="col-md-2 col-6 filter-field">
+                            <div class="mb-1 custom-select2">
+                                <!-- <label for="filter-month" class="form-label">Month</label> -->
+                                <select id="filter-month" data-placeholder="All Months"
+                                    class="form-control form-control-sm filter-select2">
+                                    <option value="all">All Months</option>
+                                    @for ($m = 1; $m <= 12; $m++)
+                                        <option value="{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}">
+                                            {{ DateTime::createFromFormat('!m', $m)->format('F') }}
+                                        </option>
+                                    @endfor
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Year Filter -->
+                        <div class="col-md-2 col-6 filter-field">
+                            <div class="mb-1 custom-select2">
+                                <!-- <label for="filter-year" class="form-label">Year</label> -->
+                                <select id="filter-year" data-placeholder="All Years"
+                                    class="form-control form-control-sm filter-select2">
+                                    <option value="all">All Years</option>
+                                    @foreach ($years as $year)
+                                        <option value="{{ $year }}">{{ $year }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-2 col-6 filter-field {{ ($financialYearEnabled ?? true) ? '' : 'd-none' }}"
+                            id="sales-financial-year-filter">
+                            <div class="mb-1">
+                                <select id="filter-financial-year" class="form-control form-control-sm">
+                                    <option value="all">All Financial Years</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        @if (($staffList ?? collect())->count())
+                        <!-- Staff Filter -->
+                        <div class="col-md-2 col-6 filter-field">
+                            <div class="mb-1 custom-select2">
+                                <select id="filter-staff" class="form-control form-control-sm filter-select2" data-placeholder="All Staff">
+                                    <option value="all">All Staff</option>
+                                    @foreach ($staffList as $staff)
+                                        <option value="{{ $staff->id }}">{{ $staff->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        @endif
+
+                        <!-- Date Filter -->
+                        <!-- <div class="col-md-2 col-6">
+                                                                                                            <div class="form-group mb-0">
+                                                                                                                <label for="filter-date" class="form-label">Date</label>
+                                                                                                                <input type="text" id="filter-date" placeholder="Choose Date"
+                                                                                                                    class="datetimepicker form-control form-control-sm">
+                                                                                                            </div>
+                                                                                                        </div> -->
+                        <!-- Date -->
+                        <div class="col-md-2 col-6 filter-field">
+                            <!-- <div class="form-group mb-0"> -->
+                            <!-- <label for="filter-date" class="form-label">Date</label> -->
+                            <input type="text" id="filter-date" placeholder="Choose Date"
+                                class="datetimepicker form-control form-control-sm filter-date-input">
+                            <!-- </div> -->
+                        </div>
+
+                        <!-- Order Type Filter -->
+                        @if(!isset($setting) || ($setting->show_order_type ?? true))
+                        <div class="col-md-2 col-6 filter-field">
+                            <div class="mb-1 custom-select2">
+                                <select id="filter-order-type" class="form-control form-control-sm filter-select2"
+                                    data-placeholder="All Order Types">
+                                    <option value="all">All Order Types</option>
+                                    <option value="self_pickup">Self Pickup</option>
+                                    <option value="delivery">Delivery</option>
+                                </select>
+                            </div>
+                        </div>
+                        @endif
+
+                        
+                        <!-- Status Filter -->
+                        <div class="col-md-2 col-6 filter-field">
+                            <div class="mb-1 custom-select2">
+                                <select id="filter-status" class="form-control form-control-sm filter-select2"
+                                    data-placeholder="All Statuses">
+                                    <option value="all">All Statuses</option>
+                                    <option value="sales">Sales</option>
+                                    <option value="quotation">Quotation</option>
+                                    @if(optional(\App\Models\Setting::first())->rental)
+                                    <option value="rental">Rental</option>
+                                    @endif
+                                    @if(optional(\App\Models\Setting::first())->advance_receipt)
+                                    <option value="advance_receipt">Advance Receipt</option>
+                                    @endif
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Sort Filter -->
+                        <div class="col-md-2 col-6 filter-field">
+                            <div class="mb-1 custom-select2">
+                                <select id="filter-sort" class="form-control form-control-sm filter-select2"
+                                    data-placeholder="Sort By">
+                                    <option value="date_desc">Latest First</option>
+                                    <option value="date_asc">Oldest First</option>
+                                    <option value="order_no_asc">Order No. 1 to Last</option>
+                                    <option value="order_no_desc">Order No. Last to 1</option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                @if (in_array(auth()->user()->role, ['admin', 'sub-admin', 'staff']))
+                    <div class="summary-badges-row">
+                        <div class="summary-badge-box pending">
+                            <span>Total Pending:</span>
+                            <span id="filtered-pending-total">₹0.00</span>
+                        </div>
+                        <div class="summary-badge-box paid">
+                            <span>Total Paid:</span>
+                            <span id="filtered-paid-total">₹0.00</span>
+                        </div>
+                        <!-- <div class="summary-badge-box" style="color: #1b2850; border-color: #c5cde0; background: #f4f6fb;"> -->
+                            <div class="summary-badge-box total">
+                            <span>Total:</span>
+                            <span id="filtered-total" style="color: #ff9f43; font-weight: 700; margin-left: 4px;">₹0.00</span>
+                        </div>
+                        <div class="summary-export-group">
+                            <button id="exportAllChallan" class="btn btn-sm btn-success">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </button>
+                            <button id="exportPdf" class="btn btn-sm btn-danger">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="summary-badges-row">
+                        <div class="summary-export-group">
+                            <button id="exportAllChallan" class="btn btn-sm btn-success">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </button>
+                            <button id="exportPdf" class="btn btn-sm btn-danger">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Filter Inputs Card -->
+                {{-- <div class="card" id="filter_inputs">
+                    <div class="card-body pb-0">
+                        <div class="row">
+                            <div class="col-lg-3 col-sm-6 col-12">
+                                <div class="form-group">
+                                    <input type="text" placeholder="Enter Name" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-sm-6 col-12">
+                                <div class="form-group">
+                                    <input type="text" placeholder="Enter Reference No" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-sm-6 col-12">
+                                <div class="form-group custom-select2">
+                                    <select class="form-select">
+                                        <option>Completed</option>
+                                        <option>Paid</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-sm-6 col-12">
+                                <div class="form-group d-flex justify-content-end">
+                                    <a class="btn btn-filters ms-auto">
+                                        <img src="admin/assets/img/icons/search-whites.svg" alt="img">
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> --}}
+                <div class="table-scroll-top"
+                    style="overflow-x: auto; overflow-y: hidden; height: 20px; margin-bottom: 5px;">
+                    <div style="height: 1px;"></div> <!-- Adjust width to match your table width -->
+                </div>
+                <!-- Orders Table -->
+                <div class="table-responsive mt-3" style="overflow-x: auto;">
+                    <table class="table datanew" id="order-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Order No.</th>
+                                <th class="">Details</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Status</th>
+                                <th>Payment Status</th>
+                                {{-- <th>Return Status</th> --}}
+                                <th>Total</th>
+                                @if(!isset($setting) || ($setting->show_assign_staff ?? true))
+                                <th>Assigned Staff</th>
+                                @endif
+                                @if(!isset($setting) || ($setting->show_order_type ?? true))
+                                <th>Order Type</th>
+                                @endif
+                                <th>Biller</th>                                @if(isset($setting) && $setting->enable_einvoice == 1)
+                                <th>E-Invoice</th>
+                                @endif
+                                <th class="text-center">Action</th>                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS will populate this -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile Order Cards -->
+                <div class="mobile-order-card mt-3" id="mobile-order-container">
+                    <!-- JS will populate this -->
+                </div>
+
+                <div
+                    class="pagination-controls d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+                    <div class="d-flex align-items-center mb-3 mb-md-0">
+                        <span class="me-2" style="font-size: 14px; color: #555;">Show per page :</span>
+                        <select id="sales-per-page-select" class="form-select form-select-sm"
+                            style="width: auto; border: 1px solid #ddd;">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="ms-3" style="font-size: 14px; color: #555;">
+                            <span id="sales-pagination-from">0</span> - <span id="sales-pagination-to">0</span> of
+                            <span id="sales-pagination-total">0</span> items
+                        </span>
+                    </div>
+                    <nav aria-label="Sales pagination">
+                        <ul class="pagination pagination-sm mb-0" id="sales-pagination-numbers"></ul>
+                    </nav>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    <form id="makePaymentForm" novalidate>
+        <div class="modal fade" id="makePaymentModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body">
+
+                        <div class="text-end mb-3">
+                            <button type="button" class="btn btn-sm btn-cancel text-white" id="viewHistoryBtn">View
+                                Payment History</button>
+                        </div>
+
+                        <!-- ✅ Payment History Container -->
+                        <div id="paymentHistoryBox" class="border p-2 rounded bg-white d-none mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Payment History</h6>
+
+                                <!-- 👇 Visible Close Button -->
+                                <button type="button" class="btn btn-sm btn-danger" id="closeHistoryBtn">
+                                    x <!-- This renders an “×” symbol -->
+                                </button>
+                            </div>
+
+                            <ul id="paymentHistoryList" class="list-unstyled mb-0"
+                                style="max-height: 200px; overflow-y: auto;">
+                                <!-- Populated via JavaScript -->
+                            </ul>
+                        </div>
+
+
+
+                        <div class="border p-2 rounded bg-light">
+                            <strong>Total Amount:</strong> ₹<span id="emiTotal"></span><br>
+                            <div id="returnAmountSection" class="d-none">
+                                <strong>Return Amount:</strong> ₹<span id="returnAmountDisplay">0.00</span><br>
+                            </div>
+                            <strong>Remaining Amount:</strong> ₹<span id="remainingAmountDisplay">0.00</span>
+
+                        </div>
+
+                        <!-- ✅ View Payment History Button -->
+
+
+
+
+
+                        <!-- Payment Method -->
+                        <div class="mb-3" id="paymentMethodDiv">
+                            <label for="paymentMethodSelect" class="form-label">Select Payment Method</label>
+                            <select class="form-select" id="paymentMethodSelect" name="payment_method">
+                                <option value="" selected disabled>Select</option>
+                                @if (isPaymentMethodEnabled('cash'))
+                                <option value="cash">Cash</option>
+                                @endif
+                                @if (isPaymentMethodEnabled('debit card') || isPaymentMethodEnabled('scan'))
+                                <option value="online">Online</option>
+                                @endif
+                                @if (isPaymentMethodEnabled('cash+online') || isPaymentMethodEnabled('cash_online'))
+                                <option value="cash_online">Cash + Online</option>
+                                @endif
+                                @if (isPaymentMethodEnabled('emi'))
+                                <option value="emi">EMI</option>
+                                @endif
+                            </select>
+                            <div class="text-danger" id="paymentMethodError"></div>
+                        </div>
+
+                        <div class="mb-3 d-none" id="cashOnlineTypeDiv">
+                            <label for="cashOnlineTypeSelect" class="form-label">Select Cash + Online Type</label>
+                            <select class="form-select" id="cashOnlineTypeSelect" name="cash_online_type">
+                                <option value="" selected disabled>Select</option>
+                                <option value="cash_online_fully">Cash + Online Fully</option>
+                                <option value="cash_online_partially">Cash + Online Partially</option>
+                            </select>
+                            <div class="text-danger" id="cashOnlineTypeError"></div>
+                        </div>
+
+                        <!-- Fully Cash + Online -->
+                        <!-- Fully Cash + Online -->
+                        <div class="mb-3 d-none" id="fullyCashOnlineFields">
+                            <label>Cash Amount</label>
+                            <input type="number" id="cashOnlineFullAmount" name="fully_cash_amount"
+                                class="form-control" min="0" step="0.01">
+                            <div class="text-danger" id="cashOnlineFullAmountError"></div>
+                            <label class="mt-2">Online Amount</label>
+                            <input type="number" id="upiOnlineFullAmount" name="full_online_amount"
+                                class="form-control" readonly>
+                            <div class="text-danger" id="upiOnlineFullAmountError"></div>
+                        </div>
+
+                        <!-- Partial Cash + Online -->
+                        <div class="mb-3 d-none" id="partialCashOnlineFields">
+                            <label>Cash Amount</label>
+                            <input type="number" id="cashOnlinePartialAmount" name="cash_amount" class="form-control"
+                                min="0" step="0.01">
+                            <div class="text-danger" id="cashOnlinePartialAmountError"></div>
+                            <label class="mt-2">Online Amount</label>
+                            <input type="number" id="upiOnlinePartialAmount" name="online_amount" class="form-control"
+                                min="0" step="0.01">
+                            <div class="text-danger" id="upiOnlinePartialAmountError"></div>
+                            <label class="mt-2">Remaining Amount</label>
+                            <input type="number" id="remainingCashOnlineAmount" name="remaining_amount"
+                                class="form-control" readonly>
+                        </div>
+
+
+
+
+
+
+
+                        <div class="mb-3 d-none" id="onlineTypeDiv">
+                            <label for="onlineTypeSelect" class="form-label">Select Online Type</label>
+                            <select class="form-select" id="onlineTypeSelect" name="online_type">
+                                <option value="" selected disabled>Select</option>
+                                <option value="online_fully">Online Fully</option>
+                                <option value="online_partially">Online Partially</option>
+                            </select>
+                            <div class="text-danger" id="onlineTypeError"></div>
+                        </div>
+
+                        <!-- Paid Type Dropdown (Hidden by default) -->
+                        <div class="mb-3 d-none" id="paidTypeDiv">
+                            <label for="paidTypeSelect" class="form-label">Paid Type</label>
+                            <select class="form-select" id="paidTypeSelect" name="paid_type">
+                                <option value="" selected disabled>Select</option>
+                                <option value="cash_partially">Cash Partially</option>
+                                <option value="cash_fully">Cash Fully</option>
+                            </select>
+                            <div class="text-danger" id="paidTypeError"></div>
+                        </div>
+
+                        <!-- UPI Amount Input -->
+                        <div class="mb-3 d-none" id="upiAmountDiv">
+                            <label for="upiAmountInput" class="form-label">Online Amount</label>
+                            <input type="number" class="form-control" id="upiAmountInput" name="upi_online_amount"
+                                readonly>
+                            <div class="text-danger" id="upiAmountError"></div>
+                        </div>
+
+
+
+                        <!-- Partially Paid Fields -->
+                        <div class="mb-3 d-none" id="partialPaidFields">
+                            <label for="partialAmount" class="form-label">Enter Amount</label>
+                            <input type="number" class="form-control mb-2" id="partialAmount" name="amount"
+                                min="1" step="0.01">
+                            <div class="text-danger" id="partialAmountError"></div>
+
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                <div style="flex: 1;">
+                                    <label for="pendingAmount" class="form-label">Pending Amount</label>
+                                    <input type="number" class="form-control" id="pendingAmount"
+                                        name="cash_pending_amount" readonly>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="mb-3 d-none" id="bank_container">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="bank_id" class="form-label mb-0">Select Bank</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="openAddBankModal">
+                                    Add Bank
+                                </button>
+                            </div>
+                            <select name="bank_id" id="bank_id" class="form-select">
+                                <option value="">Select Bank</option>
+                                @foreach ($banks as $bank)
+                                    <option value="{{ $bank->id }}">{{ $bank->bank_name }}</option>
+                                @endforeach
+                            </select>
+                            <div class="text-danger" id="bankError"></div>
+                        </div>
+
+                        <div class="mb-3 d-none" id="emiMonthDiv">
+                            <label for="emiMonthSelect" class="form-label">EMI Month</label>
+                            <select class="form-select" id="emiMonthSelect" name="emi_month">
+                                <option value="" selected disabled>Select EMI Month</option>
+                            </select>
+                            <div class="text-danger" id="emiMonthError"></div>
+                        </div>
+
+                        <div class="mb-3 d-none" id="emiMonthlyAmountDiv">
+                            <label for="emiMonthlyAmountInput" class="form-label">Monthly EMI</label>
+                            <input type="number" class="form-control" id="emiMonthlyAmountInput"
+                                name="emi_monthly_amount" readonly>
+                            <div class="text-danger" id="emiMonthlyAmountError"></div>
+                        </div>
+
+                        <div id="emiBox" style="display:none; margin-bottom: 1rem;">
+                            <div class="row g-2">
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Down Payment (Optional)</label>
+                                        <input type="number" class="form-control" id="emiDownPayment" name="emi_down_payment" placeholder="₹ Amount" min="0" step="0.01">
+                                        <small class="text-danger d-none" id="emiDownPaymentError"></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Loan Amount</label>
+                                        <input type="number" class="form-control" id="emiLoanAmount" name="emi_loan_amount" placeholder="Auto Calculate" min="0" step="0.01" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">EMI Tenure</label>
+                                        <select class="form-select" id="emiTenure" name="emi_tenure">
+                                            <option value="">Select Tenure</option>
+                                            <option value="3">3 Months</option>
+                                            <option value="6">6 Months</option>
+                                            <option value="9">9 Months</option>
+                                            <option value="12">12 Months</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+                                        <small class="text-danger d-none" id="emiTenureError"></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6 d-none" id="emiCustomTenureCol">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Custom Tenure (Months)</label>
+                                        <input type="number" class="form-control" id="emiCustomTenure" name="emi_custom_tenure" min="1" max="120" step="1" placeholder="Enter months">
+                                        <small class="text-danger d-none" id="emiCustomTenureError"></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Interest Rate (%) <small class="text-muted">Optional</small></label>
+                                        <input type="number" class="form-control" id="emiInterestRate" name="emi_interest_rate" value="0" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Monthly EMI</label>
+                                        <input type="number" class="form-control" id="emiBoxMonthlyAmount" name="emi_box_monthly_amount" placeholder="Auto Calculate" min="0" step="0.01" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Aadhar Number</label>
+                                        <input type="text" class="form-control" id="emiAadharNumber" name="emi_aadhar_number" placeholder="Customer Aadhar Number">
+                                        <small class="text-danger d-none" id="emiAadharError"></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">DO ID <small class="text-muted"></small></label>
+                                        <input type="text" class="form-control" id="emiDoId" name="emi_do_id" placeholder="DO ID">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">PAN Number <small class="text-muted">Optional</small></label>
+                                        <input type="text" class="form-control" id="emiPanNumber" name="emi_pan_number" placeholder="PAN Number">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-6">
+                                    <div class="form-group mb-3">
+                                        <label class="form-label">Guarantor Name <small class="text-muted">Optional</small></label>
+                                        <input type="text" class="form-control" id="emiGuarantorName" name="emi_guarantor_name" placeholder="Guarantor Name">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fully Paid Fields -->
+                        <div class="mb-3 d-none" id="fullyPaidFields">
+                            <label class="form-label">Cash Amount</label>
+                            <input type="number" class="form-control" id="cashAmount" name="cashAmount" min="0"
+                                step="0.01">
+                            <div class="text-danger" id="cashAmountError"></div>
+                        </div>
+
+                        <!-- Payment Date -->
+                        <div class="mb-3">
+                            <label for="paymentDate" class="form-label">Payment Date</label>
+                            <input type="date" class="form-control" id="paymentDate" name="payment_date" value="{{ date('Y-m-d') }}">
+                            <div class="text-danger" id="paymentDateError"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="paymentRemarks" class="form-label">Remark</label>
+                            <input type="text" class="form-control" id="paymentRemarks" name="remarks"
+                                placeholder="Enter remark">
+                            <div class="text-danger" id="paymentRemarksError"></div>
+                        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        <!-- Cleaned Hidden Inputs (no duplicate name attributes) -->
+                        <input type="hidden" id="paymentJobCardId" name="order_id">
+                        <input type="hidden" id="remainingAmountHidden" name="remaining_amount">
+                        <input type="hidden" id="paymentMethodHidden" name="payment_type">
+
+
+
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-submit text-white"
+                                style="background-color: #ff9f43;">Submit Payment</button>
+                            <button type="button" class="btn btn-secondary btn-cancel"
+                                data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <div class="modal fade" id="emiDetailsModal" tabindex="-1" aria-labelledby="emiDetailsModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="emiDetailsModalLabel">EMI Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body">
+                    <div class="emi-summary-panel">
+                        <div class="emi-summary-top">
+                            <div>
+                                <div class="emi-summary-title">EMI Account</div>
+                                <div class="emi-summary-order" id="emiOrderNumber">-</div>
+                                <div class="emi-summary-customer">
+                                    Customer: <span id="emiCustomerName">-</span>
+                                </div>
+                            </div>
+                            <div class="emi-summary-pill">
+                                <i class="bi bi-calendar3"></i>
+                                <span id="emiNextDueLabel">Next due: -</span>
+                            </div>
+                        </div>
+
+                        <div class="emi-info-grid">
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">EMI Tenure</span>
+                                <div class="emi-info-value" id="emiTenureValue">-</div>
+                            </div>
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">Monthly EMI</span>
+                                <div class="emi-info-value" id="emiMonthlyAmountValue">-</div>
+                            </div>
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">Down Payment</span>
+                                <div class="emi-info-value" id="emiDownPaymentValue">-</div>
+                            </div>
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">Loan Amount</span>
+                                <div class="emi-info-value" id="emiLoanAmountValue">-</div>
+                            </div>
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">Interest Rate</span>
+                                <div class="emi-info-value" id="emiInterestRateValue">-</div>
+                            </div>
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">Guarantor Name</span>
+                                <div class="emi-info-value" id="emiGuarantorValue">-</div>
+                            </div>
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">Aadhar Number</span>
+                                <div class="emi-info-value" id="emiAadharValue">-</div>
+                            </div>
+                            <div class="emi-info-card">
+                                <span class="emi-info-label">PAN Number</span>
+                                <div class="emi-info-value" id="emiPanValue">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="emi-schedule-panel">
+                        <div class="emi-schedule-header">
+                            <h6 class="mb-0">Month Wise EMI Details</h6>
+                            <span class="emi-next-due" id="emiNextDueSchedule"></span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 20%;">Month</th>
+                                        <th style="width: 20%;">Status</th>
+                                        <th style="width: 20%;">Amount</th>
+                                        <th style="width: 20%;">Paid On</th>
+                                        <th style="width: 20%;">Remark</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="emiMonthWiseBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">No EMI data loaded.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="addBankModal" tabindex="-1" aria-labelledby="addBankModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="addBankForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addBankModalLabel">Add Bank</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label for="add_bank_name" class="form-label">Bank Name</label>
+                                <input type="text" class="form-control" id="add_bank_name" name="bank_name">
+                                <div class="text-danger small" id="addBankNameError"></div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="add_account_number" class="form-label">Account Number</label>
+                                <input type="text" class="form-control" id="add_account_number" name="account_number">
+                                <div class="text-danger small" id="addAccountNumberError"></div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="add_ifsc_code" class="form-label">IFSC Code</label>
+                                <input type="text" class="form-control" id="add_ifsc_code" name="ifsc_code">
+                                <div class="text-danger small" id="addIfscCodeError"></div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="add_branch_name" class="form-label">Branch Name</label>
+                                <input type="text" class="form-control" id="add_branch_name" name="branch_name">
+                                <div class="text-danger small" id="addBranchNameError"></div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="add_opening_balance" class="form-label">Opening Balance</label>
+                                <input type="number" class="form-control" id="add_opening_balance"
+                                    name="opening_balance" min="0" step="0.01" value="0">
+                                <div class="text-danger small" id="addOpeningBalanceError"></div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="add_bank_status" class="form-label">Status</label>
+                                <select class="form-select" id="add_bank_status" name="status">
+                                    <option value="1" selected>Active</option>
+                                    <option value="0">Inactive</option>
+                                </select>
+                                <div class="text-danger small" id="addBankStatusError"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-submit text-white" id="saveBankBtn"
+                            style="background-color: #ff9f43;">Save Bank</button>
+                        <button type="button" class="btn btn-secondary btn-cancel"
+                            data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Global Payment History Modal -->
+    <div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-labelledby="paymentHistoryLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="paymentHistoryLabel">Payment History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body">
+                    <ul id="globalPaymentHistoryList" class="list-group payment-history-list"></ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editPaymentHistoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPaymentHistoryForm" class="payment-edit-form">
+                        <input type="hidden" id="editPaymentId">
+                        <input type="hidden" id="editPaymentOrderId">
+                        <input type="hidden" id="editPaymentOrderTotal">
+                        <input type="hidden" id="editPaymentOriginalRemaining">
+                        <div class="payment-edit-summary-box">
+                            <div><strong>Total Amount:</strong> <span id="editPaymentOrderTotalText">₹0.00</span></div>
+                            <div><strong>Remaining Amount:</strong> <span id="editPaymentOriginalRemainingText">₹0.00</span></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Date</label>
+                            <input type="date" class="form-control" id="editPaymentDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Payment Method</label>
+                            <select class="form-select" id="editPaymentMethod" required>
+                                <option value="cash">Cash</option>
+                                <option value="online">Online</option>
+                                <option value="cash_online">Cash + Online</option>
+                                <option value="emi">EMI</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Paid Type</label>
+                            <select class="form-select" id="editPaymentType">
+                                <option value="">Select</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Enter Amount</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="editPaymentAmount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Pending Amount</label>
+                            <input type="text" class="form-control" id="editPaymentPendingAmount" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Remark</label>
+                            <textarea class="form-control" id="editPaymentRemarks" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning text-white" id="savePaymentHistoryEditBtn">Update Payment</button>
+                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="downloadLoaderOverlay" class="download-loader-overlay d-none" aria-live="polite" aria-busy="true">
+        <div class="download-loader-box">
+            <h4 id="downloadLoaderText">Generating PDF...</h4>
+            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+        </div>
+    </div>
+
+    <!-- QR Upload Modal -->
+    <div class="modal fade" id="qrUploadModal" tabindex="-1" aria-labelledby="qrUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="qrUploadModalLabel">Upload Custom QR Code</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body">
+                    <form id="qrUploadForm" enctype="multipart/form-data">
+                        @csrf
+                        <input type="hidden" name="order_id" id="qrOrderId">
+                        <div class="mb-3">
+                            <label for="qr_code_image" class="form-label">Select QR Image</label>
+                            <input class="form-control" type="file" id="qr_code_image" name="qr_code_image" accept="image/*" required>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="qrUploadBtn">Upload</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- E-Invoice Details Modal -->
+    <style>
+    .einvoice-modal-header {
+        flex-direction: column;
+        align-items: center;
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .einvoice-check-icon {
+        width: 60px;
+        height: 60px;
+        background-color: #e8f5e9;
+        color: #4caf50;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        margin-bottom: 15px;
+        border: 3px solid #4caf50;
+    }
+    .einvoice-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-weight: bold;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .einvoice-warning {
+        color: #ff9800;
+        font-size: 13px;
+        margin-top: 10px;
+        text-align: center;
+    }
+    .einvoice-details-table {
+        width: 100%;
+        margin-top: 20px;
+    }
+    .einvoice-details-table td {
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f1f1;
+    }
+    .einvoice-details-table td:first-child {
+        color: #666;
+        font-weight: 500;
+    }
+    .einvoice-details-table td:last-child {
+        text-align: right;
+        font-weight: bold;
+        color: #333;
+    }
+    </style>
+    <div class="modal fade" id="einvoiceDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;">
+            <div class="modal-content">
+                <div class="modal-header einvoice-modal-header">
+                    <!-- <div class="einvoice-check-icon">
+                        <i class="fas fa-check"></i>
+                    </div> -->
+                    <h4 class="modal-title mb-3">E-Invoice Details</h4>
+                    <div class="einvoice-badge">
+                        <i class="fas fa-check-square"></i> E-Invoice Saved to Database <span class="badge bg-success ms-1">New</span>
+                    </div>
+                    <div class="einvoice-warning" id="einvoiceWarning">
+                        <i class="fas fa-exclamation-triangle"></i> IRP API not configured. E-Invoice marked without IRN. Go to Settings -> E-Invoice Settings to configure.
+                    </div>
+                </div>
+                <div class="modal-body pt-0 pb-4 px-4">
+                    <table class="einvoice-details-table">
+                        <tr>
+                            <td>Order No.</td>
+                            <td id="einvOrderNo">-</td>
+                        </tr>
+                        <tr>
+                            <td>IRN</td>
+                            <td id="einvIrn">-</td>
+                        </tr>
+                        <tr>
+                            <td>Ack. No.</td>
+                            <td id="einvAckNo">-</td>
+                        </tr>
+                        <tr>
+                            <td>Ack. Date</td>
+                            <td id="einvAckDate">-</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <button type="button" class="btn btn-primary     text-white px-4" id="einvDownloadBtn"><i class="fas fa-download"></i> Download PDF</button>
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Products Modal -->
+    <div class="modal fade" id="orderProductsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Product Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderProductsList">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice print preview (F10 to print) -->
+    <div class="modal fade" id="salesInvoicePrintModal" tabindex="-1" aria-labelledby="salesInvoicePrintModalLabel"
+        aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+        <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-centered sales-invoice-print-dialog">
+            <div class="modal-content sales-invoice-print-content d-flex flex-column">
+                <div class="modal-header py-2 flex-shrink-0">
+                    <div class="pe-2">
+                        <h5 class="modal-title mb-0" id="salesInvoicePrintModalLabel">
+                            <span class="d-none d-md-inline">Print Invoice</span>
+                            <span class="d-md-none">Invoice Printing</span>
+                        </h5>
+                        <small class="text-muted d-none d-md-inline">Select printer → Press <kbd>F10</kbd> or Print</small>
+                        <small class="text-muted d-md-none">Choose a printer, then Print.</small>
+                    </div>
+                    @if(isset($setting) && $setting->invoice_size === 'small')
+                    @php $preferredInvTpl = invoice_print_js_prefs()['template'] ?? 1; @endphp
+                    <div class="d-flex gap-1 ms-3 mt-2 align-items-center flex-grow-1 justify-content-center" id="pdfTemplateButtons"
+                         data-preferred-template="{{ $preferredInvTpl }}">
+                        <span class="text-muted small fw-semibold me-1">Format:</span>
+                        <button type="button" class="btn btn-sm btn-primary py-0 px-2 pdf-format-btn" data-template="1" onclick="loadPdfTemplate(1, this)" title="Template 1 — Cash sale bill">T1</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 pdf-format-btn" data-template="2" onclick="loadPdfTemplate(2, this)" title="Template 2">T2</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 pdf-format-btn" data-template="3" onclick="loadPdfTemplate(3, this)" title="Template 3">T3</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 pdf-format-btn" data-template="4" onclick="loadPdfTemplate(4, this)" title="Template 4">T4</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 pdf-format-btn" data-template="5" onclick="loadPdfTemplate(5, this)" title="Template 5">T5</button>
+                    </div>
+                    @endif
+                    <button type="button" class="btn btn-outline-secondary btn-sm invoice-preview-toggle" title="Back to preview" aria-label="Back to preview">
+                        <i class="fa fa-arrow-left"></i>
+                        <span>Preview</span>
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body p-0 sales-invoice-print-body flex-grow-1">
+                    <div class="phone-print-panel d-md-none" data-select="#salesPrinterSelect" data-status="#salesQzStatus" data-storage="posSelectedPrinter" data-bt="#salesBtPrinterList">
+                        <div class="phone-print-tabs">
+                            <button type="button" class="phone-print-tab is-active" data-tab="bt">Bluetooth</button>
+                            <button type="button" class="phone-print-tab" data-tab="wifi">WIFI</button>
+                        </div>
+                        <div id="salesBtPrinterList" class="bt-printer-list" data-print-pane="bt">
+                            <div class="bt-printer-empty">Tap Show printers and choose the receipt printer.</div>
+                        </div>
+                        <div id="salesWifiPrinterList" class="bt-printer-list d-none" data-print-pane="wifi">
+                            <div class="bt-printer-empty">Looking for the Wi‑Fi printer…</div>
+                        </div>
+                    </div>
+                    <div class="invoice-print-preview">
+                    <div class="sales-invoice-print-loading" id="salesInvoicePrintLoading" aria-live="polite">
+                        <div class="spinner-border" role="status" aria-hidden="true"></div>
+                        <span>Loading invoice...</span>
+                    </div>
+                    <iframe id="salesInvoicePrintFrame" title="Invoice preview" src="about:blank"></iframe>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 sales-invoice-print-footer flex-shrink-0">
+                    <div class="sales-invoice-print-footer-inner w-100">
+                        <div class="sales-invoice-print-footer-controls">
+                            <label class="mb-0 small text-muted text-nowrap" for="salesPrinterSelect">Printer</label>
+                            <select id="salesPrinterSelect" class="form-select form-select-sm sales-invoice-printer-select">
+                                <option value="">Connecting…</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="salesRefreshPrintersBtn" title="Refresh printer list">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm d-none d-md-inline-block desktop-bt-print-btn" data-select="#salesPrinterSelect" data-status="#salesQzStatus" data-storage="posSelectedPrinter" title="Choose a nearby Bluetooth printer">
+                                Bluetooth
+                            </button>
+                            <div class="form-check mb-0 d-flex align-items-center gap-1">
+                                <input class="form-check-input" type="checkbox" id="salesThermalAutoCut">
+                                <label class="form-check-label small" for="salesThermalAutoCut">Auto cut</label>
+                            </div>
+                            <div class="form-check mb-0 d-flex align-items-center gap-1" title="Bluetooth only: prints as printer text (much faster). Turn off to print the exact invoice image.">
+                                <input class="form-check-input bt-fast-print-toggle" type="checkbox" id="salesBtFastPrint" checked>
+                                <label class="form-check-label small" for="salesBtFastPrint">Fast print</label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="salesPrintHindi">
+                                <label class="form-check-label small" for="salesPrintHindi">Print in Hindi</label>
+                            </div>
+                            <span class="small text-nowrap" id="salesQzStatus" style="color:#6c757d;" title="helper"></span>
+                            <a href="https://qz.io/download/" target="_blank" rel="noopener" class="small" id="salesQzInstallLink" style="display:none;">Install QZ Tray</a>
+                            <a href="{{ url('/qz/install-qz-trust.bat') }}" class="small text-nowrap d-none d-md-inline" id="salesQzTrustLink" title="Fixes Allow disabled when Remember is checked">Fix Allow</a>
+                        </div>
+                        <div class="sales-invoice-print-footer-actions">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="salesInvoicePrintBtn" disabled>
+                                Print (F10)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Original-style scrollable preview; footer Print stays visible */
+        .sales-invoice-print-dialog {
+            max-width: 920px;
+            margin: 1rem auto;
+        }
+
+        .sales-invoice-print-content {
+            overflow: hidden;
+            max-height: calc(100vh - 2rem);
+            max-height: calc(100dvh - 2rem);
+        }
+
+        .sales-invoice-print-body {
+            height: min(78vh, 820px);
+            background: #f3f4f6;
+            position: relative;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .sales-invoice-print-body iframe {
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
+            border: 0;
+            display: block;
+            background: #fff;
+        }
+
+        .sales-invoice-print-footer {
+            border-top: 1px solid #dee2e6;
+            background: #fff;
+            z-index: 5;
+        }
+
+        .sales-invoice-print-footer-inner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem 0.75rem;
+        }
+
+        .sales-invoice-print-footer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.4rem 0.5rem;
+            min-width: 0;
+            flex: 1 1 220px;
+        }
+
+        .sales-invoice-printer-select {
+            min-width: 140px;
+            max-width: 240px;
+            flex: 1 1 160px;
+        }
+
+        .sales-invoice-print-footer-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 0 0 auto;
+            margin-left: auto;
+        }
+
+        .sales-invoice-print-footer-actions .btn {
+            min-width: 88px;
+        }
+
+        .sales-invoice-print-footer-actions #salesInvoicePrintBtn {
+            min-width: 110px;
+            font-weight: 600;
+        }
+
+        .sales-invoice-print-loading {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(243, 244, 246, 0.92);
+            color: #1b2850;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 2;
+        }
+
+        .sales-invoice-print-loading.is-visible {
+            display: flex;
+        }
+
+        .sales-invoice-print-loading .spinner-border {
+            width: 2rem;
+            height: 2rem;
+            color: #1b2850;
+        }
+
+        .sales-invoice-print-footer .btn[disabled] {
+            opacity: 0.55;
+            pointer-events: none;
+        }
+
+        #salesInvoicePrintModal kbd {
+            background: #1b2850;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        #salesInvoicePrintModal .modal-header {
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        #salesInvoicePrintModal .modal-header .btn-close {
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        @media screen and (max-width: 991.98px) {
+            #salesInvoicePrintModal .modal-dialog.sales-invoice-print-dialog {
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                height: 100%;
+                min-height: 100dvh;
+            }
+
+            #salesInvoicePrintModal .sales-invoice-print-content {
+                height: 100%;
+                min-height: 100dvh;
+                max-height: 100dvh;
+                border-radius: 0;
+                border: 0;
+            }
+
+            #salesInvoicePrintModal .sales-invoice-print-body {
+                height: auto;
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow: auto;
+            }
+
+            #salesInvoicePrintModal .sales-invoice-print-footer {
+                display: block;
+                padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+                border-top: 1px solid #e5e7eb;
+            }
+
+            #salesInvoicePrintModal .sales-invoice-print-footer-inner {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #salesInvoicePrintModal .sales-invoice-print-footer-actions {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            #salesInvoicePrintModal .sales-invoice-print-footer-actions .btn {
+                flex: 1 1 0;
+                min-height: 44px;
+                font-size: 15px;
+                font-weight: 600;
+            }
+        }
+    </style>
+    <style>
+        @media (max-width: 1024.98px), (width: 1032px) and (height: 1376px), (width: 1280px) and (height: 800px) {
+            .sales-filter-toolbar {
+                margin-bottom: 8px !important;
+            }
+            .sales-filter-toolbar > .row {
+                margin: 0 !important;
+                row-gap: 8px;
+                --bs-gutter-x: 8px;
+            }
+            .sales-filter-toolbar .filter-field {
+                margin: 0 !important;
+            }
+            .sales-filter-toolbar .filter-field .mb-1 {
+                margin-bottom: 0 !important;
+            }
+            .sales-filter-toolbar .filter-search {
+                display: flex !important;
+                align-items: center;
+                gap: 8px;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            .sales-filter-toolbar .filter-search .search-set {
+                flex: 1 1 auto;
+                min-width: 0;
+                width: auto !important;
+            }
+            .sales-filter-toolbar .filter-search .search-input {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+            .sales-filter-toolbar .filter-search #search-input {
+                height: 38px !important;
+                font-size: 13px;
+            }
+            .sales-filter-toggle {
+                position: relative;
+                flex: 0 0 auto;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 38px;
+                height: 38px;
+                padding: 0;
+                border: 0;
+                border-radius: 50%;
+                background: #f05a6a;
+                color: #fff;
+                font-size: 15px;
+                box-shadow: 0 2px 6px rgba(240, 90, 106, 0.35);
+            }
+            .sales-filter-toggle.has-active {
+                background: #e8334a;
+            }
+            .sales-filter-count {
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                min-width: 18px;
+                height: 18px;
+                padding: 0 5px;
+                border-radius: 999px;
+                background: #1b2850;
+                color: #fff;
+                font-size: 11px;
+                line-height: 18px;
+                text-align: center;
+            }
+
+            .sl-filter-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 1040;
+                background: rgba(16, 24, 40, 0.45);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity .2s ease;
+            }
+            .sl-filter-sheet {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1045;
+                display: flex;
+                flex-direction: column;
+                max-height: 85vh;
+                background: #fff;
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -8px 24px rgba(16, 24, 40, 0.18);
+                transform: translateY(105%);
+                transition: transform .25s ease;
+            }
+            body.sl-filter-open .sl-filter-backdrop {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            body.sl-filter-open .sl-filter-sheet {
+                transform: translateY(0);
+            }
+            body.sl-filter-open {
+                overflow: hidden;
+            }
+            body.sl-filter-open .mobile-bottom-nav,
+            body.sl-filter-open .floating-calculator-wrapper,
+            body.sl-filter-open .sl-fab-new-sale {
+                display: none !important;
+            }
+            .sl-filter-sheet-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 18px;
+                border-bottom: 1px solid #eef0f4;
+                font-size: 18px;
+                font-weight: 600;
+                color: #1b2850;
+            }
+            .sl-filter-sheet-close {
+                border: 0;
+                background: transparent;
+                color: #2f6fd8;
+                font-size: 20px;
+                width: 32px;
+                height: 32px;
+                padding: 0;
+            }
+            .sl-filter-sheet-body {
+                flex: 1 1 auto;
+                overflow-y: auto;
+                padding: 4px 18px;
+            }
+            .sl-filter-sheet-body.is-picker-open {
+                overflow: visible;
+            }
+            .sl-filter-sheet-body .filter-field {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                flex: none !important;
+                padding: 12px 0 !important;
+                border-bottom: 1px solid #eef0f4;
+            }
+            .sl-filter-sheet-body .filter-field.d-none {
+                display: none !important;
+            }
+            .sl-filter-sheet-body .filter-field .mb-1 {
+                margin: 0 !important;
+            }
+            .sl-filter-sheet-body .select2-container {
+                width: 100% !important;
+            }
+            .sl-filter-sheet-body .form-control,
+            .sl-filter-sheet-body .select2-container .select2-selection--single {
+                height: 40px !important;
+                border-radius: 8px !important;
+            }
+            .sl-filter-sheet-body .select2-container .select2-selection--single .select2-selection__rendered {
+                line-height: 40px !important;
+            }
+            .sl-sheet-label {
+                display: none;
+            }
+            .sl-filter-sheet-body .sl-sheet-label {
+                display: block;
+                margin: 0 0 6px;
+                font-size: 14px;
+                color: #344054;
+            }
+            .sl-filter-sheet-foot {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+                border-top: 1px solid #eef0f4;
+            }
+            .sl-filter-clear,
+            .sl-filter-apply {
+                height: 46px;
+                border: 0;
+                border-radius: 24px;
+                font-size: 15px;
+                font-weight: 600;
+            }
+            .sl-filter-clear {
+                background: #eef0f4;
+                color: #475467;
+            }
+            .sl-filter-apply {
+                background: #e8334a;
+                color: #fff;
+            }
+            .sales-filter-toolbar .filter-field:not(.filter-search) {
+                display: none !important;
+            }
+            .sales-filter-toolbar.is-filters-open .filter-field:not(.filter-search):not(.d-none) {
+                display: block !important;
+            }
+            .sales-filter-toolbar .select2-container {
+                width: 100% !important;
+            }
+            .sales-filter-toolbar .filter-field .form-control,
+            .sales-filter-toolbar .select2-container .select2-selection--single {
+                height: 36px !important;
+            }
+
+            .summary-badges-row {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+                align-items: stretch;
+                gap: 6px !important;
+                margin: 0 0 10px !important;
+            }
+            .summary-badges-row .summary-badge-box {
+                display: flex !important;
+                flex-direction: column;
+                align-items: flex-start;
+                justify-content: center;
+                gap: 1px;
+                min-width: 0;
+                width: auto !important;
+                margin: 0 !important;
+                padding: 5px 8px !important;
+                border-radius: 10px !important;
+                line-height: 1.2;
+            }
+            .summary-badges-row .summary-badge-box span:first-child {
+                font-size: 10px;
+                font-weight: 600;
+                opacity: .85;
+                white-space: nowrap;
+            }
+            .summary-badges-row .summary-badge-box span:last-child {
+                margin: 0 !important;
+                font-size: 12px;
+                font-weight: 800;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
+            }
+            .summary-badges-row .summary-export-group {
+                display: flex !important;
+                flex-direction: row;
+                align-items: stretch;
+                gap: 4px;
+                margin: 0 !important;
+                width: auto !important;
+            }
+            .summary-badges-row .summary-badge-box ~ .summary-export-group #exportAllChallan,
+            .summary-badges-row .summary-badge-box ~ .summary-export-group #exportPdf {
+                width: 34px !important;
+                min-width: 0 !important;
+                height: auto !important;
+                min-height: 36px;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                font-size: 0 !important;
+                border-radius: 6px !important;
+            }
+            .summary-badges-row .summary-badge-box ~ .summary-export-group #exportAllChallan i,
+            .summary-badges-row .summary-badge-box ~ .summary-export-group #exportPdf i {
+                font-size: 14px !important;
+                margin: 0 !important;
+            }
+            .summary-badges-row:not(:has(.summary-badge-box)) {
+                display: flex !important;
+                justify-content: flex-end;
+            }
+            .summary-badges-row:not(:has(.summary-badge-box)) .summary-export-group {
+                flex-direction: row;
+            }
+        }
+    </style>
+    <script>
+        (function() {
+            var toolbar = document.querySelector('.sales-filter-toolbar');
+            var toggle = document.getElementById('salesFilterToggle');
+            var countEl = document.getElementById('salesFilterCount');
+            if (!toolbar || !toggle) return;
+
+            var sheetBody = document.getElementById('slFilterSheetBody');
+            var labels = {
+                'filter-month': 'Month',
+                'filter-year': 'Year',
+                'filter-financial-year': 'Financial Year',
+                'filter-staff': 'Staff',
+                'filter-date': 'Date',
+                'filter-order-type': 'Order Type',
+                'filter-status': 'Status',
+                'filter-sort': 'Sort By'
+            };
+
+            function isPhone() {
+                return window.matchMedia('(max-width: 1024.98px), (width: 1032px) and (height: 1376px), (width: 1280px) and (height: 800px)').matches;
+            }
+
+            function placeFilterFields() {
+                if (!sheetBody) return;
+                var phone = isPhone();
+                if (phone) {
+                    toolbar.querySelectorAll('.filter-field:not(.filter-search)').forEach(function(field) {
+                        if (!field.querySelector('.sl-sheet-label')) {
+                            var input = field.querySelector('select, input');
+                            var text = input ? labels[input.id] : '';
+                            if (text) {
+                                var label = document.createElement('label');
+                                label.className = 'sl-sheet-label';
+                                label.setAttribute('for', input.id);
+                                label.textContent = text;
+                                field.insertBefore(label, field.firstChild);
+                            }
+                        }
+                        sheetBody.appendChild(field);
+                    });
+                } else {
+                    sheetBody.querySelectorAll('.filter-field').forEach(function(field) {
+                        toolbar.appendChild(field);
+                    });
+                    closeSheet();
+                }
+            }
+
+            function openSheet() {
+                placeFilterFields();
+                document.body.classList.add('sl-filter-open');
+                toggle.setAttribute('aria-expanded', 'true');
+            }
+
+            function closeSheet() {
+                document.body.classList.remove('sl-filter-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+
+            toggle.addEventListener('click', function() {
+                if (isPhone() && sheetBody) {
+                    openSheet();
+                    return;
+                }
+                var open = !toolbar.classList.contains('is-filters-open');
+                toolbar.classList.toggle('is-filters-open', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+
+            ['slFilterSheetClose', 'slFilterApply', 'slFilterBackdrop'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', closeSheet);
+            });
+
+            var clearBtn = document.getElementById('slFilterClear');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    if (!window.jQuery) return;
+                    var $ = window.jQuery;
+                    ['#filter-year', '#filter-financial-year', '#filter-staff', '#filter-order-type', '#filter-status'].forEach(function(sel) {
+                        $(sel).val('all').trigger('change.select2');
+                    });
+                    $('#filter-sort').val('date_desc').trigger('change.select2');
+                    $('#filter-date').val('');
+                    $('#filter-month').val('all').trigger('change');
+                    updateCount();
+                });
+            }
+
+            window.addEventListener('resize', placeFilterFields);
+
+            var ids = ['filter-month', 'filter-year', 'filter-financial-year', 'filter-staff', 'filter-order-type', 'filter-status'];
+            function updateCount() {
+                var n = 0;
+                ids.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el && el.value && el.value !== 'all') n++;
+                });
+                var date = document.getElementById('filter-date');
+                if (date && date.value.trim()) n++;
+                var sort = document.getElementById('filter-sort');
+                if (sort && sort.value && sort.value !== 'date_desc') n++;
+                countEl.textContent = n;
+                countEl.classList.toggle('d-none', n === 0);
+                toggle.classList.toggle('has-active', n > 0);
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                if (window.jQuery) {
+                    jQuery(document).on('change', '.sales-filter-toolbar select, .sales-filter-toolbar input', updateCount);
+                    jQuery('#filter-date').on('dp.change change.datetimepicker apply.daterangepicker', updateCount);
+                    jQuery('#filter-date').on('dp.show', function() {
+                        if (sheetBody) sheetBody.classList.add('is-picker-open');
+                    }).on('dp.hide', function() {
+                        if (sheetBody) sheetBody.classList.remove('is-picker-open');
+                    });
+                } else {
+                    toolbar.addEventListener('change', updateCount);
+                }
+                updateCount();
+            });
+        })();
+    </script>
+
+    <style>
+        .sl-card,
+        .sl-m-only {
+            display: none !important;
+        }
+
+        @media (max-width: 1024.98px), (width: 1032px) and (height: 1376px), (width: 1280px) and (height: 800px) {
+            .sl-quick-links {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+                padding: 12px 10px 10px;
+                margin-bottom: 10px;
+            }
+            .sl-quick-title {
+                font-size: 15px;
+                font-weight: 600;
+                color: #1b2850;
+                margin: 0 0 10px 6px;
+            }
+            .content:has(.sl-quick-links) > .page-header {
+                display: none !important;
+            }
+            .content:has(.sl-quick-links) {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+            }
+            .content:has(.sl-quick-links) > .card {
+                background: transparent !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            .content:has(.sl-quick-links) > .card > .card-body {
+                padding: 0 !important;
+            }
+            .content:has(.sl-quick-links) .sales-filter-toolbar {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+                padding: 8px 10px !important;
+                margin: 0 0 8px !important;
+            }
+            .content:has(.sl-quick-links) .table-responsive,
+            .content:has(.sl-quick-links) #order-table_wrapper {
+                padding: 0 !important;
+                margin: 0 !important;
+                border: 0 !important;
+            }
+            .content:has(.sl-quick-links) #order-table tbody tr:not(.order-details-row) {
+                margin-bottom: 8px;
+                border-radius: 8px;
+            }
+            .sl-quick-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+            .sl-quick-head .sl-quick-title {
+                margin: 0 0 0 2px !important;
+                white-space: nowrap;
+            }
+            .sl-quick-actions {
+                display: flex;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+            .sl-quick-actions .btn {
+                display: inline-flex;
+                align-items: center;
+                height: 30px;
+                padding: 0 10px !important;
+                font-size: 12px !important;
+                font-weight: 600;
+                white-space: nowrap;
+                margin: 0 !important;
+            }
+            #slSummarySlot .summary-badges-row {
+                margin: 0 !important;
+            }
+
+            .sl-fab-new-sale {
+                position: fixed;
+                left: 50%;
+                bottom: 74px;
+                transform: translateX(-50%);
+                z-index: 1030;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 24px;
+                border-radius: 30px;
+                background: #e8334a;
+                color: #fff !important;
+                font-size: 15px;
+                font-weight: 600;
+                text-decoration: none;
+                box-shadow: 0 6px 16px rgba(232, 51, 74, 0.35);
+                white-space: nowrap;
+            }
+            .sl-fab-new-sale i {
+                width: 26px;
+                height: 26px;
+                border: 2px solid #fff;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+            }
+            .content:has(.sl-fab-new-sale) {
+                padding-bottom: 90px !important;
+            }
+
+            .sl-m-only {
+                display: inline-flex !important;
+            }
+
+            #order-table,
+            #order-table tbody {
+                display: block !important;
+                width: 100% !important;
+                border: 0 !important;
+            }
+            #order-table thead,
+            #order-table tbody tr.order-details-row,
+            #order-table tbody .order-mobile-summary {
+                display: none !important;
+            }
+            #order-table tbody tr:not(.order-details-row) {
+                display: block !important;
+                position: relative;
+                background: #fff;
+                border: 1px solid #eef0f4;
+                border-radius: 10px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+                margin: 0 0 10px;
+                padding: 12px 12px 12px 14px;
+            }
+            #order-table tbody tr > td {
+                display: none !important;
+            }
+            #order-table tbody tr > td:first-child {
+                display: block !important;
+                width: 100% !important;
+                max-width: none !important;
+                min-width: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                background: transparent !important;
+            }
+            #order-table tbody tr > td:last-child:not(.dataTables_empty) {
+                display: block !important;
+                position: absolute;
+                right: 6px;
+                bottom: 10px;
+                width: auto !important;
+                max-width: none !important;
+                min-width: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                background: transparent !important;
+            }
+            #order-table tbody td.dataTables_empty {
+                text-align: center;
+                padding: 16px !important;
+            }
+
+            .sl-card {
+                display: block !important;
+                cursor: pointer;
+            }
+            .sl-card-top {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .sl-card-name {
+                font-size: 15px;
+                font-weight: 600;
+                color: #1b2850;
+                text-transform: uppercase;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                min-width: 0;
+            }
+            .sl-card-date {
+                font-size: 12px;
+                color: #8b93a7;
+                white-space: nowrap;
+                padding-top: 2px;
+            }
+            .sl-card-meta {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 6px 0 8px;
+            }
+            .sl-card-badge {
+                display: inline-block;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.2px;
+                padding: 3px 10px;
+                border-radius: 12px;
+                background: #e7f8ef;
+                color: #12a150;
+                text-transform: uppercase;
+            }
+            .sl-card-badge.is-unpaid {
+                background: #fff3df;
+                color: #e8960c;
+            }
+            .sl-card-badge.is-partial {
+                background: #e6f0ff;
+                color: #2f6fd8;
+            }
+            .sl-card-badge.is-other {
+                background: #eef0f4;
+                color: #475467;
+            }
+            .sl-card-no {
+                font-size: 11px;
+                color: #8b93a7;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .sl-card-amounts {
+                display: grid;
+                grid-template-columns: auto auto;
+                justify-content: start;
+                column-gap: 22px;
+                max-width: calc(100% - 136px);
+            }
+            .sl-card-amounts small {
+                display: block;
+                font-size: 12px;
+                color: #8b93a7;
+            }
+            .sl-card-amounts b {
+                display: block;
+                font-size: 14px;
+                font-weight: 600;
+                color: #1b2850;
+                white-space: nowrap;
+            }
+
+            #order-table .sales-action-cell {
+                display: flex !important;
+                align-items: center;
+                gap: 2px;
+            }
+            #order-table .sales-action-cell > .btn,
+            #order-table .sales-action-cell .sl-m-pdf,
+            #order-table .sales-action-cell .action-menu-toggle {
+                width: 32px;
+                height: 32px;
+                padding: 0 !important;
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                border: 0 !important;
+                background: transparent !important;
+                color: #8b93a7 !important;
+                font-size: 17px;
+                box-shadow: none !important;
+            }
+            #order-table .sales-action-cell .sl-m-pdf span {
+                background: #e5483d;
+                color: #fff;
+                font-size: 10px;
+                font-weight: 700;
+                border-radius: 3px;
+                padding: 5px 4px;
+                line-height: 1;
+            }
+            #order-table .sales-action-cell .action-menu-toggle i {
+                transform: rotate(90deg);
+            }
+        }
+
+        @media screen and (min-width: 768px) and (max-width: 1024.98px), screen and (width: 1032px) and (height: 1376px), screen and (width: 1280px) and (height: 800px) {
+            .page-wrapper:has(.sl-quick-links) {
+                padding-top: 0 !important;
+            }
+
+            .content:has(.sl-quick-links) {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+                padding-top: 6px !important;
+            }
+
+            .sl-quick-links.d-md-none,
+            .sl-filter-backdrop.d-md-none,
+            .sl-filter-sheet.d-md-none,
+            .sl-fab-new-sale.d-md-none {
+                display: block !important;
+            }
+
+            .sl-filter-backdrop.d-md-none {
+                display: block !important;
+            }
+
+            .sl-filter-sheet.d-md-none {
+                display: flex !important;
+            }
+
+            .sl-fab-new-sale.d-md-none {
+                display: inline-flex !important;
+            }
+
+            .sl-quick-links {
+                max-width: 100%;
+            }
+
+            .sales-filter-toolbar .filter-search {
+                display: flex !important;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .sales-filter-toolbar .filter-search .search-set {
+                flex: 1 1 auto;
+                min-width: 0;
+                width: auto !important;
+            }
+
+            .sales-filter-toolbar .filter-search .search-input {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+
+            .sales-filter-toggle.d-md-none {
+                display: inline-flex !important;
+                flex: 0 0 38px;
+            }
+
+            .table-responsive {
+                width: 100% !important;
+                min-width: 0 !important;
+                overflow: visible !important;
+            }
+
+            #order-table,
+            #order-table_wrapper,
+            #order-table tbody {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+            }
+
+            #order-table tbody {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                align-items: start;
+                gap: 10px;
+            }
+
+            #order-table tbody > tr:not(.order-details-row) {
+                min-width: 0;
+                margin: 0 0 10px !important;
+            }
+
+            #order-table tbody > tr:has(> td.dataTables_empty) {
+                grid-column: 1 / -1;
+            }
+
+            .sl-card {
+                padding: 14px 16px;
+            }
+
+            .sl-fab-new-sale {
+                bottom: 86px;
+                font-size: 16px;
+            }
+
+            .content:has(.sl-fab-new-sale) {
+                padding-bottom: 100px !important;
+            }
+        }
+
+        @media screen and (width: 1032px) and (height: 1376px), screen and (width: 1280px) and (height: 800px) {
+            .content:has(.sl-quick-links) {
+                padding-top: 64px !important;
+            }
+        }
+    </style>
+    <script>
+        (function() {
+            var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            function esc(value) {
+                return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+                });
+            }
+
+            function money(order, value) {
+                var n = parseFloat(value || 0);
+                if (!isFinite(n)) n = 0;
+                var text = n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                var sym = order.currencySymbol || '₹';
+                return order.currencyPosition === 'right' ? text + ' ' + sym : sym + ' ' + text;
+            }
+
+            function cardDate(order) {
+                var d = order.created_at ? new Date(order.created_at) : null;
+                if (d && !isNaN(d.getTime())) {
+                    return ('0' + d.getDate()).slice(-2) + ' ' + MONTHS[d.getMonth()] + ', ' + String(d.getFullYear()).slice(-2);
+                }
+                return order.created_date || '';
+            }
+
+            function badge(order) {
+                var type = String(order.quotation_status || 'sales').toLowerCase();
+                var typeLabel = { sales: 'Sale', sale: 'Sale', quotation: 'Quotation', rental: 'Rental', advance_receipt: 'Advance' }[type] || type;
+                if (type === 'quotation') return { text: typeLabel, cls: 'is-other' };
+                var pay = String(order.payment_status || '').toLowerCase();
+                if (pay === 'pending') return { text: typeLabel + ' : Unpaid', cls: 'is-unpaid' };
+                if (pay === 'partially' || pay === 'partial') return { text: typeLabel + ' : Partial', cls: 'is-partial' };
+                if (pay === 'completed' || pay === 'paid') return { text: typeLabel + ' : Paid', cls: '' };
+                return { text: typeLabel, cls: 'is-other' };
+            }
+
+            function buildCard(order) {
+                var b = badge(order);
+                var total = order.total_amount;
+                var balance = Math.max(0, parseFloat(order.remaining_amount || 0));
+                return '<div class="sl-card" data-order-id="' + esc(order.id) + '">' +
+                    '<div class="sl-card-top">' +
+                        '<span class="sl-card-name">' + esc((order.user && order.user.name) || 'Default-Customer') + '</span>' +
+                        '<span class="sl-card-date">' + esc(cardDate(order)) + '</span>' +
+                    '</div>' +
+                    '<div class="sl-card-meta">' +
+                        '<span class="sl-card-badge ' + b.cls + '">' + esc(b.text) + '</span>' +
+                        '<span class="sl-card-no">' + esc(order.order_number || '') + '</span>' +
+                    '</div>' +
+                    '<div class="sl-card-amounts">' +
+                        '<div><small>Total</small><b>' + esc(money(order, total)) + '</b></div>' +
+                        '<div><small>Balance</small><b>' + esc(money(order, balance)) + '</b></div>' +
+                    '</div>' +
+                '</div>';
+            }
+
+            function decorateRows() {
+                var map = window.orderDataMap || {};
+                var rows = document.querySelectorAll('#order-table tbody tr:not(.order-details-row)');
+                rows.forEach(function(row) {
+                    var toggle = row.querySelector('.mobile-toggle-btn-table');
+                    var id = toggle ? toggle.getAttribute('data-order-id') : '';
+                    var order = id ? map[id] : null;
+                    if (!order || !row.cells.length) return;
+                    var first = row.cells[0];
+                    var sig = [order.id, order.payment_status, order.remaining_amount, order.total_amount, order.quotation_status].join('|');
+                    var existing = first.querySelector('.sl-card');
+                    if (!existing || existing.getAttribute('data-sig') !== sig) {
+                        if (existing) existing.remove();
+                        first.insertAdjacentHTML('beforeend', buildCard(order));
+                        first.querySelector('.sl-card').setAttribute('data-sig', sig);
+                    }
+                    var actions = row.querySelector('.sales-action-cell');
+                    if (actions && !actions.querySelector('.sl-m-share')) {
+                        var dropdown = actions.querySelector('.sales-action-dropdown');
+                        var extra = '<button type="button" class="btn sl-m-only sl-m-share" data-order-id="' + esc(id) + '" title="Share">' +
+                                '<i class="fas fa-share"></i></button>' +
+                            '<a class="sl-m-only sl-m-pdf" href="/sales/invoice/pdf/' + encodeURIComponent(id) + '" target="_blank" rel="noopener" title="PDF">' +
+                                '<span>Pdf</span></a>';
+                        if (dropdown) dropdown.insertAdjacentHTML('beforebegin', extra);
+                        else actions.insertAdjacentHTML('beforeend', extra);
+                    }
+                });
+            }
+
+            var pending = false;
+            function schedule() {
+                if (pending) return;
+                pending = true;
+                requestAnimationFrame(function() {
+                    pending = false;
+                    decorateRows();
+                });
+            }
+
+            function shareInvoice(id) {
+                var order = (window.orderDataMap || {})[id] || {};
+                var url = '/sales/invoice/pdf/' + encodeURIComponent(id);
+                var name = 'Invoice-' + String(order.order_number || id).replace(/[^\w-]+/g, '_') + '.pdf';
+                fetch(url, { credentials: 'same-origin' }).then(function(res) {
+                    if (!res.ok) throw new Error('download failed');
+                    return res.blob();
+                }).then(function(blob) {
+                    var file = new File([blob], name, { type: 'application/pdf' });
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        return navigator.share({ files: [file], title: name }).catch(function() {});
+                    }
+                    window.open(url, '_blank');
+                }).catch(function() {
+                    window.open(url, '_blank');
+                });
+            }
+
+            function placeSummary() {
+                var slot = document.getElementById('slSummarySlot');
+                var row = document.querySelector('.summary-badges-row');
+                if (!slot || !row) return;
+                if (!placeSummary.home) {
+                    placeSummary.home = document.createComment('summary-badges-row');
+                    row.parentNode.insertBefore(placeSummary.home, row);
+                }
+                var phone = window.matchMedia('(max-width: 1024.98px), (width: 1032px) and (height: 1376px), (width: 1280px) and (height: 800px)').matches;
+                if (phone && row.parentNode !== slot) {
+                    slot.appendChild(row);
+                } else if (!phone && row.parentNode === slot) {
+                    placeSummary.home.parentNode.insertBefore(row, placeSummary.home);
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                placeSummary();
+                window.addEventListener('resize', placeSummary);
+                var table = document.getElementById('order-table');
+                if (!table) return;
+                new MutationObserver(schedule).observe(table, { childList: true, subtree: true });
+                schedule();
+
+                document.addEventListener('click', function(e) {
+                    var share = e.target.closest('#order-table .sl-m-share');
+                    if (share) {
+                        e.preventDefault();
+                        shareInvoice(share.getAttribute('data-order-id'));
+                        return;
+                    }
+                    var card = e.target.closest('#order-table .sl-card');
+                    if (card && !e.target.closest('a, button, input, select')) {
+                        window.location.href = '/sales-details/' + encodeURIComponent(card.getAttribute('data-order-id'));
+                    }
+                });
+            });
+        })();
+    </script>
+@endsection
+    
+@push('js')
+    {{-- Shared QZ boot (local qz-tray.js + CDN fallback + inline InvoiceQzPrint). --}}
+    @include('partials.invoice-qz-print-script')
+    <script>
+        window.enabledPaymentMethods = @json(getEnabledPaymentMethods());
+    </script>
+    <script>
+        (function showPosBillDraftsBanner() {
+            function countPosBillDrafts() {
+                const branchId = localStorage.getItem('selectedSubAdminId') || 'main';
+                const types = ['sales', 'quotation', 'rental', 'advance_receipt'];
+                let total = 0;
+                types.forEach(function(type) {
+                    try {
+                        const raw = localStorage.getItem('posBillDrafts_' + branchId + '_' + type);
+                        const parsed = raw ? JSON.parse(raw) : [];
+                        if (Array.isArray(parsed)) {
+                            total += parsed.length;
+                        }
+                    } catch (e) {}
+                });
+                return total;
+            }
+
+            $(function() {
+                const count = countPosBillDrafts();
+                if (count <= 0) {
+                    return;
+                }
+                const label = count === 1 ? '1 saved bill draft' : (count + ' saved bill drafts');
+                $('#posBillDraftsBannerText').text('You have ' + label + '.');
+                $('#posBillDraftsBanner').removeClass('d-none').addClass('d-flex');
+            });
+        })();
+    </script>
+    <script>
+        // Suppress DataTables warning alerts globally
+        $.fn.dataTable.ext.errMode = 'none';
+        
+        const userRole = "{{ auth()->user()->role }}";
+        const salesStaffList = @json($staffList ?? []);
+        const canAssignStaff = {{ ($staffList ?? collect())->count() > 0 ? 'true' : 'false' }};
+        const isEinvoiceEnabled = {{ !empty($setting->enable_einvoice) ? 1 : 0 }};
+        const showAssignStaff = {{ (!isset($setting) || ($setting->show_assign_staff ?? true)) ? 'true' : 'false' }};
+        const showOrderType = {{ (!isset($setting) || ($setting->show_order_type ?? true)) ? 'true' : 'false' }};
+    </script>
+
+    <script>
+        /**
+         * Build the inline staff assignment cell HTML.
+         * Shows a <select> dropdown pre-selected to currentStaffId when staff list is available.
+         */
+        function buildStaffCell(orderId, currentStaffId, currentStaffName) {
+            if (!showAssignStaff) {
+                return ''; // Hidden by setting
+            }
+            if (!canAssignStaff || !salesStaffList.length) {
+                return currentStaffName
+                    ? `<span class="biller-wrap">${currentStaffName}</span>`
+                    : `<span style="color:#aaa;">N/A</span>`;
+            }
+
+            // Normalize: treat null/undefined/""/0 all as "no staff"
+            const normalizedId = (currentStaffId !== null && currentStaffId !== undefined && currentStaffId !== '' && parseInt(currentStaffId) > 0)
+                ? parseInt(currentStaffId)
+                : null;
+
+            let options = `<option value=""${normalizedId === null ? ' selected' : ''}>— Unassigned —</option>`;
+            salesStaffList.forEach(function(s) {
+                const isSelected = normalizedId !== null && parseInt(s.id) === normalizedId;
+                options += `<option value="${s.id}"${isSelected ? ' selected' : ''}>${s.name}</option>`;
+            });
+
+            return `<select class="assign-staff-select form-select form-select-sm"
+                        data-order-id="${orderId}"
+                        data-prev-val="${normalizedId !== null ? normalizedId : ''}"
+                        style="min-width:110px;max-width:160px;font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid #ced4da;">
+                        ${options}
+                    </select>`;
+        }
+
+        function buildOrderTypeCell(orderId, currentOrderType) {
+            if (!showOrderType) {
+                return ''; // Hidden by setting
+            }
+            const normalizedType = String(currentOrderType || 'self_pickup').trim().toLowerCase();
+            const options = [
+                { value: 'self_pickup', label: 'Self Pickup' },
+                { value: 'delivery', label: 'Delivery' }
+            ].map(function(option) {
+                const isSelected = option.value === normalizedType;
+                return `<option value="${option.value}"${isSelected ? ' selected' : ''}>${option.label}</option>`;
+            }).join('');
+
+            return `<select class="assign-order-type-select form-select form-select-sm"
+                        data-order-id="${orderId}"
+                        style="min-width:120px;max-width:170px;font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid #ced4da;">
+                        ${options}
+                    </select>`;
+        }
+
+        // Store previous value on focus
+        $(document).on('focus', '.assign-staff-select', function() {
+            $(this).data('prev-val', $(this).val() || '');
+        });
+
+        /**
+         * Save staff assignment via API.
+         */
+        $(document).on('change', '.assign-staff-select', function() {
+            const $sel = $(this);
+            const orderId = $sel.data('order-id');
+            const staffId = $sel.val();
+            const prevStaffId = $sel.data('prev-val') || '';
+            const authToken = localStorage.getItem('authToken') || window.authToken || '';
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Are you sure you want to assign this staff?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff9f43',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, assign!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $sel.prop('disabled', true);
+
+                    $.ajax({
+                        url: '/api/orders/' + orderId + '/assign-staff',
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + authToken,
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        data: { staff_id: staffId },
+                        success: function(response) {
+                            $sel.prop('disabled', false);
+                            if (response.status) {
+                                // Update the prev-val data attribute
+                                $sel.data('prev-val', staffId);
+
+                                // Update the orderDataMap so expandable rows stay in sync
+                                if (window.orderDataMap && window.orderDataMap[orderId]) {
+                                    window.orderDataMap[orderId].staff_id   = response.staff_id;
+                                    window.orderDataMap[orderId].staff_name = response.staff_name;
+                                }
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: response.message,
+                                    confirmButtonText: 'OK',
+                                    confirmButtonColor: '#ff9f43',
+                                });
+                            } else {
+                                // Revert to previous value
+                                $sel.val(prevStaffId);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: response.message || 'Failed to assign staff.',
+                                });
+                            }
+                        },
+                        error: function() {
+                            $sel.prop('disabled', false);
+                            // Revert to previous value
+                            $sel.val(prevStaffId);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Error saving staff assignment. Please try again.',
+                            });
+                        }
+                    });
+                } else {
+                    // Revert to previous value
+                    $sel.val(prevStaffId);
+                }
+            });
+        });
+
+        // Store previous value on focus for order type
+        $(document).on('focus', '.assign-order-type-select', function() {
+            $(this).data('prev-val', $(this).val() || 'self_pickup');
+        });
+
+        $(document).on('change', '.assign-order-type-select', function() {
+            const $sel = $(this);
+            const orderId = $sel.data('order-id');
+            const orderType = $sel.val();
+            const prevType = $sel.data('prev-val') || 'self_pickup';
+            const authToken = localStorage.getItem('authToken') || window.authToken || '';
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Are you sure you want to change the order type?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff9f43',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, change it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $sel.prop('disabled', true);
+
+                    $.ajax({
+                        url: '/api/orders/' + orderId + '/order-type',
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + authToken,
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        data: { order_type: orderType },
+                        success: function(response) {
+                            $sel.prop('disabled', false);
+                            if (response.status) {
+                                $sel.data('prev-val', orderType);
+                                if (window.orderDataMap && window.orderDataMap[orderId]) {
+                                    window.orderDataMap[orderId].order_type = response.order_type;
+                                }
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Updated',
+                                    text: response.message || 'Order type updated successfully.',
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                $sel.val(prevType);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: response.message || 'Failed to update order type.'
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            $sel.prop('disabled', false);
+                            $sel.val(prevType);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: xhr.responseJSON?.message || 'Failed to update order type.'
+                            });
+                        }
+                    });
+                } else {
+                    $sel.val(prevType);
+                }
+            });
+        });
+    </script>
+
+    <script>
+        // Helper function to get status badge HTML
+        // Helper function to get status badge HTML
+        // In your JavaScript code, update the getStatusBadge and getMobileStatusBadge functions:
+
+        // Helper function to get status badge HTML
+        function formatPaymentHistoryDate(value) {
+            if (!value) return 'N/A';
+
+            const datePart = String(value).split(' ')[0];
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+                const [year, month, day] = datePart.split('-');
+                return `${day}-${month}-${year}`;
+            }
+
+            const parsedDate = new Date(value);
+            if (!isNaN(parsedDate.getTime())) {
+                const day = String(parsedDate.getDate()).padStart(2, '0');
+                const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+                const year = parsedDate.getFullYear();
+                return `${day}-${month}-${year}`;
+            }
+
+            return value;
+        }
+
+        function formatCurrencyValue(amount, currencySymbol = '₹', currencyPosition = 'left') {
+            const numericAmount = parseFloat(amount || 0);
+            const formattedAmount = numericAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            return currencyPosition === 'right' ?
+                `${formattedAmount}${currencySymbol}` :
+                `${currencySymbol}${formattedAmount}`;
+        }
+
+        function formatEmiTenureValue(value) {
+            if (!value && value !== 0) return 'N/A';
+
+            const raw = String(value).trim();
+            if (!raw) return 'N/A';
+
+            const lower = raw.toLowerCase();
+            if (lower.includes('month') || lower.includes('year')) {
+                return raw;
+            }
+
+            const months = parseInt(raw, 10);
+            if (Number.isFinite(months) && months > 0) {
+                return months === 1 ? '1 Month' : `${months} Months`;
+            }
+
+            return raw;
+        }
+
+        function getEmiDisplayValue(order, currencySymbol, currencyPosition) {
+            const monthly = order.emi_monthly_amount ?? order.emi_monthly ?? order.emi_monthly_value;
+            return formatCurrencyValue(monthly || 0, currencySymbol, currencyPosition);
+        }
+
+        function resolveEmiTenure(order, fallback = 0) {
+            const rawTenure = order?.emi_tenure || order?.emi_duration || fallback || 0;
+            return parseInt(String(rawTenure).replace(/[^0-9]/g, ''), 10) || 0;
+        }
+
+        function resolvePaymentOrder($button) {
+            const orderId = $button.data('id');
+            const mappedOrder = window.orderDataMap && window.orderDataMap[orderId] ? window.orderDataMap[orderId] : {};
+
+            return {
+                ...mappedOrder,
+                id: orderId,
+                payment_method: $button.data('method') || mappedOrder.payment_method || '',
+                emi_tenure: mappedOrder.emi_tenure || mappedOrder.emi_duration || $button.data('emi-duration') || 0,
+                emi_monthly_amount: parseFloat(mappedOrder.emi_monthly_amount || $button.data('emi-monthly-amount') || 0),
+                total_amount: parseFloat(mappedOrder.total_amount || $button.data('total-amount') || 0),
+                remaining_amount: parseFloat(mappedOrder.remaining_amount || $button.data('remaining-amount') || 0),
+                total_return: parseFloat(mappedOrder.total_return || $button.data('return-amount') || 0),
+                currencySymbol: mappedOrder.currencySymbol || '₹',
+                currencyPosition: mappedOrder.currencyPosition || 'left'
+            };
+        }
+
+        function hasEmiData(order) {
+            return String(order.payment_method || '').toLowerCase() === 'emi' ||
+                parseFloat(order.emi_monthly_amount || 0) > 0 ||
+                !!order.emi_tenure ||
+                parseFloat(order.emi_loan_amount || 0) > 0;
+        }
+
+        function isDeliveryOrder(order) {
+            return String((order && order.order_type) || '').toLowerCase() === 'delivery';
+        }
+
+        function buildTicketCreateUrl(order) {
+            const params = new URLSearchParams();
+
+            if (order && order.id) {
+                params.set('order_id', order.id);
+            }
+
+            const customerId = order?.user_id || order?.user?.id || '';
+            if (customerId) {
+                params.set('customer_id', customerId);
+            }
+
+            const queryString = params.toString();
+            return queryString ? `/ticket-create?${queryString}` : '/ticket-create';
+        }
+
+        function buildSalesActionDropdown(order, currentStatus) {
+            const status = String(currentStatus || (order && order.quotation_status) || 'sales').toLowerCase();
+            let menuItems = '';
+
+            @if (app('hasPermission')(2, 'view'))
+                if (parseFloat(order.remaining_amount || 0) > 0 && status === 'sales') {
+                    menuItems += `<a href="javascript:void(0);" class="dropdown-item make-payment-btn"
+                        data-bs-toggle="modal" data-bs-target="#makePaymentModal"
+                        data-id="${order.id}" data-amount="${order.remaining_amount}"
+                        data-method="${order.payment_method || ''}"
+                        data-emi-months="${order.remaining_emi_months}"
+                        data-emi-duration="${order.emi_tenure || order.emi_duration || 0}"
+                        data-emi-monthly-amount="${order.emi_monthly_amount || 0}"
+                        data-total-amount="${order.total_amount || 0}"
+                        data-remaining-amount="${order.remaining_amount}"
+                        data-return-amount="${order.total_return || 0}"
+                        data-remaining-emi-months="${order.remaining_emi_months}">
+                        <i class="fas fa-money-bill"></i><span>Pay</span>
+                    </a>`;
+                }
+
+                menuItems += `<button type="button" class="dropdown-item open-history" data-id="${order.id}">
+                    <i class="fas fa-history"></i><span>History</span>
+                </button>`;
+            @endif
+
+            if (status === 'quotation' || status === 'advance_receipt') {
+                menuItems += `<a class="dropdown-item convert-to-sales" href="javascript:void(0);" data-id="${order.id}">
+                    <i class="fas fa-exchange-alt"></i><span>Convert to Sales</span>
+                </a>`;
+            }
+
+            if (hasEmiData(order)) {
+                menuItems += `<button type="button" class="dropdown-item open-emi-details" data-order-id="${order.id}">
+                    <i class="fas fa-calendar-alt"></i><span>EMI Details</span>
+                </button>`;
+            }
+
+            @if (app('hasPermission')(2, 'view'))
+                menuItems += `<a class="dropdown-item" href="/sales-details/${order.id}">
+                    <i class="fas fa-eye"></i><span>View</span>
+                </a>`;
+
+                menuItems += `<a class="dropdown-item" href="${buildTicketCreateUrl(order)}">
+                    <i class="fas fa-ticket-alt"></i><span>Raise Ticket</span>
+                </a>`;
+
+                if (status === 'sales' && isDeliveryOrder(order)) {
+                    menuItems += `<a class="dropdown-item deliver-order" href="/sales/delivery/${order.id}" data-id="${order.id}">
+                        <i class="fas fa-truck"></i><span>Delivery</span>
+                    </a>`;
+                }
+            @endif
+
+            @if (app('hasPermission')(2, 'edit'))
+                if (parseFloat(order.total_return || 0) === 0 && !(order.quotation_status === 'rental' && (order.return_status === 'partially_returned' || order.return_status === 'fully_returned'))) {
+                    menuItems += `<a class="dropdown-item" href="/edit-sales/${order.id}">
+                        <i class="fas fa-edit"></i><span>Edit</span>
+                    </a>`;
+                }
+            @endif
+
+            @if (app('hasPermission')(2, 'view'))
+                menuItems += `<a class="dropdown-item" href="/sales-invoice/${order.id}">
+                    <i class="fas fa-file-invoice"></i><span>Invoice</span>
+                </a>`;
+
+                menuItems += `<a class="dropdown-item" href="javascript:void(0);" onclick="openSalesInvoicePrintModal(${order.id});">
+                    <i class="fas fa-print"></i><span>Print Invoice</span>
+                </a>`;
+            @endif
+
+            @if (app('hasPermission')(2, 'add') && app('hasPermission')(2, 'edit'))
+                if (status === 'sales' && order.order_number) {
+                    menuItems += `<a class="dropdown-item" href="/create-sales-return?order_number=${encodeURIComponent(order.order_number)}">
+                        <i class="fas fa-undo"></i><span>Sales Return</span>
+                    </a>`;
+                }
+            @endif
+
+            if (typeof isEinvoiceEnabled !== 'undefined' && isEinvoiceEnabled == 0) {
+                menuItems += `<a class="dropdown-item" href="javascript:void(0);" onclick="openQrUploadModal('${order.id}')">
+                    <i class="fas fa-qrcode"></i><span>Upload QR</span>
+                </a>`;
+            }
+
+            if (userRole !== 'sales-manager' && userRole !== 'purchase-manager' && userRole !== 'inventory-manager') {
+                @if (app('hasPermission')(2, 'delete'))
+                    menuItems += `<a class="dropdown-item text-danger delete-order" href="javascript:void(0);" data-id="${order.id}">
+                        <i class="fas fa-trash"></i><span>Delete</span>
+                    </a>`;
+                @endif
+            }
+
+            if (!menuItems) {
+                menuItems = '<span class="dropdown-item text-muted">No actions</span>';
+            }
+
+            return `<div class="sales-action-cell">
+                @if (app('hasPermission')(2, 'view'))
+                <button type="button" class="btn sales-quick-print" title="Print" onclick="openSalesInvoicePrintModal(${order.id});">
+                    <i class="fas fa-print"></i>
+                </button>
+                @endif
+                <div class="dropdown sales-action-dropdown">
+                    <button class="btn action-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Actions">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end sales-action-menu">
+                        ${menuItems}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function positionSalesActionMenu(dropdownEl) {
+            const $dropdown = $(dropdownEl);
+            const $menu = $dropdown.data('floating-menu') || $dropdown.find('.sales-action-menu');
+            const button = $dropdown.find('.action-menu-toggle')[0];
+
+            if (!$menu.length || !button) {
+                return;
+            }
+
+            const rect = button.getBoundingClientRect();
+            const menuEl = $menu[0];
+            const menuWidth = menuEl.offsetWidth || 168;
+            const menuHeight = menuEl.offsetHeight || menuEl.scrollHeight || 220;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            const gap = 4;
+
+            let left = rect.right - menuWidth;
+            left = Math.max(8, Math.min(left, viewportWidth - menuWidth - 8));
+
+            const spaceBelow = viewportHeight - rect.bottom - gap - 8;
+            const spaceAbove = rect.top - gap - 8;
+            let top = rect.bottom + gap;
+
+            if (menuHeight > spaceBelow && spaceAbove > spaceBelow) {
+                top = Math.max(8, rect.top - menuHeight - gap);
+            }
+
+            $menu.css({
+                left: `${left}px`,
+                maxHeight: `${Math.max(120, Math.min(menuHeight, Math.max(spaceBelow, spaceAbove, 120)))}px`,
+                overflowY: 'auto',
+                position: 'fixed',
+                top: `${top}px`,
+                transform: 'none'
+            });
+        }
+
+        $(document).on('show.bs.dropdown', '.sales-action-dropdown', function() {
+            const $dropdown = $(this);
+            const $menu = $dropdown.find('.sales-action-menu');
+
+            if (!$menu.length) {
+                return;
+            }
+
+            $dropdown.data('floating-menu', $menu);
+            $dropdown.data('menu-parent', $menu.parent());
+            $dropdown.data('menu-next', $menu.next());
+            $menu.addClass('sales-action-menu-floating').appendTo('body');
+        });
+
+        $(document).on('shown.bs.dropdown', '.sales-action-dropdown', function() {
+            const dropdownEl = this;
+            requestAnimationFrame(() => {
+                positionSalesActionMenu(dropdownEl);
+            });
+        });
+
+        $(document).on('hidden.bs.dropdown', '.sales-action-dropdown', function() {
+            const $dropdown = $(this);
+            const $menu = $dropdown.data('floating-menu');
+            const $parent = $dropdown.data('menu-parent');
+            const $next = $dropdown.data('menu-next');
+
+            if ($menu && $menu.length && $parent && $parent.length) {
+                $menu.removeClass('sales-action-menu-floating').removeAttr('style');
+                if ($next && $next.length && $.contains($parent[0], $next[0])) {
+                    $menu.insertBefore($next);
+                } else {
+                    $parent.append($menu);
+                }
+            }
+
+            $dropdown.removeData('floating-menu menu-parent menu-next');
+        });
+
+        $(window).on('scroll resize', function() {
+            $('.sales-action-dropdown.show').each(function() {
+                positionSalesActionMenu(this);
+            });
+        });
+
+        function openEmiDetails(order) {
+            const currencySymbol = order.currencySymbol || '₹';
+            const currencyPosition = order.currencyPosition || 'left';
+            const authToken = localStorage.getItem("authToken") || window.authToken || '';
+
+            $('#emiOrderNumber').text(order.order_number || 'N/A');
+            $('#emiCustomerName').text(order.user?.name || 'N/A');
+            $('#emiTenureValue').text(formatEmiTenureValue(order.emi_tenure || order.emi_duration || 'N/A'));
+            $('#emiMonthlyAmountValue').text(getEmiDisplayValue(order, currencySymbol, currencyPosition));
+            $('#emiDownPaymentValue').text(formatCurrencyValue(order.emi_down_payment || 0, currencySymbol, currencyPosition));
+            $('#emiLoanAmountValue').text(formatCurrencyValue(order.emi_loan_amount || 0, currencySymbol, currencyPosition));
+            $('#emiInterestRateValue').text(`${parseFloat(order.emi_interest_rate || 0).toFixed(2)}%`);
+            $('#emiAadharValue').text(order.emi_aadhar_number || 'N/A');
+            $('#emiPanValue').text(order.emi_pan_number || 'N/A');
+            $('#emiGuarantorValue').text(order.emi_guarantor_name || 'N/A');
+
+            $('#emiMonthWiseBody').html('<tr><td colspan="5" class="text-center text-muted">Loading EMI schedule...</td></tr>');
+            $('#emiNextDueLabel, #emiNextDueSchedule').text('');
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('emiDetailsModal'));
+            modal.show();
+
+            $.ajax({
+                url: '/api/sales/payment-history/' + order.id,
+                method: 'GET',
+                headers: {
+                    "Authorization": "Bearer " + authToken
+                },
+                success: function(response) {
+                    renderEmiMonthWiseDetails(order, response.data || []);
+                },
+                error: function() {
+                    $('#emiMonthWiseBody').html('<tr><td colspan="5" class="text-center text-danger">Failed to load EMI schedule.</td></tr>');
+                    $('#emiNextDueLabel, #emiNextDueSchedule').text('');
+                }
+            });
+        }
+
+        let currentPaymentOrder = null;
+
+        function loadEmiMonthOptionsForPayment(orderId, emiTenure, emiMonthlyAmount, orderData = null) {
+            const order = orderData || { id: orderId, emi_tenure: emiTenure, emi_monthly_amount: emiMonthlyAmount };
+            const tenure = resolveEmiTenure(order, emiTenure);
+
+            if (tenure <= 0) {
+                $('#emiMonthDiv').addClass('d-none');
+                $('#emiMonthSelect').empty().append('<option value="" selected disabled>Select EMI Month</option>');
+                $('#emiMonthError').text('This order does not have an EMI plan. Edit the sale to configure EMI tenure.');
+                return;
+            }
+
+            $('#emiMonthError').text('');
+            const token = localStorage.getItem("authToken") || window.authToken || '';
+
+            $.ajax({
+                url: '/api/sales/payment-history/' + orderId,
+                method: 'GET',
+                headers: {
+                    "Authorization": "Bearer " + token
+                },
+                success: function(response) {
+                    const emiMonths = [];
+                    (response.data || []).forEach(function(payment) {
+                        const paymentMethod = String(payment.payment_method || '').toLowerCase();
+                        const paymentType = String(payment.payment_type || '').toLowerCase();
+                        if (paymentMethod === 'emi' || paymentType === 'emi') {
+                            if (payment.emi_month) {
+                                emiMonths.push(parseInt(payment.emi_month, 10));
+                            }
+                        }
+                    });
+                    populateEmiMonthOptions({
+                        ...order,
+                        emi_tenure: tenure,
+                        emi_duration: tenure
+                    }, emiMonths);
+
+                    if (emiMonthlyAmount > 0) {
+                        $('#emiMonthlyAmountInput').val(emiMonthlyAmount);
+                    }
+                },
+                error: function() {
+                    populateEmiMonthOptions({
+                        ...order,
+                        emi_tenure: tenure,
+                        emi_duration: tenure
+                    }, []);
+                }
+            });
+        }
+
+        function populateEmiMonthOptions(order, paidMonths = []) {
+            const tenureRaw = order.emi_tenure || order.emi_duration || 0;
+            const tenure = parseInt(String(tenureRaw).replace(/[^0-9]/g, ''), 10) || 0;
+            const monthlyAmount = parseFloat(order.emi_monthly_amount || 0);
+            const currencySymbol = order.currencySymbol || '₹';
+            const currencyPosition = order.currencyPosition || 'left';
+            const $select = $('#emiMonthSelect');
+            $select.empty().append('<option value="" selected disabled>Select EMI Month</option>');
+
+            if (tenure <= 0) {
+                $('#emiMonthDiv').addClass('d-none');
+                return;
+            }
+
+            const paidSet = new Set((paidMonths || []).map(v => parseInt(v, 10)).filter(v => Number.isFinite(v) && v > 0));
+            let nextDueMonth = null;
+
+            for (let month = 1; month <= tenure; month++) {
+                const label = month === 1 ? '1st Month' : month === 2 ? '2nd Month' : month === 3 ? '3rd Month' : `${month}th Month`;
+                const isPaid = paidSet.has(month);
+                if (nextDueMonth === null && !isPaid) {
+                    nextDueMonth = month;
+                }
+                const isLocked = nextDueMonth !== null && month > nextDueMonth;
+                const amountLabel = monthlyAmount > 0 ? ` - ${formatCurrencyValue(monthlyAmount, currencySymbol, currencyPosition)}` : '';
+                const statusLabel = isPaid ? ' (Paid)' : (isLocked ? ' (Upcoming)' : ' (Pay now)');
+                const option = `<option value="${month}" ${isPaid || isLocked ? 'disabled' : ''}>${label}${amountLabel}${statusLabel}</option>`;
+                $select.append(option);
+            }
+
+            if (nextDueMonth !== null) {
+                $select.val(String(nextDueMonth));
+                $('#emiMonthError').text('');
+            } else {
+                $select.empty().append('<option value="" selected disabled>All EMI months are paid</option>');
+                $('#emiMonthError').text('All EMI months for this order have already been paid.');
+            }
+
+            $('#emiMonthDiv').removeClass('d-none');
+        }
+
+        function renderEmiMonthWiseDetails(order, history) {
+            const tenureRaw = order.emi_tenure || order.emi_duration || 0;
+            const tenure = parseInt(String(tenureRaw).replace(/[^0-9]/g, ''), 10) || 0;
+            const monthlyAmount = parseFloat(order.emi_monthly_amount || 0);
+            const paidMap = new Map();
+
+            (history || []).forEach(function(payment) {
+                const paymentMethod = String(payment.payment_method || '').toLowerCase();
+                const paymentType = String(payment.payment_type || '').toLowerCase();
+                if (paymentMethod === 'emi' || paymentType === 'emi') {
+                    const monthNo = parseInt(payment.emi_month, 10);
+                    if (monthNo > 0) {
+                        paidMap.set(monthNo, payment);
+                    }
+                }
+            });
+
+            const rows = [];
+            for (let month = 1; month <= tenure; month++) {
+                const payment = paidMap.get(month);
+                const isPaid = !!payment;
+                const label = month === 1 ? '1st Month' : month === 2 ? '2nd Month' : month === 3 ? '3rd Month' : `${month}th Month`;
+                rows.push(`
+                    <tr>
+                        <td>${label}</td>
+                        <td>
+                            <span class="status-badge ${isPaid ? 'status-completed' : 'status-pending'}">
+                                ${isPaid ? 'Paid' : 'Pending'}
+                            </span>
+                        </td>
+                        <td>${formatCurrencyValue(payment?.payment_amount || monthlyAmount, order.currencySymbol || '₹', order.currencyPosition || 'left')}</td>
+                        <td>${isPaid ? formatPaymentHistoryDate(payment.payment_date || payment.created_at) : '-'}</td>
+                        <td>${isPaid ? (payment.remarks || '-') : '-'}</td>
+                    </tr>
+                `);
+            }
+
+            if (!rows.length) {
+                rows.push('<tr><td colspan="5" class="text-center text-muted">No EMI schedule found.</td></tr>');
+            }
+
+            $('#emiMonthWiseBody').html(rows.join(''));
+
+            const nextDue = (history || [])
+                .filter(function(payment) {
+                    return String(payment.payment_method || '').toLowerCase() === 'emi' || String(payment.payment_type || '').toLowerCase() === 'emi';
+                })
+                .map(function(payment) { return parseInt(payment.emi_month, 10); })
+                .filter(function(v) { return Number.isFinite(v) && v > 0; });
+
+            let nextMonth = 1;
+            while (nextMonth <= tenure && nextDue.includes(nextMonth)) {
+                nextMonth++;
+            }
+
+            $('#emiNextDueLabel').text(nextMonth <= tenure ? `Next due: ${nextMonth === 1 ? '1st' : nextMonth === 2 ? '2nd' : nextMonth === 3 ? '3rd' : `${nextMonth}th`} Month` : 'All EMI months paid');
+            $('#emiNextDueSchedule').text(nextMonth <= tenure ? `Next due: ${nextMonth === 1 ? '1st' : nextMonth === 2 ? '2nd' : nextMonth === 3 ? '3rd' : `${nextMonth}th`} Month` : 'All EMI months paid');
+        }
+
+        function getStatusBadge(status, type = 'payment', extraPaid = 0) {
+            status = status ? status.toLowerCase() : '';
+
+            if (type === 'quotation') {
+                switch (status) {
+                    case 'quotation':
+                        return `<span class="status-badge status-quotation">Quotation</span>`;
+                    case 'sales':
+                    case 'sale':
+                        return `<span class="status-badge status-sales">Sales</span>`;
+                    case 'rental':
+                        return `<span class="status-badge status-rental">Rental</span>`;
+                    case 'advance_receipt':
+                        return `<span class="status-badge status-advance_receipt">Advance Receipt</span>`;
+                    default:
+                        return `<span class="status-badge status-other">${status || 'N/A'}</span>`;
+                }
+            }
+
+            if (type === 'payment') {
+
+
+                // Payment Status badges
+                switch (status) {
+                    case 'pending':
+                        return `<span class="status-badge status-pending">Pending</span>`; // Red
+                    case 'completed':
+                    case 'paid':
+                        return `<span class="status-badge status-completed">Completed</span>`; // Green
+                    case 'partially':
+                    case 'partial':
+                        return `<span class="status-badge status-partially">Partially</span>`; // Teal
+                    default:
+                        return `<span class="status-badge status-other">${status || 'N/A'}</span>`; // Gray
+                }
+            } else if (type === 'return') {
+                switch (status) {
+                    case 'returned':
+                        return `<span class="status-badge status-pending">Returned</span>`; // Red
+                    default:
+                        return `<span class="status-badge status-completed">No Return</span>`; // Gray
+                }
+            } else {
+                // Payment Method badges
+                switch (status) {
+                    case 'cash':
+                        return `<span class="status-badge status-cash">Cash</span>`; // Teal
+                    case 'online':
+                        return `<span class="status-badge status-online">Online</span>`; // Green
+                    case 'emi':
+                        return `<span class="status-badge status-emi">EMI</span>`; // Red
+                    case 'cash_online':
+                    case 'cash + online':
+                        return `<span class="status-badge status-cash_online">Cash+Online</span>`; // Green
+                    default:
+                        return `<span class="status-badge status-other">${status || 'N/A'}</span>`; // Gray
+                }
+            }
+        }
+
+        // Helper function for mobile view
+        function getMobileStatusBadge(status, type = 'payment', extraPaid = 0) {
+            status = status ? status.toLowerCase() : '';
+
+            if (type === 'quotation') {
+                switch (status) {
+                    case 'quotation':
+                        return `<span class="mobile-badge status-quotation">Quotation</span>`;
+                    case 'sales':
+                    case 'sale':
+                        return `<span class="mobile-badge status-sales">Sales</span>`;
+                    case 'rental':
+                        return `<span class="mobile-badge status-rental">Rental</span>`;
+                    case 'advance_receipt':
+                        return `<span class="mobile-badge status-advance_receipt">Advance Receipt</span>`;
+                    default:
+                        return `<span class="mobile-badge status-other">${status || 'N/A'}</span>`;
+                }
+            }
+
+            if (type === 'payment') {
+
+
+                switch (status) {
+                    case 'pending':
+                        return `<span class="mobile-badge status-pending">Pending</span>`; // Red
+                    case 'completed':
+                    case 'paid':
+                        return `<span class="mobile-badge status-completed">Paid</span>`; // Green
+                    case 'partially':
+                    case 'partial':
+                        return `<span class="mobile-badge status-partially">Partially</span>`; // Teal
+                    default:
+                        return `<span class="mobile-badge status-other">${status || 'N/A'}</span>`; // Gray
+                }
+            } else if (type === 'return') {
+                switch (status) {
+                    case 'returned':
+                        return `<span class="mobile-badge status-pending">Returned</span>`; // Red
+                    default:
+                        return `<span class="mobile-badge status-other">No Return</span>`; // Gray
+                }
+            } else {
+                switch (status) {
+                    case 'cash':
+                        return `<span class="mobile-badge status-cash">Cash</span>`; // Teal
+                    case 'online':
+                        return `<span class="mobile-badge status-online">Online</span>`; // Green
+                    case 'emi':
+                        return `<span class="mobile-badge status-emi">EMI</span>`; // Red
+                    case 'cash_online':
+                    case 'cash + online':
+                        return `<span class="mobile-badge status-cash_online">Cash+Online</span>`; // Green
+                    default:
+                        return `<span class="mobile-badge status-other">${status || 'N/A'}</span>`; // Gray
+                }
+            }
+        }
+        // Function to render mobile order cards
+        function renderMobileOrders(orders, currencySymbol, currencyPosition) {
+            const container = $('#mobile-order-container');
+            container.html('');
+
+            if (!orders || orders.length === 0) {
+                container.html('<div class="text-center p-4">No orders found</div>');
+                return;
+            }
+
+            // Add header row
+            const headerHtml = `
+                <div class="mobile-order-header-row">
+                    <div class="mobile-order-header-cell">Order Number</div>
+                    <div class="mobile-order-header-cell">Details</div>
+                </div>
+            `;
+            container.append(headerHtml);
+
+            orders.forEach((order, index) => {
+                const status = String(order.quotation_status || 'sales').toLowerCase();
+                const remaining = parseFloat(order.remaining_amount || 0);
+                const amount = parseFloat(order.total_amount || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                const displayAmount = currencyPosition === 'right' ?
+                    amount + currencySymbol : currencySymbol + amount;
+
+
+                // Build action buttons HTML
+                let actionBtns = '';
+                @if (app('hasPermission')(2, 'view'))
+                // if (status === 'sales') {
+                if (parseFloat(order.remaining_amount || 0) > 0 && status === 'sales') {
+                    actionBtns += `<a href="javascript:void(0);" class="btn btn-sm btn-primary make-payment-btn"
+                        data-bs-toggle="modal" data-bs-target="#makePaymentModal"
+                        data-id="${order.id}" data-amount="${order.remaining_amount}"
+                        data-method="${order.payment_method || ''}"
+                        data-emi-months="${order.remaining_emi_months}"
+                        data-emi-duration="${order.emi_tenure || order.emi_duration || 0}"
+                        data-emi-monthly-amount="${order.emi_monthly_amount || 0}"
+                        data-total-amount="${order.total_amount || 0}"
+                        data-remaining-amount="${order.remaining_amount}"
+                        data-return-amount="${order.total_return || 0}"
+                        data-remaining-emi-months="${order.remaining_emi_months}"
+                        title="Make Payment">
+                        <i class="fas fa-money-bill"></i> Pay
+                    </a>`;
+                }
+                @endif
+
+                @if (app('hasPermission')(2, 'view'))
+                actionBtns += `<button class="btn btn-sm btn-secondary open-history" data-id="${order.id}" title="Payment History">
+                    <i class="fas fa-history"></i> History
+                </button>`;
+                @endif
+
+                if (['quotation', 'advance_receipt'].includes((order.quotation_status || '').toLowerCase())) {
+                    actionBtns += `<a class="btn btn-sm btn-success convert-to-sales" href="javascript:void(0);" data-id="${order.id}" title="Convert to Sales">
+                        Convert to Sales
+                    </a>`;
+                }
+
+                if ((order.quotation_status || '').toLowerCase() === 'advance_receipt') {
+                    actionBtns += `<a class="btn btn-sm make-payment-btn" href="javascript:void(0);"
+                        data-bs-toggle="modal" data-bs-target="#makePaymentModal"
+                        data-id="${order.id}" data-amount="${order.remaining_amount}"
+                        data-method="${order.payment_method || 'cash'}"
+                        data-total-amount="${order.total_amount || 0}"
+                        data-remaining-amount="${order.remaining_amount}"
+                        style="background-color:#7367f0;color:#fff;"
+                        title="Complete Payment for Advance Receipt">
+                        <i class="fas fa-check-circle"></i> Complete Payment
+                    </a>`;
+                }
+
+                if (hasEmiData(order)) {
+                    actionBtns += `<button type="button" class="btn btn-sm emi-action-btn open-emi-details" data-order-id="${order.id}" title="View EMI Details">
+                        <i class="fas fa-calendar-alt"></i> EMI
+                    </button>`;
+                }
+
+                @if (app('hasPermission')(2, 'view'))
+                    actionBtns += `<a class="btn btn-sm btn-info" href="/sales-details/${order.id}">
+                        <i class="fas fa-eye"></i> View
+                    </a>`;
+                @endif
+
+                // Show delivery/truck icon only for delivery sales.
+                if ((order.quotation_status || '').toLowerCase() === 'sales' && isDeliveryOrder(order)) {
+                    actionBtns += `<a class="btn btn-sm btn-primary me-2 deliver-order" href="/sales/delivery/${order.id}" data-id="${order.id}" title="Delivery">
+                        <i class="fas fa-truck"></i>
+                    </a>`;
+                }
+
+                // if (!order.has_payment || order.has_payment === 0) {
+                @if (app('hasPermission')(2, 'edit'))
+                    if (parseFloat(order.total_return || 0) === 0 && !(order.quotation_status === 'rental' && (order.return_status === 'partially_returned' || order.return_status === 'fully_returned'))) {
+                        actionBtns += `<a class="btn btn-sm btn-warning" href="/edit-sales/${order.id}">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>`;
+                    }
+                @endif
+                // }
+
+                @if (app('hasPermission')(2, 'view'))
+                    actionBtns += `<a class="btn btn-sm btn-success" href="/sales-invoice/${order.id}">
+                        <i class="fas fa-file-invoice"></i> Invoice
+                    </a>`;
+                @endif
+
+                @if (app('hasPermission')(2, 'add') && app('hasPermission')(2, 'edit'))
+                if ((order.quotation_status || 'sales').toLowerCase() === 'sales' && order.order_number) {
+                    actionBtns += `<a class="btn btn-sm btn-outline-warning" href="/create-sales-return?order_number=${encodeURIComponent(order.order_number)}" title="Sales Return">
+                        <i class="fas fa-undo"></i> Sales Return
+                    </a>`;
+                }
+                @endif
+
+                if (userRole !== 'sales-manager' && userRole !== 'purchase-manager' && userRole !==
+                    'inventory-manager') {
+                    @if (app('hasPermission')(2, 'delete'))
+                        actionBtns += `<a class="btn btn-sm btn-danger delete-order" href="javascript:void(0);" data-id="${order.id}">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>`;
+                    @endif
+                }
+
+                if (typeof isEinvoiceEnabled !== 'undefined' && isEinvoiceEnabled == 0) {
+                    actionBtns += `<a class="btn btn-sm btn-outline-primary" href="javascript:void(0);" onclick="openQrUploadModal('${order.id}')" title="Upload QR">
+                        <i class="fas fa-qrcode"></i> Upload QR
+                    </a>`;
+                }
+
+                const cardHtml = `
+                    <div class="mobile-order-item" data-order-id="${order.id}">
+                        <div class="mobile-order-row">
+                            <div class="mobile-order-cell mobile-order-number">${order.order_number || 'N/A'}</div>
+                            <div class="mobile-order-cell mobile-order-details-cell">
+                                <button class="mobile-toggle-btn" onclick="toggleMobileDetails('${order.id}')" data-order-id="${order.id}">
+                                    <span class="toggle-icon">+</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mobile-order-details" id="mobile-details-${order.id}">
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Order Number:</span>
+                                <span class="mobile-detail-value">${order.order_number || 'N/A'}</span>
+                            </div>
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Date:</span>
+                                <span class="mobile-detail-value">${order.created_date || 'N/A'}</span>
+                            </div>
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Customer Name:</span>
+                                <span class="mobile-detail-value">${order.user?.name || 'N/A'}</span>
+                            </div>
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Status:</span>
+                                <span class="mobile-detail-value">${getMobileStatusBadge(order.quotation_status || 'sales', 'quotation')}</span>
+                            </div>
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Payment Status:</span>
+                                <span class="mobile-detail-value">
+                                    ${getMobileStatusBadge(order.payment_status, 'payment', order.extra_paid || 0)}
+                                </span>
+                            </div>
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Return Status:</span>
+                                <span class="mobile-detail-value">
+                                    ${getMobileStatusBadge(parseFloat(order.total_return || 0) > 0 ? 'returned' : '', 'return')}
+                                </span>
+                            </div>
+                            ${order.extra_paid > 0 ? `
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label" style="color: #dc3545;">Extra Paid:</span>
+                                    <span class="mobile-detail-value" style="color: #dc3545; font-weight: bold;">
+                                        ${currencySymbol}${parseFloat(order.extra_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Payment Method:</span>
+                                <span class="mobile-detail-value">
+                                    ${getMobileStatusBadge(order.payment_method, 'method')}
+                                </span>
+                            </div>
+                            ${hasEmiData(order) ? `
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label">EMI Tenure:</span>
+                                    <span class="mobile-detail-value">${formatEmiTenureValue(order.emi_tenure || order.emi_duration || 'N/A')}</span>
+                                </div>
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label">Monthly EMI:</span>
+                                    <span class="mobile-detail-value" style="font-weight: 700; color: #1b2850;">
+                                        ${getEmiDisplayValue(order, currencySymbol, currencyPosition)}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Total:</span>
+                                <span class="mobile-detail-value" style="font-weight: bold; color: #ff9f43;">${displayAmount}</span>
+                            </div>
+                            ${showAssignStaff ? `<div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Assigned Staff:</span>
+                                <span class="mobile-detail-value">${buildStaffCell(order.id, order.staff_id, order.staff_name)}</span>
+                            </div>` : ''}
+                            ${showOrderType ? `<div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Order Type:</span>
+                                <span class="mobile-detail-value">${buildOrderTypeCell(order.id, order.order_type)}</span>
+                            </div>` : ''}                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Biller:</span>
+                                <span class="mobile-detail-value">${order.biller || 'Admin'}</span>
+                            </div>
+                            ${parseFloat(order.remaining_amount || 0) > 0 &&
+                            (order.quotation_status || 'sales').toLowerCase() === 'sales' ? `
+                                <div class="mobile-detail-row">
+                                    <span class="mobile-detail-label">Remaining:</span>
+                                    <span class="mobile-detail-value" style="color: #dc3545; font-weight: bold;">
+                                        ${currencySymbol}${parseFloat(order.remaining_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            <div class="mobile-action-buttons">
+                                ${actionBtns}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.append(cardHtml);
+            });
+        }
+
+        // Toggle mobile details function
+        function toggleMobileDetails(orderId) {
+            const details = $(`#mobile-details-${orderId}`);
+            const btn = $(`.mobile-toggle-btn[data-order-id="${orderId}"]`);
+            const icon = btn.find('.toggle-icon');
+
+            if (details.hasClass('active')) {
+                details.removeClass('active');
+                btn.removeClass('minus');
+                icon.text('+');
+            } else {
+                details.addClass('active');
+                btn.addClass('minus');
+                icon.text('-');
+            }
+        }
+
+        // Helper function to build expandable row content
+        function buildExpandableRowContent(order, currencySymbol, currencyPosition) {
+            const amount = parseFloat(order.total_amount || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            const displayAmount = currencyPosition === 'right' ?
+                amount + currencySymbol : currencySymbol + amount;
+
+            let actionBtns = '';
+
+            // History icon button
+            actionBtns += `<button class="btn-icon-mobile btn-history open-history" data-id="${order.id}" title="Payment History">
+                <i class="fas fa-history"></i>
+            </button>`;
+
+            // View icon button
+            @if (app('hasPermission')(2, 'view'))
+                actionBtns += `<a class="btn-icon-mobile btn-view" href="/sales-details/${order.id}" title="View">
+                    <i class="fas fa-eye"></i>
+                </a>`;
+            @endif
+
+            // Edit icon button
+            // if (!order.has_payment || order.has_payment === 0) {
+            @if (app('hasPermission')(2, 'edit'))
+                if (parseFloat(order.total_return || 0) === 0 && !(order.quotation_status === 'rental' && (order.return_status === 'partially_returned' || order.return_status === 'fully_returned'))) {
+                    actionBtns += `<a class="btn-icon-mobile btn-edit" href="/edit-sales/${order.id}" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>`;
+                }
+            @endif
+            // }
+
+            // Download icon button (Invoice)
+            @if (app('hasPermission')(2, 'view'))
+                actionBtns += `<a class="btn-icon-mobile btn-download" href="/sales-invoice/${order.id}" title="Download Invoice">
+                    <i class="fas fa-file-invoice"></i>
+                </a>`;
+            @endif
+
+            // Print icon button
+            @if (app('hasPermission')(2, 'view'))
+                actionBtns += `<a class="btn-icon-mobile btn-print" href="javascript:void(0);" onclick="openSalesInvoicePrintModal( ${order.id});" title="Print Invoice">
+                    <i class="fas fa-print"></i>
+                </a>`;
+            @endif
+
+            @if (app('hasPermission')(2, 'add') && app('hasPermission')(2, 'edit'))
+            if ((order.quotation_status || 'sales').toLowerCase() === 'sales' && order.order_number) {
+                actionBtns += `<a class="btn-icon-mobile" style="background-color:#ff9f43;color:#fff;" href="/create-sales-return?order_number=${encodeURIComponent(order.order_number)}" title="Sales Return">
+                    <i class="fas fa-undo"></i>
+                </a>`;
+            }
+            @endif
+
+            // Delivery/truck icon (mobile) - only for delivery sales.
+            if ((order.quotation_status || 'sales').toLowerCase() === 'sales' && isDeliveryOrder(order)) {
+                actionBtns += `<a class="btn-icon-mobile btn-deliver deliver-order" href="/sales/delivery/${order.id}" data-id="${order.id}" title="Delivery">
+                    <i class="fas fa-truck"></i>
+                </a>`;
+            }
+
+            // Delete icon button
+            if (userRole !== 'sales-manager' && userRole !== 'purchase-manager' && userRole !== 'inventory-manager') {
+                @if (app('hasPermission')(2, 'delete'))
+                    actionBtns += `<a class="btn-icon-mobile btn-delete delete-order" href="javascript:void(0);" data-id="${order.id}" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </a>`;
+                @endif
+            }
+
+            if (typeof isEinvoiceEnabled !== 'undefined' && isEinvoiceEnabled == 0) {
+                actionBtns += `<a class="btn-icon-mobile" style="background-color: #6c757d; color: white;" href="javascript:void(0);" onclick="openQrUploadModal('${order.id}')" title="Upload QR Code">
+                    <i class="fas fa-qrcode"></i>
+                </a>`;
+            }
+
+            // Payment icon button if there's remaining amount
+
+            if (
+                (order.quotation_status || 'sales').toLowerCase() === 'sales'
+            ) {
+                actionBtns += `<a href="javascript:void(0);" class="btn-icon-mobile btn-payment make-payment-btn"
+                    data-bs-toggle="modal" data-bs-target="#makePaymentModal"
+                    data-id="${order.id}" data-amount="${order.remaining_amount}"
+                    data-method="${order.payment_method || ''}"
+                    data-emi-months="${order.remaining_emi_months}"
+                    data-emi-duration="${order.emi_tenure || order.emi_duration || 0}"
+                    data-emi-monthly-amount="${order.emi_monthly_amount || 0}"
+                    data-total-amount="${order.total_amount || 0}"
+                    data-remaining-amount="${order.remaining_amount}"
+                    data-return-amount="${order.total_return || 0}"
+                    data-remaining-emi-months="${order.remaining_emi_months}"
+                    title="Make Payment">
+                    <i class="fas fa-money-bill-wave"></i>
+                </a>`;
+            }
+
+            if (hasEmiData(order)) {
+                actionBtns += `<button type="button" class="btn-icon-mobile btn-payment open-emi-details" data-order-id="${order.id}" title="EMI Details">
+                    <i class="fas fa-calendar-alt"></i>
+                </button>`;
+            }
+
+            return `
+        <td colspan="10" class="order-details-content">
+            <div class="order-details-list">
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Order Number:</span>
+                    <span class="order-detail-value-simple">${order.order_number || 'N/A'}</span>
+                </div>
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Date:</span>
+                    <span class="order-detail-value-simple">${order.created_date || 'N/A'}</span>
+                </div>
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Customer Name:</span>
+                    <span class="order-detail-value-simple">${order.user?.name || 'N/A'}</span>
+                </div>
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Status:</span>
+                    <span class="order-detail-value-simple">
+                        ${getStatusBadge(order.quotation_status || 'sales', 'quotation')}
+                    </span>
+                </div>
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Payment Status:</span>
+                    <span class="order-detail-value-simple">
+                        ${getStatusBadge(order.payment_status, 'payment', order.extra_paid || 0)}
+                    </span>
+                </div>
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Return Status:</span>
+                    <span class="order-detail-value-simple">
+                        ${getStatusBadge(parseFloat(order.total_return || 0) > 0 ? 'returned' : '', 'return')}
+                    </span>
+                </div>
+                ${(order.extra_paid || 0) > 0 ? `
+                    <div class="order-detail-row-simple">
+                        <span class="order-detail-label-simple" style="color: #dc3545;">Extra Paid:</span>
+                        <span class="order-detail-value-simple" style="color: #dc3545; font-weight: bold;">
+                            ${currencySymbol}${parseFloat(order.extra_paid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Advance/Refund)
+                        </span>
+                    </div>
+                ` : ''}
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Payment Method:</span>
+                    <span class="order-detail-value-simple">
+                        ${getStatusBadge(order.payment_method, 'method')}
+                    </span>
+                </div>
+                ${hasEmiData(order) ? `
+                    <div class="order-detail-row-simple">
+                        <span class="order-detail-label-simple">EMI Tenure:</span>
+                        <span class="order-detail-value-simple">${formatEmiTenureValue(order.emi_tenure || order.emi_duration || 'N/A')}</span>
+                    </div>
+                    <div class="order-detail-row-simple">
+                        <span class="order-detail-label-simple">Monthly EMI:</span>
+                        <span class="order-detail-value-simple" style="font-weight: 700; color: #1b2850;">
+                            ${getEmiDisplayValue(order, currencySymbol, currencyPosition)}
+                        </span>
+                    </div>
+                ` : ''}
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Total:</span>
+                    <span class="order-detail-value-simple" style="font-weight: bold; color: #ff9f43;">${displayAmount}</span>
+                </div>
+                ${showAssignStaff ? `<div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Assigned Staff:</span>
+                    <span class="order-detail-value-simple">${buildStaffCell(order.id, order.staff_id, order.staff_name)}</span>
+                </div>` : ''}
+                ${showOrderType ? `<div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Order Type:</span>
+                    <span class="order-detail-value-simple">${buildOrderTypeCell(order.id, order.order_type)}</span>
+                </div>` : ''}                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Biller:</span>
+                    <span class="order-detail-value-simple">${order.biller || 'Admin'}</span>
+                </div>
+                ${parseFloat(order.remaining_amount || 0) > 0 &&
+(order.quotation_status || 'sales').toLowerCase() === 'sales' ? `
+                    <div class="order-detail-row-simple">
+                        <span class="order-detail-label-simple">Remaining:</span>
+                        <span class="order-detail-value-simple" style="color: #dc3545; font-weight: bold;">
+                            ${currencySymbol}${parseFloat(order.remaining_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="mobile-action-buttons-simple">
+                ${actionBtns}
+            </div>
+        </td>
+    `;
+        }
+
+        // Toggle function for table rows
+        function toggleTableRowDetails(orderId) {
+            // Find the button that was clicked
+            const btn = $(`.mobile-toggle-btn-table[data-order-id="${orderId}"]`);
+            if (btn.length === 0) {
+                // console.error('Toggle button not found for order:', orderId);
+                return;
+            }
+
+            const row = btn.closest('tr');
+            let detailsRow = row.next(`tr.order-details-row[data-order-id="${orderId}"]`);
+            const icon = btn.find('.toggle-icon');
+
+            // If expandable row doesn't exist, create it
+            if (detailsRow.length === 0) {
+                const orderData = window.orderDataMap && window.orderDataMap[orderId];
+                if (orderData) {
+                    detailsRow = $('<tr>')
+                        .addClass('order-details-row')
+                        .attr('data-order-id', orderId)
+                        .html(buildExpandableRowContent(orderData, orderData.currencySymbol, orderData.currencyPosition));
+                    row.after(detailsRow);
+                } else {
+                    // console.error('Order data not found for order:', orderId);
+                    return;
+                }
+            }
+
+            if (detailsRow.hasClass('show')) {
+                detailsRow.removeClass('show');
+                btn.removeClass('minus');
+                icon.text('+');
+            } else {
+                detailsRow.addClass('show');
+                btn.addClass('minus');
+                icon.text('-');
+            }
+        }
+
+        // Global variables
+        var table;
+        window.salesSummaryTotals = window.salesSummaryTotals || null;
+
+        // Function to calculate total for visible rows - must be global
+        function calculateFilteredTotal() {
+            if (window.salesSummaryTotals) {
+                updateSalesSummaryTotals(
+                    window.salesSummaryTotals.total_amount || 0,
+                    window.salesSummaryTotals.total_pending_amount || 0,
+                    window.salesSummaryTotals.total_paid_amount || 0,
+                    window.salesSummaryTotals.currency_symbol || '₹',
+                    window.salesSummaryTotals.currency_position || 'left'
+                );
+                return;
+            }
+
+            if (!table) {
+                table = $('.datanew').DataTable();
+            }
+
+            let total = 0;
+
+            // Find the Total column index by header name
+            let totalColumnIndex = -1;
+            table.columns().every(function() {
+                const header = $(this.header());
+                if (header.text().trim() === 'Total') {
+                    totalColumnIndex = this.index();
+                    return false; // break
+                }
+            });
+
+            // If column not found by name, use index 6 as fallback
+            if (totalColumnIndex === -1) {
+                totalColumnIndex = 6;
+            }
+
+            table.rows({
+                filter: 'applied'
+            }).every(function() {
+                const row = this.data();
+                if (row[totalColumnIndex]) {
+                    const amountText = row[totalColumnIndex];
+                    const rawAmount = parseFloat(amountText.replace(/[^0-9.-]+/g, '')) || 0;
+                    total += rawAmount;
+                }
+            });
+
+            const currencySymbol = "₹";
+            $('#filtered-total').text(
+                `${currencySymbol}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            );
+        }
+
+        // Normalize filter values: treat "all" or empty as no-filter ('')
+        function normalizeFilterValue(val) {
+            if (typeof val === 'undefined' || val === null) return '';
+            return (String(val) === '' || String(val) === 'all') ? '' : val;
+        }
+
+        function resolveSalesBranchId() {
+            const fromStorage = localStorage.getItem('selectedSubAdminId');
+            if (fromStorage && fromStorage !== 'null' && fromStorage !== 'undefined') {
+                return fromStorage;
+            }
+
+            const fromSession = @json(session('selectedSubAdminId'));
+            if (fromSession) {
+                localStorage.setItem('selectedSubAdminId', String(fromSession));
+                return String(fromSession);
+            }
+
+            return '';
+        }
+
+        function formatSummaryAmount(amount, currencySymbol, currencyPosition) {
+            const numericAmount = parseFloat(amount || 0);
+            const formattedAmount = numericAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            return currencyPosition === 'right' ?
+                `${formattedAmount}${currencySymbol}` :
+                `${currencySymbol}${formattedAmount}`;
+        }
+
+        function updateSalesSummaryTotals(totalAmount, totalPendingAmount, totalPaidAmount, currencySymbol,
+            currencyPosition) {
+            $('#filtered-total').text(formatSummaryAmount(totalAmount, currencySymbol, currencyPosition));
+            $('#filtered-pending-total').text(formatSummaryAmount(totalPendingAmount, currencySymbol,
+                currencyPosition));
+            $('#filtered-paid-total').text(formatSummaryAmount(totalPaidAmount, currencySymbol,
+                currencyPosition));
+        }
+
+        const salesCalendarYears = @json($years ?? []);
+
+        function buildFinancialYearOptions(yearValues) {
+            const fyStartYears = new Set();
+            (Array.isArray(yearValues) ? yearValues : []).forEach((yearVal) => {
+                const year = parseInt(yearVal, 10);
+                if (!Number.isNaN(year)) {
+                    fyStartYears.add(year - 1);
+                    fyStartYears.add(year);
+                }
+            });
+
+            const currentYear = new Date().getFullYear();
+            fyStartYears.add(currentYear - 1);
+            fyStartYears.add(currentYear);
+
+            return Array.from(fyStartYears)
+                .sort((a, b) => b - a)
+                .map((startYear) => `${startYear}-${startYear + 1}`);
+        }
+
+        function populateSalesFinancialYears() {
+            const $financialYear = $('#filter-financial-year');
+            const options = buildFinancialYearOptions(salesCalendarYears);
+            $financialYear.empty().append('<option value="all">All Financial Years</option>');
+            options.forEach((financialYear) => {
+                $financialYear.append(`<option value="${financialYear}">${financialYear}</option>`);
+            });
+        }
+
+        // Helper function to update Select2 display for filters
+        function updateSelect2Display(selectedMonth, selectedYear) {
+            try {
+                let paddedMonth = '';
+                if (typeof selectedMonth !== 'undefined' && selectedMonth !== null && selectedMonth !== '') {
+                    paddedMonth = (String(selectedMonth).length === 1) ? ('0' + String(selectedMonth)) : String(
+                        selectedMonth);
+                }
+
+                if (paddedMonth !== '') {
+                    $('#filter-month').val(paddedMonth).trigger('change.select2');
+                } else {
+                    $('#filter-month').val('all').trigger('change.select2');
+                }
+
+                if (typeof selectedYear !== 'undefined' && selectedYear !== null && selectedYear !== '') {
+                    $('#filter-year').val(String(selectedYear)).trigger('change.select2');
+                } else {
+                    $('#filter-year').val('all').trigger('change.select2');
+                }
+
+                // Update Select2 rendered text directly to ensure UI is in sync
+                $('.filter-select2').each(function() {
+                    const text = $(this).find('option:selected').text() || $(this).data('placeholder');
+                    const rendered = $(this).next('.select2-container').find('.select2-selection__rendered');
+                    if (rendered.length) rendered.text(text.trim());
+                });
+            } catch (e) {
+                // console.warn('Failed to update Select2 display:', e);
+            }
+        }
+
+        $(document).ready(function() {
+            // Initialize each Select2 with its own placeholder so empty value shows label
+            $('.filter-select2').each(function() {
+                const placeholder = $(this).data('placeholder') || '';
+                $(this).select2({
+                    width: '100%',
+                    placeholder: placeholder,
+                    allowClear: true,
+                    templateSelection: function(state) {
+                        return (state && state.text) ? state.text.trim() : placeholder;
+                    },
+                    templateResult: function(state) {
+                        return (state && state.text) ? state.text.trim() : '';
+                    }
+                });
+            });
+
+            const syncFilterSelect2Display = () => {
+                $('.filter-select2').each(function() {
+                    const text = $(this).find('option:selected').text() || $(this).data('placeholder');
+                    const rendered = $(this).next('.select2-container').find('.select2-selection__rendered');
+                    if (rendered.length) rendered.text(text.trim());
+                });
+            };
+            syncFilterSelect2Display();
+
+            let skipDateResetFromMonthYear = false;
+
+
+            var authToken = localStorage.getItem("authToken");
+            let selectedSubAdminId = resolveSalesBranchId();
+            const addBankModalElement = document.getElementById('addBankModal');
+            const addBankModal = addBankModalElement ? bootstrap.Modal.getOrCreateInstance(addBankModalElement) : null;
+            let currentPage = 1;
+            let lastPage = 1;
+            let perPage = 10;
+            let searchQuery = '';
+            let isFinancialYearEnabled = false;
+            table = $('.datanew').DataTable();
+            populateSalesFinancialYears();
+
+            function resetAddBankForm() {
+                $('#addBankForm')[0].reset();
+                $('#add_opening_balance').val('0');
+                $('#add_bank_status').val('1');
+                $('#addBankForm .text-danger').text('');
+            }
+
+            function upsertBankOption(bank) {
+                if (!bank || !bank.id) {
+                    return;
+                }
+
+                const bankId = String(bank.id);
+                const bankName = bank.bank_name || 'Unnamed Bank';
+                const existingOption = $('#bank_id option[value="' + bankId + '"]');
+
+                if (existingOption.length) {
+                    existingOption.text(bankName);
+                } else {
+                    $('#bank_id').append(new Option(bankName, bankId));
+                }
+
+                $('#bank_id').val(bankId).trigger('change');
+            }
+
+            function toggleSalesFinancialYearFilter(enabled) {
+                isFinancialYearEnabled = Boolean(Number(enabled));
+                const $financialYearWrapper = $('#sales-financial-year-filter');
+                if (isFinancialYearEnabled) {
+                    $financialYearWrapper.removeClass('d-none');
+                } else {
+                    $financialYearWrapper.addClass('d-none');
+                    $('#filter-financial-year').val('all');
+                }
+            }
+
+            $('#search-input').on('keyup', function() {
+                searchQuery = $(this).val();
+                loadOrders(1);
+            });
+
+            $('#sales-per-page-select').on('change', function() {
+                perPage = $(this).val();
+                table.page.len(parseInt(perPage, 10)).draw(false);
+                loadOrders(1);
+            });
+
+            $('#filter-sort').off('change select2:select select2:unselect').on('change select2:select select2:unselect', function() {
+                syncFilterSelect2Display();
+                loadOrders(1);
+            });
+
+            $(document).on('click', '.make-payment-btn', function() {
+                const paymentOrder = resolvePaymentOrder($(this));
+                let jobCardId = paymentOrder.id;
+                let totalAmount = paymentOrder.total_amount;
+                let remainingAmount = paymentOrder.remaining_amount;
+                let returnAmount = paymentOrder.total_return;
+                let method = paymentOrder.payment_method || '';
+                let emiMonthlyAmount = parseFloat(paymentOrder.emi_monthly_amount || 0);
+                let emiTenure = resolveEmiTenure(paymentOrder);
+
+                currentPaymentOrder = {
+                    id: jobCardId,
+                    method: method,
+                    emiTenure: emiTenure,
+                    emiMonthlyAmount: emiMonthlyAmount,
+                    order: paymentOrder
+                };
+
+                // ✅ Fill modal hidden inputs + text spans
+                $('#paymentJobCardId').val(jobCardId);
+                $('#emiTotal').text(parseFloat(totalAmount).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }));
+                $('#remainingAmountDisplay').text(parseFloat(remainingAmount).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }));
+
+                if (returnAmount > 0) {
+                    $('#returnAmountDisplay').text(returnAmount.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }));
+                    $('#returnAmountSection').removeClass('d-none');
+                } else {
+                    $('#returnAmountSection').addClass('d-none');
+                }
+
+                $('#remainingAmountHidden').val(remainingAmount);
+                $('#paymentMethodHidden').val(method);
+
+                // ✅ Reset payment method dropdown to default
+                $('#paymentMethodSelect').val('');
+                $('#emiMonthlyAmountInput').val(emiMonthlyAmount > 0 ? emiMonthlyAmount : '');
+                if (String(method).toLowerCase() === 'emi') {
+                    $('#paymentMethodSelect').val('emi').trigger('change');
+                    $('#emiMonthlyAmountDiv').removeClass('d-none');
+                    $('#bank_container').removeClass('d-none');
+                    $('#emiMonthlyAmountInput').val(emiMonthlyAmount > 0 ? emiMonthlyAmount : remainingAmount);
+                    loadEmiMonthOptionsForPayment(jobCardId, emiTenure, emiMonthlyAmount, paymentOrder);
+                } else {
+                    $('#emiMonthDiv, #emiMonthlyAmountDiv').addClass('d-none');
+                }
+
+                // ✅ Hide history box initially
+                $('#paymentHistoryBox').addClass('d-none');
+                $('#paymentHistoryList').html('');
+
+                // ✅ Bind View History button
+                $('#viewHistoryBtn').off('click').on('click', function() {
+                    $.ajax({
+                        url: '/api/sales/payment-history/' + jobCardId,
+                        method: 'GET',
+                        headers: {
+                            "Authorization": "Bearer " + authToken,
+                        },
+                        success: function(response) {
+                            const history = response.data;
+
+                            if (!history || history.length === 0) {
+                                $('#paymentHistoryList').html(
+                                    '<li>No payment history found.</li>');
+                            } else {
+                            historyHtml = '';
+
+history.forEach(function(payment) {
+
+    const paymentMethod = payment.payment_method
+        ? payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1).toLowerCase()
+        : 'N/A';
+
+    const paymentType = payment.payment_type
+        ? payment.payment_type.charAt(0).toUpperCase() + payment.payment_type.slice(1).toLowerCase()
+        : 'N/A';
+
+    const paymentRemark = payment.remarks && String(payment.remarks).trim() !== ''
+        ? payment.remarks
+        : 'N/A';
+
+    historyHtml += `
+        <li class="mb-2">
+            <strong>Amount:</strong> ₹${parseFloat(payment.payment_amount).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}<br>
+
+            <strong>Date:</strong> ${formatPaymentHistoryDate(payment.payment_date || payment.created_at)}<br>
+
+            <strong>Method:</strong> ${paymentMethod}<br>
+
+            <strong>Payment Type:</strong> ${paymentType}<br>
+
+            <strong>Remark:</strong> ${paymentRemark}<br>
+
+            ${payment.payment_type === 'emi'
+                ? `<strong>EMI Months:</strong> ${payment.emi_month || 0}<br>`
+                : ''}
+        </li>
+
+        <hr class="my-1"/>
+    `;
+});
+
+$('#paymentHistoryList').html(historyHtml);
+                                // Add Summary
+                                if (response.summary) {
+                                    let summaryHtml = `
+                                        <hr class="my-2"/>
+                                        <li class="mb-1"><strong>Order Total:</strong> ₹${parseFloat(response.summary.order_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</li>
+                                        <li class="mb-1"><strong>Total Paid:</strong> ₹${parseFloat(response.summary.total_paid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</li>
+                                        <li class="mb-1"><strong>Return Amount:</strong> ₹${parseFloat(response.summary.return_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</li>
+                                        <li class="mb-1"><strong>Remaining:</strong> ₹${parseFloat(response.summary.remaining).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</li>
+                                    `;
+                                    $('#paymentHistoryList').append(summaryHtml);
+                                }
+                            }
+
+                            $('#paymentHistoryBox').removeClass('d-none');
+                        },
+                        error: function() {
+                            $('#paymentHistoryList').html(
+                                '<li class="text-danger">Failed to load payment history.</li>'
+                            );
+                            $('#paymentHistoryBox').removeClass('d-none');
+                        }
+                    });
+                });
+
+                // ✅ Close history
+                $('#closeHistoryBtn').off('click').on('click', function() {
+                    $('#paymentHistoryBox').addClass('d-none');
+                });
+            });
+
+            $('#paymentMethodSelect').on('change', function() {
+                let method = $(this).val();
+
+                // Hide all optional sections first
+                $('#cashOnlineTypeDiv, #fullyCashOnlineFields, #partialCashOnlineFields, #onlineTypeDiv, #paidTypeDiv, #upiAmountDiv, #partialPaidFields, #fullyPaidFields, #bank_container, #emiMonthDiv, #emiMonthlyAmountDiv')
+                    .addClass('d-none');
+                $('#emiBox').hide();
+                $('#bank_id').val('');
+                $("#bankError").text("");
+                $('#emiMonthError, #emiMonthlyAmountError').text('');
+
+                if (method === 'cash') {
+                    $('#paidTypeDiv').removeClass('d-none'); // Show paid type options
+
+                } else if (method === 'online') {
+                    $('#onlineTypeDiv').removeClass('d-none'); // Show online type dropdown
+                    $('#bank_container').removeClass('d-none');
+
+                } else if (method === 'cash_online') {
+                    $('#cashOnlineTypeDiv').removeClass('d-none'); // Show Cash + Online type dropdown
+                    $('#bank_container').removeClass('d-none');
+                } else if (method === 'emi') {
+                    $('#bank_container').removeClass('d-none');
+                    if (currentPaymentOrder && currentPaymentOrder.method === 'emi') {
+                        $('#emiMonthDiv, #emiMonthlyAmountDiv').removeClass('d-none');
+                        $('#emiBox').hide();
+                        loadEmiMonthOptionsForPayment(
+                            currentPaymentOrder.id,
+                            currentPaymentOrder.emiTenure,
+                            currentPaymentOrder.emiMonthlyAmount,
+                            currentPaymentOrder.order
+                        );
+                    } else {
+                        $('#emiMonthDiv, #emiMonthlyAmountDiv').addClass('d-none');
+                        $('#emiBox').show();
+                        if (typeof refreshEmiCalculations === 'function') {
+                            refreshEmiCalculations();
+                        }
+                    }
+                }
+            });
+
+            $('#bank_id').on('change', function() {
+                if ($(this).val()) {
+                    $("#bankError").text("");
+                }
+            });
+
+            $('#openAddBankModal').on('click', function() {
+                resetAddBankForm();
+                if (addBankModal) {
+                    addBankModal.show();
+                }
+            });
+
+            $('#addBankModal').on('hidden.bs.modal', function() {
+                if ($('#makePaymentModal').hasClass('show')) {
+                    $('body').addClass('modal-open');
+                }
+            });
+
+            $('#addBankForm').on('submit', function(e) {
+                e.preventDefault();
+
+                $('#addBankForm .text-danger').text('');
+
+                const formData = new FormData(this);
+                if (selectedSubAdminId) {
+                    formData.append('selectedSubAdminId', selectedSubAdminId);
+                }
+
+                const saveButton = $('#saveBankBtn');
+                saveButton.prop('disabled', true).text('Saving...');
+
+                $.ajax({
+                    url: '/api/banks',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                        "Authorization": "Bearer " + authToken
+                    },
+                    success: function(response) {
+                        upsertBankOption(response.data || null);
+                        $("#bankError").text("");
+
+                        if (addBankModal) {
+                            addBankModal.hide();
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: response.message || 'Bank added successfully.',
+                            confirmButtonText: 'OK'
+                        });
+                    },
+                    error: function(xhr) {
+                        const errors = xhr.responseJSON?.errors || {};
+
+                        $('#addBankNameError').text(errors.bank_name ? errors.bank_name[0] : '');
+                        $('#addAccountNumberError').text(errors.account_number ? errors.account_number[0] : '');
+                        $('#addIfscCodeError').text(errors.ifsc_code ? errors.ifsc_code[0] : '');
+                        $('#addBranchNameError').text(errors.branch_name ? errors.branch_name[0] : '');
+                        $('#addOpeningBalanceError').text(errors.opening_balance ? errors.opening_balance[0] : '');
+                        $('#addBankStatusError').text(errors.status ? errors.status[0] : '');
+
+                        if (!Object.keys(errors).length) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: xhr.responseJSON?.message || 'Failed to add bank.',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    complete: function() {
+                        saveButton.prop('disabled', false).text('Save Bank');
+                    }
+                });
+            });
+
+            function parseEmiAmount(val) {
+                let num = parseFloat(val);
+                return isNaN(num) ? 0 : num;
+            }
+
+            function refreshEmiCalculations() {
+                const total = parseFloat($('#remainingAmountHidden').val()) || 0;
+                const downPayment = parseEmiAmount($("#emiDownPayment").val());
+                const loanAmount = Math.max(total - downPayment, 0);
+                $("#emiLoanAmount").val(loanAmount.toFixed(2));
+                
+                const tenure = $("#emiTenure").val();
+                const isCustomTenure = tenure === "custom";
+                if (isCustomTenure) {
+                    $("#emiCustomTenureCol").removeClass("d-none").show();
+                } else {
+                    $("#emiCustomTenureCol").addClass("d-none").hide();
+                }
+                const months = isCustomTenure
+                    ? parseInt($("#emiCustomTenure").val() || "0", 10)
+                    : parseInt(tenure || "0", 10);
+                const annualRate = parseEmiAmount($("#emiInterestRate").val());
+
+                $("#emiCustomTenureError").addClass("d-none").text("");
+                if (isCustomTenure) {
+                    const rawCustom = ($("#emiCustomTenure").val() || "").trim();
+                    if (rawCustom !== "" && (months <= 0 || !Number.isInteger(months))) {
+                        $("#emiCustomTenureError").removeClass("d-none").text("Please enter a valid positive whole number.");
+                    }
+                }
+                if (downPayment > 0 && downPayment >= total && total > 0) {
+                    $("#emiDownPaymentError").removeClass("d-none").text("Down payment must be less than loan amount.");
+                } else {
+                    $("#emiDownPaymentError").addClass("d-none").text("");
+                }
+
+                let emi = 0;
+                if (loanAmount > 0 && months > 0) {
+                    if (annualRate === 0) {
+                        emi = loanAmount / months;
+                    } else {
+                        const R = annualRate / 12 / 100;
+                        const pow = Math.pow(1 + R, months);
+                        emi = (loanAmount * R * pow) / (pow - 1);
+                    }
+                    $("#emiBoxMonthlyAmount").val(emi.toFixed(2));
+                } else {
+                    $("#emiBoxMonthlyAmount").val("");
+                }
+            }
+
+            $(document).on('input change', '#emiDownPayment, #emiInterestRate, #emiTenure, #emiCustomTenure', function() {
+                refreshEmiCalculations();
+            });
+
+            $('#paidTypeSelect').on('change', function() {
+                let type = $(this).val();
+                let remaining = parseFloat($('#remainingAmountHidden').val()) || 0;
+
+                // Hide both sections
+                $('#partialPaidFields, #fullyPaidFields').addClass('d-none');
+
+                // Disable all inputs first
+                $('#partialPaidFields input, #fullyPaidFields input').prop('disabled', true);
+
+                if (type === 'cash_partially') {
+                    // Show partial fields
+                    $('#partialPaidFields').removeClass('d-none');
+                    $('#partialPaidFields input').prop('disabled', false);
+
+                    // Clear & reset values
+                    $('#partialAmount').val('');
+                    $('#pendingAmount').val(remaining.toFixed(2));
+
+                    // Remove any full cash amount
+                    $('#cashAmount').val('').prop('readonly', false).prop('disabled', true);
+
+                    // Live calculation for pending
+                    $('#partialAmount').off('input').on('input', function() {
+                        let entered = parseFloat($(this).val()) || 0;
+                        let newPending = Math.max(remaining - entered, 0);
+                        $('#pendingAmount').val(newPending.toFixed(2));
+                    });
+
+                } else if (type === 'cash_fully') {
+                    // Show fully fields
+                    $('#fullyPaidFields').removeClass('d-none');
+                    $('#fullyPaidFields input').prop('disabled', false);
+
+                    // Fill full amount & disable editing
+                    $('#cashAmount').val(remaining.toFixed(2)).prop('readonly', true);
+
+                    // Reset partial fields
+                    $('#partialAmount, #pendingAmount').val('');
+                    $('#partialPaidFields input').prop('disabled', true);
+                }
+            });
+
+            $('#onlineTypeSelect').on('change', function() {
+                let type = $(this).val();
+                let remaining = parseFloat($('#remainingAmountHidden').val()) || 0;
+
+                // Hide both sections
+                $('#upiAmountDiv, #partialPaidFields').addClass('d-none');
+                // Disable all inputs first
+                $('#upiAmountDiv input, #partialPaidFields input').prop('disabled', true);
+
+                if (type === 'online_partially') {
+                    // Show partial fields
+                    $('#partialPaidFields').removeClass('d-none');
+                    $('#partialPaidFields input').prop('disabled', false);
+
+                    // Reset values
+                    $('#partialAmount').val('');
+                    $('#pendingAmount').val(remaining.toFixed(2));
+
+                    // Clear and disable UPI field
+                    $('#upiAmountInput').val('').prop('readonly', false).prop('disabled', true);
+
+                    // Live pending update
+                    $('#partialAmount').off('input').on('input', function() {
+                        let entered = parseFloat($(this).val()) || 0;
+                        let newPending = Math.max(remaining - entered, 0);
+                        $('#pendingAmount').val(newPending.toFixed(2));
+                    });
+
+                } else if (type === 'online_fully') {
+                    // Show fully online section
+                    $('#upiAmountDiv').removeClass('d-none');
+                    $('#upiAmountDiv input').prop('disabled', false);
+
+                    // Fill with remaining and lock editing
+                    $('#upiAmountInput').val(remaining.toFixed(2)).prop('readonly', true);
+
+                    // Reset partial section
+                    $('#partialAmount, #pendingAmount').val('');
+                    $('#partialPaidFields input').prop('disabled', true);
+                }
+            });
+
+            $('#cashOnlineTypeSelect').on('change', function() {
+                let type = $(this).val();
+                let remaining = parseFloat($('#remainingAmountHidden').val()) || 0;
+
+                // Hide both sections
+                $('#fullyCashOnlineFields, #partialCashOnlineFields').addClass('d-none');
+                // Disable all inputs first
+                $('#fullyCashOnlineFields input, #partialCashOnlineFields input').prop('disabled', true);
+
+                if (type === 'cash_online_fully') {
+                    // Show fully section
+                    $('#fullyCashOnlineFields').removeClass('d-none');
+                    $('#fullyCashOnlineFields input').prop('disabled', false);
+
+                    // Reset values
+                    $('#cashOnlineFullAmount').val('');
+                    $('#upiOnlineFullAmount').val(remaining.toFixed(2));
+
+                    // Live adjustment of online amount
+                    $('#cashOnlineFullAmount').off('input').on('input', function() {
+                        let cash = parseFloat($(this).val()) || 0;
+                        let online = Math.max(remaining - cash, 0);
+                        $('#upiOnlineFullAmount').val(online.toFixed(2));
+                    });
+
+                    // Disable partial fields
+                    $('#partialCashOnlineFields input').prop('disabled', true);
+
+                } else if (type === 'cash_online_partially') {
+                    // Show partial section
+                    $('#partialCashOnlineFields').removeClass('d-none');
+                    $('#partialCashOnlineFields input').prop('disabled', false);
+
+                    // Reset values
+                    $('#cashOnlinePartialAmount, #upiOnlinePartialAmount').val('');
+                    $('#remainingCashOnlineAmount').val(remaining.toFixed(2));
+
+                    // Live update on cash input
+                    $('#cashOnlinePartialAmount').off('input').on('input', function() {
+                        let cash = parseFloat($(this).val()) || 0;
+                        let newRemaining = Math.max(remaining - cash, 0);
+                        $('#remainingCashOnlineAmount').val(newRemaining.toFixed(2));
+                    });
+
+                    // Live update on online input
+                    $('#upiOnlinePartialAmount').off('input').on('input', function() {
+                        let online = parseFloat($(this).val()) || 0;
+                        let cash = parseFloat($('#cashOnlinePartialAmount').val()) || 0;
+                        let newRemaining = Math.max(remaining - cash - online, 0);
+                        // console.log("newRemaining:", newRemaining);
+                        $('#remainingCashOnlineAmount').val(newRemaining.toFixed(2));
+                    });
+
+                    // Disable fully fields
+                    $('#fullyCashOnlineFields input').prop('disabled', true);
+                }
+            });
+
+            $('#makePaymentForm').on('submit', function(e) {
+                e.preventDefault();
+
+
+                let isValid = true;
+
+
+
+                // Clear all previous errors
+                $('.text-danger').text('');
+
+                // Get values
+                let paymentMethod = $('#paymentMethodSelect').val();
+                let paymentTypeemionly = $('#paymentType').val();
+                let paidType = $('#paidTypeSelect').val();
+                let onlineType = $('#onlineTypeSelect').val();
+                let cashOnlineType = $('#cashOnlineTypeSelect').val();
+                let emiMonth = $('#emiMonthSelect').val();
+                let emiMonthlyAmount = parseFloat($('#emiMonthlyAmountInput').val()) || 0;
+                let paymentDate = $('#paymentDate').val();
+
+                if (!paymentDate) {
+                    isValid = false;
+                    $('#paymentDateError').text("Please select a payment date.");
+                    return false;
+                }
+
+                // EMI Validation
+                if (paymentMethod === 'emi') {
+                    if (currentPaymentOrder && currentPaymentOrder.method === 'emi') {
+                        if (!$("#bank_id").val()) {
+                            isValid = false;
+                            $("#bankError").text("Please select a bank.");
+                            return false;
+                        }
+                        if (!emiMonth) {
+                            isValid = false;
+                            $('#emiMonthError').text('Please select EMI month.');
+                            return false;
+                        }
+                        if (!emiMonthlyAmount || emiMonthlyAmount <= 0) {
+                            isValid = false;
+                            $('#emiMonthlyAmountError').text('Monthly EMI amount is required.');
+                            return false;
+                        }
+                        const nextSelectableMonth = $('#emiMonthSelect option:not(:disabled)').first().val();
+                        if (String(emiMonth) !== String(nextSelectableMonth)) {
+                            isValid = false;
+                            $('#emiMonthError').text('Please pay the next pending EMI month in sequence.');
+                            return false;
+                        }
+                    } else {
+                        // NEW EMI SETUP
+                        if (!$("#bank_id").val()) {
+                            isValid = false;
+                            $("#bankError").text("Please select a bank.");
+                            return false;
+                        }
+                        const tenure = $("#emiTenure").val();
+                        if (!tenure) {
+                            isValid = false;
+                            $('#emiTenureError').removeClass('d-none').text('Please select tenure.');
+                            return false;
+                        }
+                        const months = tenure === "custom"
+                            ? parseInt($("#emiCustomTenure").val() || "0", 10)
+                            : parseInt(tenure || "0", 10);
+                        if (months <= 0) {
+                            isValid = false;
+                            $('#emiCustomTenureError').removeClass('d-none').text('Please enter valid tenure.');
+                            return false;
+                        }
+                    }
+                }
+
+
+
+                // Payment Method validation
+
+
+                if (!paymentMethod) {
+                    isValid = false;
+                    // console.log("Validation failed: Payment method not selected");
+                    $('#paymentMethodError').text("Please select a payment method.");
+                    return false;
+                } else {
+                    console.log("Payment method selected:", paymentMethod);
+                }
+
+
+                // Cash Payment Validation
+                if (paymentMethod === 'cash') {
+                    // console.log("Cash payment selected");
+
+                    if (!paidType) {
+                        isValid = false;
+                        // console.log("Validation failed: Paid type not selected");
+                        $('#paidTypeError').text("Please select paid type.");
+                        return false;
+                    } else {
+                        // console.log("Paid type selected:", paidType);
+                    }
+
+                    if (paidType === 'cash_partially') {
+                        let partialAmount = parseFloat($('#partialAmount').val()) || 0;
+                        let remainingAmount = parseFloat($('#remainingAmountHidden').val()) || 0;
+
+                        // console.log("Cash partially selected, entered amount:", partialAmount, "Remaining:",
+                        //     remainingAmount);
+
+                        if (!partialAmount || isNaN(partialAmount) || partialAmount <= 0) {
+                            isValid = false;
+                            $('#partialAmountError').text("Enter a valid positive partial cash amount.");
+                            return false;
+                        }
+
+                        if (partialAmount > remainingAmount) {
+                            isValid = false;
+                            $('#partialAmountError').text(
+                                "Partial cash amount cannot exceed remaining amount (" + remainingAmount
+                                .toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }) + ")."
+                            );
+                            return false;
+                        }
+
+                        if (partialAmount < 0) {
+                            isValid = false;
+                            $('#partialAmountError').text("Amount cannot be negative.");
+                            return false;
+                        }
+
+                        // console.log("Partial cash amount valid");
+                    } else {
+                        let cashAmount = $('#cashAmount').val();
+                        // console.log("Cash fully selected, amount:", cashAmount);
+                        if (!cashAmount || parseFloat(cashAmount) <= 0) {
+                            isValid = false;
+                            // console.log("Validation failed: Invalid full cash amount");
+                            $('#cashAmountError').text("Enter a valid cash amount.");
+                            return false;
+                        } else {
+                            // console.log("Full cash amount valid");
+                        }
+                    }
+                }
+
+                // Online Payment Validation
+                if (paymentMethod === 'online') {
+                    // console.log("Online payment selected");
+
+                    if (!onlineType) {
+                        isValid = false;
+                        // console.log("Validation failed: Online type not selected");
+                        $('#onlineTypeError').text("Please select online type.");
+                        return false;
+                    } else {
+                        // console.log("Online type selected:", onlineType);
+                    }
+
+                    if (!$("#bank_id").val()) {
+                        isValid = false;
+                        $("#bankError").text("Please select a bank");
+                        return false;
+                    }
+
+                    let onlineAmount = parseFloat($('#partialAmount').val()) || parseFloat($(
+                        '#upiAmountInput').val()) || 0;
+                    let remainingAmount = parseFloat($('#remainingAmountHidden').val()) || 0;
+
+                    // console.log("Online amount entered:", onlineAmount, "Remaining:", remainingAmount);
+
+                    // ✅ Check 1: Must be a valid positive number
+                    if (!onlineAmount || isNaN(onlineAmount) || onlineAmount <= 0) {
+                        isValid = false;
+                        if (onlineType === 'online_partially') {
+                            // console.log("Validation failed: Invalid partial online amount");
+                            $('#partialAmountError').text("Enter a valid positive online partial amount.");
+                        } else {
+                            // console.log("Validation failed: Invalid full online amount");
+                            $('#upiAmountError').text("Enter a valid positive online amount.");
+                        }
+                        return false;
+                    }
+
+                    // ✅ Check 2: Cannot exceed remaining
+                    if (onlineType === 'online_partially' && onlineAmount > remainingAmount) {
+                        // console.log(onlineType);
+                        isValid = false;
+                        // console.log("Validation failed: Partial online amount exceeds remaining");
+                        $('#partialAmountError').text(
+                            "Partial online amount cannot exceed remaining amount (" + remainingAmount
+                            .toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }) + ")."
+                        );
+                        return false;
+                    }
+
+                    // ✅ Check 3: Cannot be negative
+                    if (onlineAmount < 0) {
+                        isValid = false;
+                        // console.log("Validation failed: Negative online amount");
+                        $('#partialAmountError').text("Amount cannot be negative.");
+                        return false;
+                    }
+
+                    // console.log("Online amount valid");
+                }
+
+
+                // Cash + Online Validation
+                if (paymentMethod === 'cash_online') {
+                    // console.log("Cash + Online payment selected");
+
+                    if (!cashOnlineType) {
+                        isValid = false;
+                        // console.log("Validation failed: Cash + Online type not selected");
+                        $('#cashOnlineTypeError').text("Please select Cash + Online type.");
+                        return false;
+                    } else {
+                        // console.log("Cash + Online type selected:", cashOnlineType);
+                    }
+
+                    if (!$("#bank_id").val()) {
+                        isValid = false;
+                        $("#bankError").text("Please select a bank");
+                        return false;
+                    }
+
+                    if (cashOnlineType === 'cash_online_fully') {
+                        let cashAmt = $('#cashOnlineFullAmount').val();
+                        let onlineAmt = $('#upiOnlineFullAmount').val();
+                        // console.log("Cash+Online fully amounts:", cashAmt, onlineAmt);
+
+                        if (!cashAmt || parseFloat(cashAmt) <= 0 || !onlineAmt || parseFloat(onlineAmt) <=
+                            0) {
+                            isValid = false;
+                            // console.log("Validation failed: Invalid fully cash + online amounts");
+                            $('#cashOnlineFullAmountError').text("Enter a valid cash amount.");
+                            $('#upiOnlineFullAmountError').text("Enter a valid online amount.");
+                            return false;
+                        } else {
+                            // console.log("Fully cash + online amounts valid");
+                        }
+                    }
+
+                    if (cashOnlineType === 'cash_online_partially') {
+                        let cashAmt = parseFloat($('#cashOnlinePartialAmount').val()) || 0;
+                        let onlineAmt = parseFloat($('#upiOnlinePartialAmount').val()) || 0;
+
+                        // Clean pending amount
+                        let rawPending = $('#remainingCashOnlineAmount').val() || "0";
+                        rawPending = rawPending.replace(/[₹,]/g, '').trim();
+                        let pendingAmt = parseFloat(rawPending) || 0;
+
+                        // console.log("Cash+Online partially amounts:", cashAmt, onlineAmt, "Pending:",
+                        //     pendingAmt);
+
+                        // ✅ Check for invalid or negative input
+                        if ((cashAmt <= 0 && onlineAmt <= 0)) {
+                            isValid = false;
+                            // console.log("Validation failed: Invalid partially cash + online amounts");
+                            $('#cashOnlinePartialAmountError').text("Enter at least one valid amount.");
+                            $('#upiOnlinePartialAmountError').text("Enter at least one valid amount.");
+                            return false;
+                        }
+
+                        if (cashAmt < 0 || onlineAmt < 0) {
+                            isValid = false;
+                            // console.log("Validation failed: Negative amounts are not allowed");
+                            $('#cashOnlinePartialAmountError').text("Negative amount not allowed.");
+                            $('#upiOnlinePartialAmountError').text("Negative amount not allowed.");
+                            return false;
+                        }
+
+                        // ✅ Total should not exceed pending amount
+                        let total = cashAmt + onlineAmt;
+                        // console.log("Total payment:", total, "Pending amount:", pendingAmt);
+
+                        if (total > pendingAmt) {
+                            isValid = false;
+                            // console.log("Validation failed: Total exceeds pending amount");
+                            $('#cashOnlinePartialAmountError').text(
+                                "Total payment cannot exceed pending amount (" + pendingAmt + ").");
+                            $('#upiOnlinePartialAmountError').text(
+                                "Total payment cannot exceed pending amount (" + pendingAmt + ").");
+                            return false;
+                        }
+
+                        // console.log("Partially cash + online amounts valid");
+                    }
+
+                }
+
+
+
+                // console.log('done pay');
+
+
+                if (isValid) {
+                    // this.submit(); // submit the form
+                }
+                let selectedPaymentType = $('#paymentMethodSelect').val();
+                $('#paymentMethodHidden').val(selectedPaymentType);
+
+                if ($("#paymentMethodDiv").hasClass("d-none")) {
+                    $("#newEmiHidden").prop("disabled", true).val("");
+                }
+
+
+
+                let formElement = $(this)[0];
+                let formData = new FormData(formElement);
+
+                let submitButton = $(this).find('button[type="submit"]');
+                submitButton.prop('disabled', true).text('Processing...');
+                if (selectedPaymentType === 'emi') {
+                    if (currentPaymentOrder && currentPaymentOrder.method === 'emi') {
+                        formData.append('emi_month', emiMonth);
+                        formData.append('emi_monthly_amount', emiMonthlyAmount);
+                        formData.append('payment_type', 'emi');
+                        formData.append('amount', emiMonthlyAmount);
+                        formData.append('payment_amount', emiMonthlyAmount);
+                        formData.append('is_existing_emi', '1');
+                    } else {
+                        formData.append('payment_type', 'emi');
+                        formData.append('is_new_emi', '1');
+                        let emiDownPmt = $('#emiDownPayment').val() || 0;
+                        formData.append('amount', emiDownPmt);
+                        formData.append('payment_amount', emiDownPmt);
+                    }
+                }
+
+                $.ajax({
+                    url: "/api/sales/make-payment",
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                        "Authorization": "Bearer " + authToken
+                    },
+                    success: function(response) {
+                        $('#makePaymentModal').modal('hide');
+                        submitButton.prop('disabled', false).text('Submit Payment');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Payment submitted successfully.',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        submitButton.prop('disabled', false).text('Submit Payment');
+
+                        if (xhr.status === 422) {
+                            let errors = xhr.responseJSON.errors;
+                            let errorMsg = '';
+                            $.each(errors, function(key, value) {
+                                errorMsg += value + '\n';
+                            });
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Validation Error',
+                                text: errorMsg
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Something went wrong. Please try again.'
+                            });
+                        }
+                    }
+                });
+            });
+
+            $(document).on('click', '.open-emi-details', function() {
+                const orderId = $(this).data('order-id');
+                const order = window.orderDataMap && window.orderDataMap[orderId];
+                if (!order) {
+                    return;
+                }
+                openEmiDetails(order);
+            });
+            $('#makePaymentModal').on('hidden.bs.modal', function() {
+
+                // Reset entire form
+                $('#makePaymentForm')[0].reset();
+
+                // Hide all dynamic sections
+                $('#cashOnlineTypeDiv, #fullyCashOnlineFields, #partialCashOnlineFields, #onlineTypeDiv, #paidTypeDiv, #upiAmountDiv, #partialPaidFields, #fullyPaidFields, #bank_container, #emiMonthDiv, #emiMonthlyAmountDiv')
+                    .addClass('d-none');
+
+                // Clear error messages
+                $('.text-danger').text('');
+
+                // Hide payment history
+                $('#paymentHistoryBox').addClass('d-none');
+                $('#paymentHistoryList').html('');
+
+                // Reset hidden fields
+                $('#paymentJobCardId').val('');
+                $('#remainingAmountHidden').val('');
+                $('#paymentMethodHidden').val('');
+                $('#emiMonthSelect').html('<option value="" selected disabled>Select EMI Month</option>');
+                $('#emiMonthlyAmountInput').val('');
+                $('#bank_id').val('');
+            });
+
+            function loadOrders(page = 1) {
+                currentPage = page;
+                selectedSubAdminId = resolveSalesBranchId();
+                const selectedMonth = normalizeFilterValue($('#filter-month').val() || '');
+                const selectedYear = normalizeFilterValue($('#filter-year').val() || '');
+                let selectedDate = ($('#filter-date').val() || '').trim();
+                if (selectedDate && selectedDate.includes('-')) {
+                    const parts = selectedDate.split('-');
+                    if (parts.length === 3 && parts[0].length <= 2 && parts[2].length === 4) {
+                        selectedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                }
+
+                $.ajax({
+                    url: "/api/get_orders",
+                    method: "GET",
+                    data: {
+                        page: currentPage,
+                        per_page: perPage,
+                        search: searchQuery,
+                        month: selectedMonth,
+                        year: selectedYear,
+                        date: selectedDate,
+                        financial_year: normalizeFilterValue($('#filter-financial-year').val() || ''),
+                        selectedSubAdminId: selectedSubAdminId || '',
+                        staff_id: normalizeFilterValue($('#filter-staff').val() || ''),
+                        order_type: normalizeFilterValue($('#filter-order-type').val() || ''),
+                        status: normalizeFilterValue($('#filter-status').val() || ''),
+                        sort_by: $('#filter-sort').val() || 'date_desc'
+                    },
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    success: function(response) {
+
+                        // console.log('response ', response);
+                        if (response.status) {
+                            toggleSalesFinancialYearFilter(response.financial_year_enabled);
+                            currentPage = response.pagination?.current_page || 1;
+                            lastPage = response.pagination?.last_page || 1;
+                            updateSalesPaginationUI(response.pagination || {
+                                current_page: 1,
+                                last_page: 1,
+                                per_page: perPage,
+                                total: response.data?.length || 0
+                            });
+                            let tableBody = [];
+                            const currencySymbol = response.currency_symbol || '₹';
+                            const currencyPosition = response.currency_position || 'left';
+                            updateSalesSummaryTotals(
+                                response.total_amount || 0,
+                                response.total_pending_amount || 0,
+                                response.total_paid_amount || 0,
+                                currencySymbol,
+                                currencyPosition
+                            );
+                            window.salesSummaryTotals = {
+                                total_amount: response.total_amount || 0,
+                                total_pending_amount: response.total_pending_amount || 0,
+                                total_paid_amount: response.total_paid_amount || 0,
+                                currency_symbol: currencySymbol,
+                                currency_position: currencyPosition
+                            };
+
+
+                            response.data.forEach(order => {
+
+                                const status = String(order.quotation_status || 'sales')
+                                    .toLowerCase();
+                                const remaining = parseFloat(order.remaining_amount || 0);
+                                let amount = parseFloat(order.total_amount).toLocaleString(
+                                    undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    });
+                                let displayAmount = currencyPosition === 'right' ?
+                                    amount + currencySymbol // No space before/after
+                                    :
+                                    currencySymbol + amount;
+
+
+                                let actionBtns = ``;
+
+                                // if (status === 'sales') {
+                                if (parseFloat(order.remaining_amount || 0) > 0 && status ===
+                                    'sales') {
+                                    actionBtns += `<a href="javascript:void(0);" class="me-3 make-payment-btn" data-bs-toggle="modal" data-bs-target="#makePaymentModal"
+                                        data-id="${order.id}" data-amount="${order.remaining_amount}" data-method="${order.payment_method || ''}"
+                                        data-emi-months="${order.remaining_emi_months}" data-emi-duration="${order.emi_tenure || order.emi_duration || 0}"
+                                        data-emi-monthly-amount="${order.emi_monthly_amount || 0}"
+                                        data-total-amount="${order.total_amount || 0}" data-remaining-amount="${order.remaining_amount}"
+                                        data-return-amount="${order.total_return || 0}"
+                                        data-remaining-emi-months="${order.remaining_emi_months}" title="Make Payment">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#092C4C" viewBox="0 0 24 24">
+                                            <path d="M21 7H3V5h18v2zm0 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9h18zm-2 4H5v6h14v-6zM8 12h2v2H8v-2zm6 0h2v2h-2v-2z"/>
+                                        </svg>
+                                    </a>`;
+
+                                }
+                                actionBtns += `<button class="btn open-history" data-id="${order.id}" title="Payment History">
+                                                <i class="fas fa-history" style="font-size: 16px;"></i>
+                                            </button>`;
+                                if (['quotation', 'advance_receipt'].includes((order.quotation_status || '').toLowerCase())) {
+                                    actionBtns += `<a class="btn btn-sm btn-success me-2 convert-to-sales" href="javascript:void(0);" data-id="${order.id}" title="Convert to Sales">
+                                    Convert to Sales
+                                </a>`;
+                                }
+                                if (hasEmiData(order)) {
+                                    actionBtns += `<button type="button" class="btn btn-sm emi-action-btn open-emi-details" data-order-id="${order.id}" title="View EMI Details">
+                                        <i class="fas fa-calendar-alt"></i> EMI
+                                    </button>`;
+                                }
+                                @if (app('hasPermission')(2, 'view'))
+                                    actionBtns += `<a class="me-3" href="/sales-details/${order.id}">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9C11.206 9.00524 10.4459 9.32299 9.88447 9.88447C9.32299 10.4459 9.00524 11.206 9 12C9 13.642 10.358 15 12 15C13.641 15 15 13.642 15 12C15 10.359 13.641 9 12 9Z" fill="#092C4C"/>
+            <path d="M12 5C4.36704 5 2.07304 11.617 2.05204 11.684L1.94604 12L2.05105 12.316C2.07305 12.383 4.36704 19 12 19C19.633 19 21.927 12.383 21.948 12.316L22.054 12L21.949 11.684C21.927 11.617 19.633 5 12 5ZM12 17C6.64904 17 4.57604 13.154 4.07404 12C4.57804 10.842 6.65204 7 12 7C17.351 7 19.424 10.846 19.926 12C19.422 13.158 17.348 17 12 17Z" fill="#092C4C"/>
+            </svg>
+
+
+                                        </a>`;
+                                
+                                    // Show delivery/truck icon only for delivery sales.
+                                    if (status === 'sales' && isDeliveryOrder(order)) {
+                                        actionBtns += `<a class="me-3 deliver-order" href="/sales/delivery/${order.id}" data-id="${order.id}" title="Delivery">
+                                            <i class="fas fa-truck" style="font-size:16px;"></i>
+                                        </a>`;
+                                    }
+                                @endif
+                                // if (!order.has_payment || order.has_payment === 0) {
+                                @if (app('hasPermission')(2, 'edit'))
+                                    if (parseFloat(order.total_return || 0) === 0 && !(order.quotation_status === 'rental' && (order.return_status === 'partially_returned' || order.return_status === 'fully_returned'))) {
+                                        actionBtns += `
+                                            <a class="me-3" href="/edit-sales/${order.id}">
+                                                <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.045 5.401C15.423 5.023 15.631 4.521 15.631 3.987C15.631 3.453 15.423 2.951 15.045 2.573L13.459 0.987001C13.081 0.609001 12.579 0.401001 12.045 0.401001C11.511 0.401001 11.009 0.609001 10.632 0.986001L0 11.585V16H4.413L15.045 5.401ZM12.045 2.401L13.632 3.986L12.042 5.57L10.456 3.985L12.045 2.401ZM2 14V12.415L9.04 5.397L10.626 6.983L3.587 14H2ZM0 18H16V20H0V18Z" fill="#092C4C"/>
+                </svg>
+
+                                            </a>`;
+                                    }
+                                @endif
+                                // }
+                                @if (app('hasPermission')(2, 'view'))
+                                    actionBtns += `
+                                        <a class="me-3" href="/sales-invoice/${order.id}">
+
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="#092C4C" viewBox="0 0 24 24">
+                <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm0 2.5L16.5 7H14zM8 11h8v1.5H8zm0 3h8v1.5H8zm0 3h5v1.5H8z"/>
+            </svg>
+                                        </a>
+                                        <a class="me-3" href="javascript:void(0);" onclick="openSalesInvoicePrintModal( ${order.id});"  title="Print Invoice">
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="#092C4C" viewBox="0 0 24 24">
+                <path d="M19 7V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3H3a1 1 0 0 0-1 1v9a2 2 0 0 0 2 2h2v3h12v-3h2a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1h-2zM7 4h10v3H7V4zm10 16H7v-4h10v4zm3-6a1 1 0 0 1-1 1h-2v-2H7v2H5a1 1 0 0 1-1-1V9h16v5z"/>
+            </svg>
+        </a>`;
+                                @endif
+                                let deleteButton = '';
+
+                                if (
+                                    userRole !== 'sales-manager' &&
+                                    userRole !== 'purchase-manager' &&
+                                    userRole !== 'inventory-manager'
+                                ) {
+                                    @if (app('hasPermission')(2, 'delete'))
+                                        actionBtns += `
+                                        <a class="me-3 delete-order" href="javascript:void(0);" data-id="${order.id}">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M5 20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V8H21V6H17V4C17 3.46957 16.7893 2.96086 16.4142 2.58579C16.0391 2.21071 15.5304 2 15 2H9C8.46957 2 7.96086 2.21071 7.58579 2.58579C7.21071 2.96086 7 3.46957 7 4V6H3V8H5V20ZM9 4H15V6H9V4ZM8 8H17V20H7V8H8Z" fill="#092C4C"/>
+                                                <path d="M9 10H11V18H9V10ZM13 10H15V18H13V10Z" fill="#092C4C"/>
+                                            </svg>
+                                        </a>
+                                    `;
+                                    @endif
+                                }
+                                actionBtns = buildSalesActionDropdown(order, status);
+                                // Store order data for expandable row
+                                const orderData = {
+                                    ...order,
+                                    displayAmount: displayAmount,
+                                    currencySymbol: currencySymbol,
+                                    currencyPosition: currencyPosition
+                                };
+
+                                let rowData = [
+                                    `<div class="order-mobile-summary">
+                                        <span class="order-mobile-customer">${order.user?.name || 'N/A'}</span>
+
+                                        <a href="/sales-details/${order.id}" class="order-mobile-link">${order.order_number || ''}</a>
+                                        <i class="fas fa-exclamation-circle text-danger ms-1 view-order-products" data-order-id="${order.id}" style="cursor: pointer;" title="View Products"></i>
+                                    </div>`,
+                                    `<button class="mobile-toggle-btn-table" onclick="toggleTableRowDetails('${order.id}')" data-order-id="${order.id}">
+                                    <span class="toggle-icon">+</span>
+                                </button>`,
+                                    order.created_date,
+                                    order.user?.name || 'Default-Customer',
+                                    getStatusBadge(order.quotation_status || 'sales',
+                                        'quotation'),
+                                    getStatusBadge(order.payment_status, 'payment',
+                                        order
+                                        .extra_paid || 0),
+                                    displayAmount || '0.00',
+                                    ...(showAssignStaff ? [buildStaffCell(order.id, order.staff_id, order.staff_name)] : []),
+                                    ...(showOrderType ? [buildOrderTypeCell(order.id, order.order_type)] : []),
+                                    `<span class="biller-wrap">${order.biller || 'Admin'}</span>`                                ];
+
+                                if (typeof isEinvoiceEnabled !== 'undefined' && isEinvoiceEnabled == 1) {
+                                    rowData.push(`<button class="btn btn-sm" onclick="openEinvoiceModal('${order.id}', '${order.order_number}', '${order.irn || ''}', '${order.ack_no || ''}', '${order.ack_date || ''}')" style="background-color: #6f42c1; color: white; border: none; border-radius: 4px;">Invoice</button>`);
+                                }
+                                rowData.push(actionBtns);
+                                tableBody.push(rowData);
+
+                                // Store order data for later use in expandable row
+                                if (!window.orderDataMap) {
+                                    window.orderDataMap = {};
+                                }
+                                window.orderDataMap[order.id] = orderData;
+
+                            });
+
+
+                            table.clear().rows.add(tableBody).draw();
+
+                            // Force-apply selected values on staff dropdowns after DataTables renders HTML
+                            function syncStaffDropdowns() {
+                                $('#order-table tbody .assign-staff-select').each(function() {
+                                    const orderId = $(this).data('order-id');
+                                    const orderData = window.orderDataMap && window.orderDataMap[orderId];
+                                    if (orderData && orderData.staff_id) {
+                                        $(this).val(String(orderData.staff_id));
+                                    }
+                                });
+                            }
+                            setTimeout(syncStaffDropdowns, 50);
+                            table.on('draw.staffsync', function() {
+                                setTimeout(syncStaffDropdowns, 50);
+                            });
+
+                            // Add expandable rows after table is drawn
+                            function addExpandableRows() {
+                                const tbody = $('#order-table tbody');
+                                table.rows().every(function() {
+                                    const row = this.node();
+                                    const toggleBtn = $(row).find('.mobile-toggle-btn-table');
+                                    if (toggleBtn.length > 0) {
+                                        const orderId = toggleBtn.data('order-id');
+                                        const orderData = window.orderDataMap[orderId];
+                                        if (orderData && !$(row).next(
+                                                'tr.order-details-row[data-order-id="' +
+                                                orderId +
+                                                '"]').length) {
+                                            const expandableRow = $('<tr>')
+                                                .addClass('order-details-row')
+                                                .attr('data-order-id', orderId)
+                                                .html(buildExpandableRowContent(orderData,
+                                                    orderData
+                                                    .currencySymbol, orderData
+                                                    .currencyPosition
+                                                ));
+                                            $(row).after(expandableRow);
+                                        }
+                                    }
+                                });
+                            }
+
+                            setTimeout(addExpandableRows, 100);
+
+                            // Re-add expandable rows on table redraw
+                            table.on('draw', function() {
+                                setTimeout(addExpandableRows, 50);
+                            });
+                            // Render mobile cards
+                            renderMobileOrders(response.data, currencySymbol, currencyPosition);
+                            calculateFilteredTotal();
+                            setTimeout(() => {
+                                const topScroll = document.querySelector('.table-scroll-top');
+                                const tableResponsive = document.querySelector(
+                                    '.table-responsive');
+                                const orderTable = document.getElementById('order-table');
+
+                                if (topScroll && tableResponsive && orderTable) {
+                                    const topInnerDiv = topScroll.querySelector('div');
+
+                                    if (topInnerDiv) {
+                                        topInnerDiv.style.width = orderTable.scrollWidth + 'px';
+
+                                        // Avoid duplicate listeners
+                                        topScroll.onscroll = () => {
+                                            tableResponsive.scrollLeft = topScroll
+                                                .scrollLeft;
+                                        };
+                                        tableResponsive.onscroll = () => {
+                                            topScroll.scrollLeft = tableResponsive
+                                                .scrollLeft;
+                                        };
+                                    }
+                                }
+                            }, 100);
+                        } else {
+                            table.clear().draw();
+                            $(".datanew tbody").html('<tr><td colspan="10">No order found</td></tr>');
+                            updateSalesSummaryTotals(0, 0, 0, '₹', 'left');
+                            window.salesSummaryTotals = {
+                                total_amount: 0,
+                                total_pending_amount: 0,
+                                total_paid_amount: 0,
+                                currency_symbol: '₹',
+                                currency_position: 'left'
+                            };
+                            $('#mobile-order-container').html(
+                                '<div class="text-center p-4">No orders found</div>');
+                        }
+                    },
+                    error: function() {
+                        alert("Failed to load orders.");
+                    }
+                });
+            }
+
+            function updateSalesPaginationUI(pagination) {
+                let from = (pagination.current_page - 1) * pagination.per_page + 1;
+                let to = pagination.current_page * pagination.per_page;
+
+                if (to > pagination.total) {
+                    to = pagination.total;
+                }
+
+                if (pagination.total === 0) {
+                    from = 0;
+                }
+
+                $('#sales-pagination-from').text(from);
+                $('#sales-pagination-to').text(to);
+                $('#sales-pagination-total').text(pagination.total);
+
+                let paginationHtml = '';
+
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === 1 ? 'disabled' : ''}">
+                        <a class="page-link sales-page-link" href="javascript:void(0);" data-page="${pagination.current_page - 1}">Previous</a>
+                    </li>
+                `;
+
+                // Show only 3 page numbers at a time
+                const visiblePageCount = 2;
+                let startPage = Math.floor((pagination.current_page - 1) / visiblePageCount) * visiblePageCount + 1;
+                let endPage = Math.min(pagination.last_page, startPage + visiblePageCount - 1);
+
+                // Show previous ellipsis if there are pages before startPage
+                if (startPage > 1) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link sales-page-link" href="javascript:void(0);" data-page="${startPage - 1}" data-action="prev-group">..</a>
+                        </li>
+                    `;
+                }
+
+                // Generate page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += `
+                        <li class="page-item ${i === pagination.current_page ? 'active' : ''}">
+                            <a class="page-link sales-page-link" href="javascript:void(0);" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                }
+
+                // Show next ellipsis if there are more pages after endPage
+                if (endPage < pagination.last_page) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link sales-page-link" href="javascript:void(0);" data-page="${endPage + 1}" data-action="next-group">..</a>
+                        </li>
+                    `;
+                }
+
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === pagination.last_page || pagination.last_page === 0 ? 'disabled' : ''}">
+                        <a class="page-link sales-page-link" href="javascript:void(0);" data-page="${pagination.current_page + 1}">Next</a>
+                    </li>
+                `;
+
+                $('#sales-pagination-numbers').html(paginationHtml);
+                $('.pagination-controls').toggle(pagination.total > 0);
+            }
+
+            // Handle page number clicks with ellipsis support
+            $(document).on('click', '.sales-page-link', function(e) {
+                e.preventDefault();
+                let page = $(this).data('page');
+                let action = $(this).data('action');
+
+                // Handle ellipsis clicks to load next/previous groups
+                if (action === 'next-group') {
+                    // Load the page that starts the next group
+                    if (page && page <= lastPage) {
+                        loadOrders(page);
+                    }
+                    return;
+                }
+
+                if (action === 'prev-group') {
+                    // Load the previous group's starting page
+                    let prevStartPage = Math.max(1, page - 2);
+                    if (prevStartPage >= 1 && prevStartPage <= lastPage) {
+                        loadOrders(prevStartPage);
+                    }
+                    return;
+                }
+
+                // Regular page navigation
+                if (page && page !== currentPage && page >= 1 && page <= lastPage) {
+                    loadOrders(page);
+                }
+            });
+
+            loadOrders(currentPage);
+
+            // Function to calculate the total for visible (filtered) rows
+
+            // Month short names
+            const monthNames = {
+                "01": "Jan",
+                "02": "Feb",
+                "03": "Mar",
+                "04": "Apr",
+                "05": "May",
+                "06": "Jun",
+                "07": "Jul",
+                "08": "Aug",
+                "09": "Sep",
+                "10": "Oct",
+                "11": "Nov",
+                "12": "Dec"
+            };
+
+            // Recalculate total after table redraw
+            table.on('draw', function() {
+                calculateFilteredTotal();
+            });
+
+
+            $('#filter-date').on('dp.change', function() {
+                if (skipDateResetFromMonthYear) {
+                    skipDateResetFromMonthYear = false;
+                    return;
+                }
+
+                let selectedDate = $(this).val().trim(); // e.g. DD-MM-YYYY
+
+                // Clear month & year dropdowns
+                updateSelect2Display('', '');
+
+                if (selectedDate === '') {
+                    fetchAllOrders();
+                    return;
+                }
+
+                loadOrders(1);
+            });
+
+            // Listen to both native change and Select2 events so UI and programmatic
+            // updates all trigger the same handler.
+            $('#filter-month, #filter-year').off('change select2:select select2:unselect').on(
+                'change select2:select select2:unselect',
+                function(e) {
+                    syncFilterSelect2Display();
+
+                    const selectedMonthRaw = $('#filter-month').val() || '';
+                    const selectedYearRaw = $('#filter-year').val() || '';
+                    const selectedMonth = normalizeFilterValue(selectedMonthRaw);
+                    const selectedYear = normalizeFilterValue(selectedYearRaw);
+                    const selectedDate = $('#filter-date').val() || '';
+
+                    // If both month and year are empty, treat as "no filter" and fetch all orders.
+                    if (selectedMonth === '' && selectedYear === '') {
+                        updateSelect2Display('', '');
+                        // Only fetch all if date is also empty
+                        if (!selectedDate) {
+                            fetchAllOrders();
+                            setTimeout(function() {
+                                calculateFilteredTotal();
+                            }, 200);
+                        }
+                        return;
+                    }
+
+                    // If month/year is selected, clear the date filter to avoid confusion
+                    if (selectedMonth || selectedYear) {
+                        if ($('#filter-date').val()) {
+                            skipDateResetFromMonthYear = true;
+                            $('#filter-date').val('');
+                        }
+                    }
+
+                    updateSelect2Display(selectedMonth, selectedYear);
+                    loadOrders(1);
+                });
+
+            $('#filter-financial-year').off('change').on('change', function() {
+                if (!isFinancialYearEnabled) {
+                    return;
+                }
+                fetchAllOrders();
+                setTimeout(function() {
+                    calculateFilteredTotal();
+                }, 200);
+            });
+
+            $('#filter-staff').off('change select2:select select2:unselect').on('change select2:select select2:unselect', function() {
+                syncFilterSelect2Display();
+                fetchAllOrders();
+                setTimeout(function() {
+                    calculateFilteredTotal();
+                }, 200);
+            });
+
+            $('#filter-order-type').off('change select2:select select2:unselect').on(
+                'change select2:select select2:unselect',
+                function() {
+                    syncFilterSelect2Display();
+                    fetchAllOrders();
+                    setTimeout(function() {
+                        calculateFilteredTotal();
+                    }, 200);
+                });
+
+            $('#filter-status').off('change select2:select select2:unselect').on(
+                'change select2:select select2:unselect',
+                function() {
+                    syncFilterSelect2Display();
+                    fetchAllOrders();
+                    setTimeout(function() {
+                        calculateFilteredTotal();
+                    }, 200);
+                });
+
+            function fetchAllOrders() {
+                loadOrders(1);
+            }
+
+            // Window resize handler to automatically apply responsive CSS
+            let resizeTimer;
+            let lastWidth = $(window).width();
+
+            function handleResize() {
+                const currentWidth = $(window).width();
+
+                // Only process if width actually changed significantly (more than 5px)
+                if (Math.abs(currentWidth - lastWidth) < 5) {
+                    return;
+                }
+                lastWidth = currentWidth;
+
+                // Trigger DataTables to recalculate column visibility and table layout
+                if (table) {
+                    // Remove all expandable rows first
+                    $('tr.order-details-row').remove();
+
+                    // Force DataTables to completely recalculate
+                    try {
+                        table.columns.adjust();
+                        // Try responsive extension if available
+                        if (table.responsive && typeof table.responsive.recalc === 'function') {
+                            table.responsive.recalc();
+                        }
+                    } catch (e) {
+                        // Fallback if responsive extension not available
+                        table.columns.adjust();
+                    }
+
+                    // Force a reflow to ensure CSS media queries are recalculated
+                    const orderTable = $('#order-table')[0];
+                    if (orderTable) {
+                        void orderTable.offsetHeight;
+                    }
+
+                    // Redraw table and recalculate
+                    setTimeout(function() {
+                        // Redraw table completely
+                        table.draw(false);
+
+                        // Force another recalculation after draw
+                        table.columns.adjust();
+
+                        // Check if we're on mobile/tablet (1024px or below)
+                        const isMobileOrTablet = currentWidth <= 1024;
+
+                        // Re-add expandable rows only if on mobile/tablet
+                        if (isMobileOrTablet && window.orderDataMap) {
+                            setTimeout(function() {
+                                table.rows().every(function() {
+                                    const row = this.node();
+                                    const toggleBtn = $(row).find(
+                                        '.mobile-toggle-btn-table');
+                                    if (toggleBtn.length > 0) {
+                                        const orderId = toggleBtn.data('order-id');
+                                        const orderData = window.orderDataMap[orderId];
+                                        if (orderData) {
+                                            const expandableRow = $('<tr>')
+                                                .addClass('order-details-row')
+                                                .attr('data-order-id', orderId)
+                                                .html(buildExpandableRowContent(orderData,
+                                                    orderData.currencySymbol, orderData
+                                                    .currencyPosition));
+                                            $(row).after(expandableRow);
+                                        }
+                                    }
+                                });
+                            }, 50);
+                        }
+                    }, 100);
+                }
+            }
+
+            // Make handleResize available globally for manual triggering
+            window.refreshTableLayout = handleResize;
+
+            $(window).on('resize', function() {
+                clearTimeout(resizeTimer);
+                // Use shorter delay for more responsive feel
+                resizeTimer = setTimeout(handleResize, 100);
+            });
+
+            // Force initial check after page load
+            setTimeout(function() {
+                handleResize();
+            }, 500);
+
+            // Also trigger on orientation change for mobile devices
+            $(window).on('orientationchange', function() {
+                setTimeout(handleResize, 300);
+            });
+
+            // Use matchMedia to detect breakpoint changes more reliably
+            const mobileQuery = window.matchMedia('(max-width: 767px)');
+            const tabletQuery = window.matchMedia('(min-width: 768px) and (max-width: 1024px)');
+            const desktopQuery = window.matchMedia('(min-width: 1025px)');
+
+            function handleMediaChange() {
+                handleResize();
+            }
+
+            // Listen for media query changes
+            if (mobileQuery.addEventListener) {
+                mobileQuery.addEventListener('change', handleMediaChange);
+                tabletQuery.addEventListener('change', handleMediaChange);
+                desktopQuery.addEventListener('change', handleMediaChange);
+            } else {
+                // Fallback for older browsers
+                mobileQuery.addListener(handleMediaChange);
+                tabletQuery.addListener(handleMediaChange);
+                desktopQuery.addListener(handleMediaChange);
+            }
+        });
+
+        function renderOrdersByMonthAndYear(data, selectedMonth, selectedYear) {
+            let tableBody = [];
+            let mobileOrders = [];
+            const currencySymbol = '₹';
+            const currencyPosition = 'left';
+
+            data.forEach(order => {
+                const formattedDate = order.created_date || order.created_at || 'N/A';
+                const amount = parseFloat(order.total_amount).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                const displayAmount = currencyPosition === 'right' ? amount + currencySymbol : currencySymbol +
+                    amount;
+                const status = String(order.quotation_status || 'sales').toLowerCase();
+                const remaining = parseFloat(order.remaining_amount || 0);
+
+                let actionBtns = ``;
+
+                // if (status === 'sales') {
+                if (parseFloat(order.remaining_amount || 0) > 0 && status === 'sales') {
+                    actionBtns += `<a href="javascript:void(0);" class="me-3 make-payment-btn" data-bs-toggle="modal" data-bs-target="#makePaymentModal"
+                                        data-id="${order.id}" data-amount="${order.remaining_amount}" data-method="${order.payment_method || ''}"
+                    data-emi-months="${order.remaining_emi_months}" data-emi-duration="${order.emi_tenure || order.emi_duration || 0}"
+                    data-emi-monthly-amount="${order.emi_monthly_amount || 0}"
+                                        data-total-amount="${order.total_amount || 0}" data-remaining-amount="${order.remaining_amount}"
+                                        data-return-amount="${order.total_return || 0}"
+                                        data-remaining-emi-months="${order.remaining_emi_months}" title="Make Payment">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#092C4C" viewBox="0 0 24 24">
+                                            <path d="M21 7H3V5h18v2zm0 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9h18zm-2 4H5v6h14v-6zM8 12h2v2H8v-2zm6 0h2v2h-2v-2z"/>
+                                        </svg>
+                                    </a>`;
+
+                }
+                actionBtns += `<button class="btn open-history" data-id="${order.id}" title="Payment History">
+                                                <i class="fas fa-history" style="font-size: 16px;"></i>
+                                            </button>`;
+                if (['quotation', 'advance_receipt'].includes((order.quotation_status || '').toLowerCase())) {
+                    actionBtns += `<a class="btn btn-sm btn-success me-2 convert-to-sales" href="javascript:void(0);" data-id="${order.id}" title="Convert to Sales">
+                        Convert to Sales
+                    </a>`;
+                }
+                if (hasEmiData(order)) {
+                    actionBtns += `<button type="button" class="btn btn-sm emi-action-btn open-emi-details" data-order-id="${order.id}" title="View EMI Details">
+                        <i class="fas fa-calendar-alt"></i> EMI
+                    </button>`;
+                }
+                @if (app('hasPermission')(2, 'view'))
+
+                    actionBtns += `
+                                        <a class="me-3" href="/sales-details/${order.id}">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9C11.206 9.00524 10.4459 9.32299 9.88447 9.88447C9.32299 10.4459 9.00524 11.206 9 12C9 13.642 10.358 15 12 15C13.641 15 15 13.642 15 12C15 10.359 13.641 9 12 9Z" fill="#092C4C"/>
+            <path d="M12 5C4.36704 5 2.07304 11.617 2.05204 11.684L1.94604 12L2.05105 12.316C2.07305 12.383 4.36704 19 12 19C19.633 19 21.927 12.383 21.948 12.316L22.054 12L21.949 11.684C21.927 11.617 19.633 5 12 5ZM12 17C6.64904 17 4.57604 13.154 4.07404 12C4.57804 10.842 6.65204 7 12 7C17.351 7 19.424 10.846 19.926 12C19.422 13.158 17.348 17 12 17Z" fill="#092C4C"/>
+            </svg>
+                                        </a>`;
+                @endif
+                // if (!order.has_payment || order.has_payment === 0) {
+                @if (app('hasPermission')(2, 'edit'))
+                    if (parseFloat(order.total_return || 0) === 0 && !(order.quotation_status === 'rental' && (order.return_status === 'partially_returned' || order.return_status === 'fully_returned'))) {
+                        actionBtns += `
+                                            <a class="me-3" href="/edit-sales/${order.id}">
+                                                <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.045 5.401C15.423 5.023 15.631 4.521 15.631 3.987C15.631 3.453 15.423 2.951 15.045 2.573L13.459 0.987001C13.081 0.609001 12.579 0.401001 12.045 0.401001C11.511 0.401001 11.009 0.609001 10.632 0.986001L0 11.585V16H4.413L15.045 5.401ZM12.045 2.401L13.632 3.986L12.042 5.57L10.456 3.985L12.045 2.401ZM2 14V12.415L9.04 5.397L10.626 6.983L3.587 14H2ZM0 18H16V20H0V18Z" fill="#092C4C"/>
+                </svg>
+
+                                            </a>`;
+                    }
+                @endif
+                // }
+                actionBtns += `
+                @if (app('hasPermission')(2, 'view'))
+
+                                        <a class="me-3" href="/sales-invoice/${order.id}">
+
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="#092C4C" viewBox="0 0 24 24">
+                <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm0 2.5L16.5 7H14zM8 11h8v1.5H8zm0 3h8v1.5H8zm0 3h5v1.5H8z"/>
+            </svg>
+                                        </a>
+                                        <a class="me-3" href="javascript:void(0);" onclick="openSalesInvoicePrintModal( ${order.id});"  title="Print Invoice">
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="#092C4C" viewBox="0 0 24 24">
+                <path d="M19 7V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3H3a1 1 0 0 0-1 1v9a2 2 0 0 0 2 2h2v3h12v-3h2a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1h-2zM7 4h10v3H7V4zm10 16H7v-4h10v4zm3-6a1 1 0 0 1-1 1h-2v-2H7v2H5a1 1 0 0 1-1-1V9h16v5z"/>
+            </svg>
+        </a>
+
+                @endif
+                                        ${!['sales-manager', 'purchase-manager', 'inventory-manager'].includes(userRole) ? `
+                                                                                        @if (app('hasPermission')(2, 'delete'))
+                                                                                        <a class="me-3 delete-order" href="javascript:void(0);" data-id="${order.id}">
+                                                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                                                <path d="M5 20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V8H21V6H17V4C17 3.46957 16.7893 2.96086 16.4142 2.58579C16.0391 2.21071 15.5304 2 15 2H9C8.46957 2 7.96086 2.21071 7.58579 2.58579C7.21071 2.96086 7 3.46957 7 4V6H3V8H5V20ZM9 4H15V6H9V4ZM8 8H17V20H7V8H8Z" fill="#092C4C"/>
+                                                                                                <path d="M9 10H11V18H9V10ZM13 10H15V18H13V10Z" fill="#092C4C"/>
+                                                                                            </svg>
+                                                                                        </a>
+                                                                                        @endif
+
+                                                                                    ` : ''}
+    `
+                // Show delivery/truck icon only for delivery sales.
+                if (status === 'sales' && isDeliveryOrder(order)) {
+                    actionBtns += `<a class="me-3 deliver-order" href="/sales/delivery/${order.id}" data-id="${order.id}" title="Delivery">
+                        <i class="fas fa-truck" style="font-size:16px;"></i>
+                    </a>`;
+                }
+                actionBtns = buildSalesActionDropdown(order, status);
+                // Your existing HTML table rendering here...
+                const orderData = {
+                    ...order,
+                    created_date: formattedDate,
+                    displayAmount: displayAmount,
+                    currencySymbol: currencySymbol,
+                    currencyPosition: currencyPosition
+                };
+
+                tableBody.push([
+                    `<div class="order-mobile-summary">
+                        <a href="/sales-details/${order.id}" class="order-mobile-link">${order.order_number || ''}</a>
+                        <span class="order-mobile-customer">${order.user?.name || 'N/A'}</span>
+                    </div>`,
+                    `<button class="mobile-toggle-btn-table" onclick="toggleTableRowDetails('${order.id}')" data-order-id="${order.id}">
+                        <span class="toggle-icon">+</span>
+                    </button>`,
+                    order.created_date || 'N/A',
+                    order.user?.name || 'N/A',
+                    getStatusBadge(order.quotation_status || 'sales', 'quotation'),
+                    getStatusBadge(order.payment_status, 'payment', order.extra_paid || 0),
+                    displayAmount || '0.00',
+                    ...(showAssignStaff ? [buildStaffCell(order.id, order.staff_id, order.staff_name)] : []),
+                    ...(showOrderType ? [buildOrderTypeCell(order.id, order.order_type)] : []),
+                    `<span class="biller-wrap">${order.biller || 'Admin'}</span>`,
+                    actionBtns                ]);
+
+                // Store order data for expandable row
+                if (!window.orderDataMap) {
+                    window.orderDataMap = {};
+                }
+                window.orderDataMap[order.id] = orderData;
+
+                // Add to mobile orders array
+                const mobileOrder = {
+                    ...order
+                };
+                mobileOrder.created_date = formattedDate;
+                mobileOrders.push(mobileOrder);
+            });
+
+            const table = $('#order-table').DataTable();
+            table.clear().rows.add(tableBody).draw();
+
+            // Force-apply selected values on staff dropdowns after DataTables renders
+            setTimeout(function() {
+                $('#order-table tbody .assign-staff-select').each(function() {
+                    const orderId = $(this).data('order-id');
+                    const od = window.orderDataMap && window.orderDataMap[orderId];
+                    if (od && od.staff_id) { $(this).val(String(od.staff_id)); }
+                });
+                $('#order-table tbody .assign-order-type-select').each(function() {
+                    const orderId = $(this).data('order-id');
+                    const od = window.orderDataMap && window.orderDataMap[orderId];
+                    if (od && od.order_type) { $(this).val(String(od.order_type)); }
+                });
+            }, 50);
+
+            // Add expandable rows
+            function addExpandableRowsForMonthYear() {
+                table.rows().every(function() {
+                    const row = this.node();
+                    const toggleBtn = $(row).find('.mobile-toggle-btn-table');
+                    if (toggleBtn.length > 0) {
+                        const orderId = toggleBtn.data('order-id');
+                        const orderData = window.orderDataMap[orderId];
+                        if (orderData && !$(row).next('tr.order-details-row[data-order-id="' + orderId + '"]')
+                            .length) {
+                            const expandableRow = $('<tr>')
+                                .addClass('order-details-row')
+                                .attr('data-order-id', orderId)
+                                .html(buildExpandableRowContent(orderData, orderData.currencySymbol, orderData
+                                    .currencyPosition));
+                            $(row).after(expandableRow);
+                        }
+                    }
+                });
+            }
+
+            setTimeout(addExpandableRowsForMonthYear, 100);
+
+            // Re-add expandable rows on table redraw
+            table.off('draw').on('draw', function() {
+                setTimeout(addExpandableRowsForMonthYear, 50);
+            });
+
+            // Render mobile cards
+            renderMobileOrders(mobileOrders, currencySymbol, currencyPosition);
+        }
+
+        function renderOrders(data, selectedDate) {
+            let tableBody = [];
+            let mobileOrders = [];
+            const currencySymbol = '₹';
+            const currencyPosition = 'left';
+
+            data.forEach(order => {
+                if (!order.created_date) return;
+
+                const orderDate = new Date(order.created_date).toISOString().split('T')[0]; // 'YYYY-MM-DD'
+
+                // If selectedDate exists and doesn't match, skip this
+                if (selectedDate && selectedDate !== orderDate) return;
+
+                // Format and push to table
+                let date = new Date(order.created_date);
+                let day = String(date.getDate()).padStart(2, '0');
+                let monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                ];
+                let month = monthNames[date.getMonth()];
+                let year = date.getFullYear();
+
+                let hours = date.getHours();
+                let minutes = String(date.getMinutes()).padStart(2, '0');
+                let ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12;
+
+                let amount = parseFloat(order.total_amount).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                let displayAmount = currencyPosition === 'right' ?
+                    amount + currencySymbol : currencySymbol + amount;
+                const status = String(order.quotation_status || 'sales').toLowerCase();
+                const remaining = parseFloat(order.remaining_amount || 0);
+
+                const formattedDate = `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+
+                // 🔹 Build action buttons properly
+                let actionBtns = ``;
+
+                // if (status === 'sales') {
+                if (parseFloat(order.remaining_amount || 0) > 0 && status === 'sales') {
+                    actionBtns += `<a href="javascript:void(0);" class="me-3 make-payment-btn" data-bs-toggle="modal" data-bs-target="#makePaymentModal"
+                                        data-id="${order.id}" data-amount="${order.remaining_amount}" data-method="${order.payment_method || ''}"
+                                        data-emi-months="${order.remaining_emi_months}" data-emi-duration="${order.emi_tenure || order.emi_duration || 0}"
+                                        data-emi-monthly-amount="${order.emi_monthly_amount || 0}"
+                                        data-total-amount="${order.total_amount || 0}" data-remaining-amount="${order.remaining_amount}"
+                                        data-return-amount="${order.total_return || 0}"
+                                        data-remaining-emi-months="${order.remaining_emi_months}" title="Make Payment">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#092C4C" viewBox="0 0 24 24">
+                                            <path d="M21 7H3V5h18v2zm0 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9h18zm-2 4H5v6h14v-6zM8 12h2v2H8v-2zm6 0h2v2h-2v-2z"/>
+                                        </svg>
+                                    </a>`;
+
+                }
+                actionBtns += `<button class="btn open-history" data-id="${order.id}" title="Payment History">
+                                                <i class="fas fa-history" style="font-size: 16px;"></i>
+                                            </button>`;
+                if (['quotation', 'advance_receipt'].includes((order.quotation_status || '').toLowerCase())) {
+                    actionBtns += `<a class="btn btn-sm btn-success me-2 convert-to-sales" href="javascript:void(0);" data-id="${order.id}" title="Convert to Sales">
+                        Convert to Sales
+                    </a>`;
+                }
+                if (hasEmiData(order)) {
+                    actionBtns += `<button type="button" class="btn btn-sm emi-action-btn open-emi-details" data-order-id="${order.id}" title="View EMI Details">
+                        <i class="fas fa-calendar-alt"></i> EMI
+                    </button>`;
+                }
+
+                @if (app('hasPermission')(2, 'view'))
+                    actionBtns += `<a class="me-3" href="/sales-details/${order.id}">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9C11.206 9.00524 10.4459 9.32299 9.88447 9.88447C9.32299 10.4459 9.00524 11.206 9 12C9 13.642 10.358 15 12 15C13.641 15 15 13.642 15 12C15 10.359 13.641 9 12 9Z" fill="#092C4C"/>
+            <path d="M12 5C4.36704 5 2.07304 11.617 2.05204 11.684L1.94604 12L2.05105 12.316C2.07305 12.383 4.36704 19 12 19C19.633 19 21.927 12.383 21.948 12.316L22.054 12L21.949 11.684C21.927 11.617 19.633 5 12 5ZM12 17C6.64904 17 4.57604 13.154 4.07404 12C4.57804 10.842 6.65204 7 12 7C17.351 7 19.424 10.846 19.926 12C19.422 13.158 17.348 17 12 17Z" fill="#092C4C"/>
+            </svg>
+
+
+                                        </a>`;
+                @endif
+                // if (!order.has_payment || order.has_payment === 0) {
+                @if (app('hasPermission')(2, 'edit'))
+                    if (parseFloat(order.total_return || 0) === 0 && !(order.quotation_status === 'rental' && (order.return_status === 'partially_returned' || order.return_status === 'fully_returned'))) {
+                        actionBtns += `
+                                            <a class="me-3" href="/edit-sales/${order.id}">
+                                                <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.045 5.401C15.423 5.023 15.631 4.521 15.631 3.987C15.631 3.453 15.423 2.951 15.045 2.573L13.459 0.987001C13.081 0.609001 12.579 0.401001 12.045 0.401001C11.511 0.401001 11.009 0.609001 10.632 0.986001L0 11.585V16H4.413L15.045 5.401ZM12.045 2.401L13.632 3.986L12.042 5.57L10.456 3.985L12.045 2.401ZM2 14V12.415L9.04 5.397L10.626 6.983L3.587 14H2ZM0 18H16V20H0V18Z" fill="#092C4C"/>
+                </svg>
+
+                                            </a>`;
+                    }
+                @endif
+                // }
+                actionBtns += `
+                @if (app('hasPermission')(2, 'view'))
+                                        <a class="me-3" href="/sales-invoice/${order.id}">
+
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="#092C4C" viewBox="0 0 24 24">
+                <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm0 2.5L16.5 7H14zM8 11h8v1.5H8zm0 3h8v1.5H8zm0 3h5v1.5H8z"/>
+            </svg>
+                                        </a>
+                                        <a class="me-3" href="javascript:void(0);" onclick="openSalesInvoicePrintModal( ${order.id});"  title="Print Invoice">
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="#092C4C" viewBox="0 0 24 24">
+                <path d="M19 7V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3H3a1 1 0 0 0-1 1v9a2 2 0 0 0 2 2h2v3h12v-3h2a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1h-2zM7 4h10v3H7V4zm10 16H7v-4h10v4zm3-6a1 1 0 0 1-1 1h-2v-2H7v2H5a1 1 0 0 1-1-1V9h16v5z"/>
+            </svg>
+        </a>
+                        @endif
+
+                                         ${!['sales-manager', 'purchase-manager', 'inventory-manager'].includes(userRole) ? `
+                                                                                                                                 @if (app('hasPermission')(2, 'delete'))
+                                                                                        <a class="me-3 delete-order" href="javascript:void(0);" data-id="${order.id}">
+                                                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                                                <path d="M5 20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V8H21V6H17V4C17 3.46957 16.7893 2.96086 16.4142 2.58579C16.0391 2.21071 15.5304 2 15 2H9C8.46957 2 7.96086 2.21071 7.58579 2.58579C7.21071 2.96086 7 3.46957 7 4V6H3V8H5V20ZM9 4H15V6H9V4ZM8 8H17V20H7V8H8Z" fill="#092C4C"/>
+                                                                                                <path d="M9 10H11V18H9V10ZM13 10H15V18H13V10Z" fill="#092C4C"/>
+                                                                                            </svg>
+                                                                                        </a>
+                                                                                        @endif
+                                                                                    ` : ''}
+    `
+
+                actionBtns = buildSalesActionDropdown(order, status);
+                const orderData = {
+                    ...order,
+                    created_date: formattedDate,
+                    displayAmount: displayAmount,
+                    currencySymbol: currencySymbol,
+                    currencyPosition: currencyPosition
+                };
+
+                tableBody.push([
+                    `<div class="order-mobile-summary">
+                        <span class="order-mobile-customer">${order.user?.name || 'N/A'}</span>
+                        <a href="/sales-details/${order.id}" class="order-mobile-link">${order.order_number || ''}</a>
+
+                    </div>`,
+                    `<button class="mobile-toggle-btn-table" onclick="toggleTableRowDetails('${order.id}')" data-order-id="${order.id}">
+                        <span class="toggle-icon">+</span>
+                    </button>`,
+                    // formattedDate,
+                    order.created_date || 'N/A',
+                    order.user?.name || 'N/A',
+                    getStatusBadge(order.quotation_status || 'sales', 'quotation'),
+                    getStatusBadge(order.payment_status, 'payment', order.extra_paid || 0),
+                    displayAmount || '0.00',
+                    buildStaffCell(order.id, order.staff_id, order.staff_name),
+                    `<span class="biller-wrap">${order.biller || 'Admin'}</span>`,
+                    actionBtns
+                ]);
+
+                // Store order data for expandable row
+                if (!window.orderDataMap) {
+                    window.orderDataMap = {};
+                }
+                window.orderDataMap[order.id] = orderData;
+
+                // Add to mobile orders array (order already passed date filter above)
+                const mobileOrder = {
+                    ...order
+                };
+                mobileOrder.created_date = formattedDate;
+                mobileOrders.push(mobileOrder);
+            });
+
+            const table = $('#order-table').DataTable();
+            table.clear().rows.add(tableBody).draw();
+
+            // Force-apply selected values on staff dropdowns after DataTables renders
+            setTimeout(function() {
+                $('#order-table tbody .assign-staff-select').each(function() {
+                    const orderId = $(this).data('order-id');
+                    const od = window.orderDataMap && window.orderDataMap[orderId];
+                    if (od && od.staff_id) { $(this).val(String(od.staff_id)); }
+                });
+                $('#order-table tbody .assign-order-type-select').each(function() {
+                    const orderId = $(this).data('order-id');
+                    const od = window.orderDataMap && window.orderDataMap[orderId];
+                    if (od && od.order_type) { $(this).val(String(od.order_type)); }
+                });
+            }, 50);
+
+            // Add expandable rows
+            function addExpandableRowsForDate() {
+                table.rows().every(function() {
+                    const row = this.node();
+                    const toggleBtn = $(row).find('.mobile-toggle-btn-table');
+                    if (toggleBtn.length > 0) {
+                        const orderId = toggleBtn.data('order-id');
+                        const orderData = window.orderDataMap[orderId];
+                        if (orderData && !$(row).next('tr.order-details-row[data-order-id="' + orderId + '"]')
+                            .length) {
+                            const expandableRow = $('<tr>')
+                                .addClass('order-details-row')
+                                .attr('data-order-id', orderId)
+                                .html(buildExpandableRowContent(orderData, orderData.currencySymbol, orderData
+                                    .currencyPosition));
+                            $(row).after(expandableRow);
+                        }
+                    }
+                });
+            }
+
+            setTimeout(addExpandableRowsForDate, 100);
+
+            // Re-add expandable rows on table redraw
+            table.off('draw').on('draw', function() {
+                setTimeout(addExpandableRowsForDate, 50);
+            });
+
+            // Render mobile cards
+            renderMobileOrders(mobileOrders, currencySymbol, currencyPosition);
+
+            // Recalculate total after rendering
+            setTimeout(function() {
+                calculateFilteredTotal();
+            }, 200);
+        }
+        // Global history modal open
+        $(document).on('click', '.open-history', function() {
+            var authToken = localStorage.getItem("authToken");
+
+            const jobCardId = $(this).data('id');
+            $('#globalPaymentHistoryList').html('<li class="list-group-item">Loading...</li>');
+            $.ajax({
+                url: '/api/order/payment-history/' + jobCardId,
+                method: 'GET',
+                headers: {
+                    "Authorization": "Bearer " + authToken
+                },
+                success: function(response) {
+
+                    const history = response.data || [];
+                    const summary = response.summary || {};
+
+                    let html = '';
+
+                    if (history.length === 0) {
+                        html = '<li class="list-group-item">No payment history found.</li>';
+                    } else {
+                        html = history.map(p => `
+            <li class="list-group-item d-flex justify-content-between">
+                <span>${formatPaymentHistoryDate(p.payment_date || p.created_at)}</span>
+                <span>
+                    <strong>₹${parseFloat(p.payment_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    (${p.payment_method || ''})
+                </span>
+            </li>
+        `).join('');
+                    }
+
+                    html += `
+        <li class="list-group-item mt-2 bg-light">
+            <strong>Order Total:</strong> ₹${parseFloat(summary.order_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </li>
+        <li class="list-group-item bg-light">
+            <strong>Total Paid:</strong> ₹${parseFloat(summary.total_paid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </li>
+        <li class="list-group-item bg-light">
+            <strong>Return Amount:</strong> ₹${parseFloat(summary.return_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </li>
+    `;
+
+                    if (summary.extra_paid > 0) {
+                        html += `
+            <li class="list-group-item bg-warning">
+                <strong>Extra Paid:</strong>
+                ₹${parseFloat(summary.extra_paid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span class="text-danger">(Advance / Refund)</span>
+            </li>
+        `;
+                    } else {
+                        html += `
+            <li class="list-group-item bg-light">
+                <strong>Remaining:</strong>
+                ₹${parseFloat(summary.remaining).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </li>
+        `;
+                    }
+
+                    $('#globalPaymentHistoryList').html(html);
+
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('paymentHistoryModal')).show();
+                },
+
+                error: function() {
+                    $('#globalPaymentHistoryList').html(
+                        '<li class="list-group-item text-danger">Failed to load payment history.</li>'
+                    );
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('paymentHistoryModal')).show();
+                }
+            });
+        });
+
+        $(document).on('click', '.open-history', function() {
+            const authToken = localStorage.getItem("authToken");
+            const jobCardId = $(this).data('id');
+
+            $.ajax({
+                url: '/api/order/payment-history/' + jobCardId,
+                method: 'GET',
+                headers: {
+                    "Authorization": "Bearer " + authToken
+                },
+                success: function(response) {
+                    const history = response.data || [];
+                    const summary = response.summary || {};
+                    let html = '';
+
+                    if (history.length === 0) {
+                        html = '<li class="list-group-item">No payment history found.</li>';
+                    } else {
+                        html = history.map(function(p) {
+                            const paymentDate = formatPaymentHistoryDate(p.payment_date || p.created_at);
+                            const paymentAmount = parseFloat(p.payment_amount || 0).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                            const paymentMethod = p.payment_method ? String(p.payment_method) : 'N/A';
+                            const paymentType = p.payment_type ? String(p.payment_type) : 'N/A';
+                            const paymentRemarks = p.remarks && String(p.remarks).trim() !== '' ? p.remarks : 'N/A';
+
+                            return `
+            <li class="list-group-item">
+                <div class="payment-history-entry">
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">${paymentDate}</div>
+                        <div class="payment-history-meta">
+                            Method: ${paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1).toLowerCase()} | Type: ${paymentType.charAt(0).toUpperCase() + paymentType.slice(1).toLowerCase()}
+                            <br>
+                            Remarks: ${paymentRemarks}
+                        </div>
+                        <div class="mt-2 payment-history-amount">₹${paymentAmount}</div>
+                    </div>
+                    <div class="payment-history-actions">
+                        <button type="button" class="btn btn-sm btn-outline-warning payment-history-edit-btn"
+                            data-payment-id="${p.id}"
+                            data-order-id="${p.order_id || ''}"
+                            data-order-total="${summary.order_total || 0}"
+                            data-payment-date="${p.payment_date || ''}"
+                            data-payment-amount="${p.payment_amount || ''}"
+                            data-payment-method="${p.payment_method || ''}"
+                            data-payment-type="${p.payment_type || ''}"
+                            data-payment-remaining="${p.remaining_amount || summary.remaining || 0}"
+                            data-payment-remarks="${p.remarks || ''}"
+                            title="Edit">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger payment-history-delete-btn" data-payment-id="${p.id}" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </li>
+        `;
+                        }).join('');
+                    }
+
+                    html += `
+        <li class="list-group-item mt-2 bg-light payment-history-summary">
+            <strong>Order Total:</strong> ₹${parseFloat(summary.order_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </li>
+        <li class="list-group-item bg-light payment-history-summary">
+            <strong>Total Paid:</strong> ₹${parseFloat(summary.total_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </li>
+        <li class="list-group-item bg-light payment-history-summary">
+            <strong>Return Amount:</strong> ₹${parseFloat(summary.return_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </li>
+    `;
+
+                    if (summary.extra_paid > 0) {
+                        html += `
+            <li class="list-group-item bg-warning payment-history-summary">
+                <strong>Extra Paid:</strong> ₹${parseFloat(summary.extra_paid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span class="text-danger">(Advance / Refund)</span>
+            </li>
+        `;
+                    } else {
+                        html += `
+            <li class="list-group-item bg-light payment-history-summary">
+                <strong>Remaining:</strong> ₹${parseFloat(summary.remaining || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </li>
+        `;
+                    }
+
+                    $('#globalPaymentHistoryList').html(html);
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('paymentHistoryModal')).show();
+                },
+                error: function() {
+                    $('#globalPaymentHistoryList').html(
+                        '<li class="list-group-item text-danger">Failed to load payment history.</li>'
+                    );
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('paymentHistoryModal')).show();
+                }
+            });
+        });
+
+        function normalizeEditPaymentType(type) {
+            type = String(type || '').toLowerCase();
+
+            if (['cash_partially', 'online_partially', 'cash_online_partially', 'partial'].includes(type)) {
+                return 'partially';
+            }
+
+            if (['cash_fully', 'online_fully', 'cash_online_fully', 'full'].includes(type)) {
+                return 'fully';
+            }
+
+            return ['partially', 'fully', 'emi'].includes(type) ? type : '';
+        }
+
+        function setEditPaymentTypeOptions(method, selectedType) {
+            const normalizedMethod = String(method || '').toLowerCase();
+            const labelPrefix = {
+                cash: 'Cash',
+                online: 'Online',
+                cash_online: 'Cash + Online',
+                emi: 'EMI'
+            }[normalizedMethod] || 'Payment';
+
+            const options = normalizedMethod === 'emi' ? [
+                { value: 'emi', label: 'EMI' }
+            ] : [
+                { value: '', label: 'Select' },
+                { value: 'partially', label: labelPrefix + ' Partially' },
+                { value: 'fully', label: labelPrefix + ' Fully' }
+            ];
+
+            $('#editPaymentType').html(options.map(function(option) {
+                return `<option value="${option.value}">${option.label}</option>`;
+            }).join('')).val(normalizeEditPaymentType(selectedType));
+        }
+
+        $(document).on('click', '.payment-history-edit-btn', function() {
+            const originalAmount = parseFloat($(this).data('payment-amount') || 0);
+            const originalRemaining = parseFloat($(this).data('payment-remaining') || 0);
+            const paymentMethod = $(this).data('payment-method') || '';
+            const paymentType = $(this).data('payment-type') || '';
+
+            $('#editPaymentId').val($(this).data('payment-id'));
+            $('#editPaymentDate').val($(this).data('payment-date'));
+            
+            // Dynamic check of payment methods configuration
+            $('#editPaymentMethod option').each(function() {
+                const val = $(this).val();
+                let isEnabled = false;
+                if (val === 'cash' && window.enabledPaymentMethods.includes('cash')) {
+                    isEnabled = true;
+                } else if (val === 'online' && (window.enabledPaymentMethods.includes('debit card') || window.enabledPaymentMethods.includes('scan'))) {
+                    isEnabled = true;
+                } else if (val === 'cash_online' && (window.enabledPaymentMethods.includes('cash+online') || window.enabledPaymentMethods.includes('cash_online'))) {
+                    isEnabled = true;
+                } else if (val === 'emi' && window.enabledPaymentMethods.includes('emi')) {
+                    isEnabled = true;
+                }
+                
+                if (isEnabled || val === paymentMethod) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            $('#editPaymentMethod').val(paymentMethod);
+            setEditPaymentTypeOptions(paymentMethod, paymentType);
+            $('#editPaymentRemarks').val($(this).data('payment-remarks'));
+            $('#editPaymentOrderId').val($(this).data('order-id') || '');
+            $('#editPaymentOrderTotal').val($(this).data('order-total') || '');
+            $('#editPaymentOriginalAmount').val(originalAmount);
+            $('#editPaymentOriginalRemaining').val(originalRemaining);
+            $('#editPaymentOrderTotalText').text('₹' + (parseFloat($(this).data('order-total') || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            $('#editPaymentOriginalRemainingText').text('₹' + originalRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            $('#editPaymentAmount').val(originalAmount.toFixed(2));
+            $('#editPaymentPendingAmount').val((originalRemaining + originalAmount - originalAmount).toFixed(2));
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('editPaymentHistoryModal')).show();
+        });
+
+        $(document).on('change', '#editPaymentMethod', function() {
+            setEditPaymentTypeOptions($(this).val(), $('#editPaymentType').val());
+        });
+
+        $(document).on('input', '#editPaymentAmount', function() {
+            const originalRemaining = parseFloat($('#editPaymentOriginalRemaining').val() || 0);
+            const originalAmount = parseFloat($('#editPaymentOriginalAmount').val() || 0);
+            const enteredAmount = parseFloat($(this).val() || 0);
+            const pending = Math.max(0, originalRemaining + originalAmount - enteredAmount);
+            $('#editPaymentPendingAmount').val(pending.toFixed(2));
+        });
+
+        $(document).on('click', '#savePaymentHistoryEditBtn', function() {
+            const paymentId = $('#editPaymentId').val();
+            const updateUrl = @json(route('sales.receipt.transaction.update', ['payment' => '__PAYMENT__']));
+            const authToken = localStorage.getItem('authToken');
+
+            $.ajax({
+                url: updateUrl.replace('__PAYMENT__', paymentId),
+                method: 'PUT',
+                data: {
+                    payment_date: $('#editPaymentDate').val(),
+                    payment_amount: $('#editPaymentAmount').val(),
+                    payment_method: $('#editPaymentMethod').val(),
+                    payment_type: $('#editPaymentType').val(),
+                    remarks: $('#editPaymentRemarks').val(),
+                    _token: $('#csrf_token').val() || $('meta[name="csrf-token"]').attr('content')
+                },
+                headers: {
+                    'X-CSRF-TOKEN': $('#csrf_token').val() || $('meta[name="csrf-token"]').attr('content'),
+                    'Authorization': authToken ? 'Bearer ' + authToken : ''
+                },
+                success: function(response) {
+                    if (response && response.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('editPaymentHistoryModal')).hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated',
+                            text: response.message || 'Payment transaction updated successfully.'
+                        });
+                        $('#viewHistoryBtn').trigger('click');
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Unable to update',
+                            text: (response && response.message) ? response.message : 'Unable to update payment transaction.'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    const message = xhr.responseJSON && xhr.responseJSON.message
+                        ? (typeof xhr.responseJSON.message === 'string' ? xhr.responseJSON.message : 'Validation failed.')
+                        : 'An error occurred while updating the payment transaction.';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Unable to update',
+                        text: message
+                    });
+                }
+            });
+        });
+
+        $(document).on('click', '.payment-history-delete-btn', function() {
+            const paymentId = $(this).data('payment-id');
+            const deleteUrl = @json(route('sales.receipt.transaction.delete', ['payment' => '__PAYMENT__']));
+            const authToken = localStorage.getItem('authToken');
+
+            Swal.fire({
+                title: 'Delete this payment?',
+                text: 'This will remove the payment transaction and recalculate the remaining amount.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Delete',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                $.ajax({
+                    url: deleteUrl.replace('__PAYMENT__', paymentId),
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': $('#csrf_token').val() || $('meta[name="csrf-token"]').attr('content'),
+                        'Authorization': authToken ? 'Bearer ' + authToken : ''
+                    },
+                    success: function(response) {
+                        if (response && response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted',
+                                text: response.message || 'Payment transaction deleted successfully.'
+                            });
+                            $('#viewHistoryBtn').trigger('click');
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Unable to delete',
+                                text: (response && response.message) ? response.message : 'Unable to delete payment transaction.'
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        const message = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'An error occurred while deleting the payment transaction.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Unable to delete',
+                            text: message
+                        });
+                    }
+                });
+            });
+        });
+        $(document).on('click', '.delete-order', function() {
+            var orderId = $(this).data('id'); // ✅ Correct usage
+            var authToken = localStorage.getItem("authToken");
+
+            Swal.fire({
+                title: "Are you sure?",
+                text: "You won't be able to revert this!",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#ff9f43",
+                cancelButtonColor: "#6c757d",
+                confirmButtonText: "Yes, delete it!"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: 'api/delete/' + orderId,
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                            "Authorization": "Bearer " + authToken,
+                        },
+                        success: function(response) {
+                            if (response.status === true) {
+                                Swal.fire({
+                                    title: "Deleted!",
+                                    text: response.message,
+                                    icon: "success",
+                                    confirmButtonColor: '#ff9f43', // Set OK button color here
+                                    confirmButtonText: 'OK'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: "Error",
+                                    text: response.error,
+                                    icon: "error",
+                                    confirmButtonColor: '#ff9f43',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            let errorMessage = "An error occurred while deleting the order";
+                            if (xhr.responseJSON && xhr.responseJSON.error) {
+                                errorMessage = xhr.responseJSON.error;
+                            }
+
+                            Swal.fire({
+                                title: "Error",
+                                text: errorMessage,
+                                icon: "error",
+                                confirmButtonColor: '#ff9f43',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+
+                    });
+                }
+            });
+        });
+
+        $(document).on('click', '.convert-to-sales', function() {
+            const orderId = $(this).data('id');
+            const authToken = localStorage.getItem("authToken");
+
+            Swal.fire({
+                title: "Are you sure?",
+                text: "You want to convert this to a sale!",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes, convert it!",
+                cancelButtonText: "Cancel"
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                // Redirect to the Add Sale POS interface with the order ID so we can finish the checkout
+                window.location.href = '/add-sales?convert_order_id=' + orderId;
+            });
+        });
+
+        const $downloadLoader = $("#downloadLoaderOverlay");
+        const $downloadLoaderText = $("#downloadLoaderText");
+        const $exportButtons = $("#exportPdf, #exportAllChallan");
+
+        function toggleDownloadLoader(isLoading, message) {
+            if (isLoading) {
+                $downloadLoaderText.text(message || "Generating report...");
+                $downloadLoader.removeClass("d-none");
+                $exportButtons.prop("disabled", true).addClass("disabled").attr("aria-disabled", "true");
+            } else {
+                $downloadLoader.addClass("d-none");
+                $exportButtons.prop("disabled", false).removeClass("disabled").removeAttr("aria-disabled");
+            }
+        }
+
+        $('#exportPdf').click(function() {
+            var authToken = localStorage.getItem("authToken");
+            let selectedYearRaw = $('#filter-year').val() || '';
+            let selectedMonthRaw = $('#filter-month').val() || '';
+            let selectedYear = normalizeFilterValue(selectedYearRaw);
+            let selectedMonth = normalizeFilterValue(selectedMonthRaw);
+            let selectedDate = $('#filter-date').val() || '';
+            let selectedCustomerId = $('#filter-customer').val() || '';
+            let selectedOrderType = normalizeFilterValue($('#filter-order-type').val() || '');
+            let selectedStatus = normalizeFilterValue($('#filter-status').val() || '');
+            const selectedSubAdminId = localStorage.getItem("selectedSubAdminId");
+
+            $.ajax({
+                url: `/api/pdf-orders`,
+                type: 'GET',
+                beforeSend: function() {
+                    toggleDownloadLoader(true, "Generating PDF...");
+                },
+                headers: {
+                    "Authorization": "Bearer " + authToken
+                },
+                data: {
+                    year: selectedYear,
+                    month: selectedMonth,
+                    date: selectedDate,
+                    customerId: selectedCustomerId,
+                    order_type: selectedOrderType,
+                    status: selectedStatus,
+                    selectedSubAdminId: selectedSubAdminId,
+                    type: 'pdf'
+                },
+                success: function(response) {
+                    if (response.status && response.file_url) {
+                        // Open PDF in new tab or trigger download
+                        const link = document.createElement('a');
+                        link.href = response.file_url;
+                        link.download = response.file_name || 'sales_report.pdf';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        Swal.fire({
+                            title: "Error",
+                            text: "Failed to generate PDF: " + response.message,
+                            icon: "error",
+                            confirmButtonColor: '#ff9f43',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        title: "Error",
+                        text: "PDF export failed: " + (xhr.responseJSON?.message ??
+                            "Unknown error"),
+                        icon: "error",
+                        confirmButtonColor: '#ff9f43',
+                        confirmButtonText: 'OK'
+                    });
+                },
+                complete: function() {
+                    toggleDownloadLoader(false);
+                }
+            });
+        });
+        $('#exportAllChallan').click(function() {
+            let selectedYearRaw = $('#filter-year').val() || '';
+            let selectedMonthRaw = $('#filter-month').val() || '';
+            let selectedYear = normalizeFilterValue(selectedYearRaw);
+            let selectedMonth = normalizeFilterValue(selectedMonthRaw);
+            let selectedDate = $('#filter-date').val() || '';
+            let selectedVendorId = $('#filter-customer').val() || '';
+            let selectedOrderType = normalizeFilterValue($('#filter-order-type').val() || '');
+            let selectedStatus = normalizeFilterValue($('#filter-status').val() || '');
+            const selectedSubAdminId = localStorage.getItem("selectedSubAdminId");
+            let authToken = localStorage.getItem("authToken");
+
+            let url =
+                `/api/export-order?year=${selectedYear}&month=${selectedMonth}&date=${selectedDate}&customer_id=${selectedVendorId}&order_type=${selectedOrderType}&status=${selectedStatus}&selectedSubAdminId=${selectedSubAdminId}&format_currency=indian`;
+            $.ajax({
+                url: url,
+                method: "GET",
+                beforeSend: function() {
+                    toggleDownloadLoader(true, "Generating Excel...");
+                },
+                headers: {
+                    "Authorization": "Bearer " + authToken
+                },
+                success: function(response) {
+                    if (response.status && response.file_url) {
+                        // Trigger download via file_url
+                        const link = document.createElement('a');
+                        link.href = response.file_url;
+                        link.download = response.file_name; // optional
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        Swal.fire({
+                            title: "Error",
+                            text: "Export failed: " + (response.message || "Unknown error"),
+                            icon: "error",
+                            confirmButtonColor: '#ff9f43',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    // console.error("Export failed:", xhr.responseText);
+                    Swal.fire({
+                        title: "Error",
+                        text: "Export failed. Please try again.",
+                        icon: "error",
+                        confirmButtonColor: '#ff9f43',
+                        confirmButtonText: 'OK'
+                    });
+                },
+                complete: function() {
+                    toggleDownloadLoader(false);
+                }
+            });
+        });
+        
+        // QR Upload Logic
+        function openQrUploadModal(orderId) {
+            $('#qrOrderId').val(orderId);
+            $('#qrUploadForm')[0].reset();
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('qrUploadModal'));
+            modal.show();
+        }
+
+        function openEinvoiceModal(orderId, orderNo, irn, ackNo, ackDate) {
+            $('#einvOrderNo').text(orderNo && orderNo !== 'null' ? orderNo : '-');
+            $('#einvIrn').text(irn && irn !== 'null' ? irn : '-');
+            $('#einvAckNo').text(ackNo && ackNo !== 'null' ? ackNo : '-');
+            $('#einvAckDate').text(ackDate && ackDate !== 'null' ? ackDate : '-');
+            
+            if (irn && irn !== 'null' && irn.length > 5) {
+                $('#einvoiceWarning').addClass('d-none');
+            } else {
+                $('#einvoiceWarning').removeClass('d-none');
+            }
+            
+            $('#einvDownloadBtn').attr('onclick', `window.open('/sales/invoice/pdf/${orderId}')`);
+            
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('einvoiceDetailsModal'));
+            modal.show();
+        }
+
+        $(document).on('submit', '#qrUploadForm', function(e) {
+            e.preventDefault();
+            const orderId = $('#qrOrderId').val();
+            const formData = new FormData(this);
+            const authToken = localStorage.getItem('authToken') || window.authToken || '';
+            const btn = $('#qrUploadSubmitBtn');
+            const originalText = btn.html();
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...');
+
+            $.ajax({
+                url: '/api/orders/' + orderId + '/upload-qr',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    "Authorization": "Bearer " + authToken,
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.status) {
+                        Swal.fire({
+                            title: "Success",
+                            text: response.message,
+                            icon: "success",
+                            confirmButtonColor: '#ff9f43',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            bootstrap.Modal.getInstance(document.getElementById('qrUploadModal')).hide();
+                            fetchOrders(); // reload table
+                        });
+                    } else {
+                        Swal.fire({
+                            title: "Error",
+                            text: response.message || "Upload failed.",
+                            icon: "error",
+                            confirmButtonColor: '#ff9f43',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        title: "Error",
+                        text: xhr.responseJSON?.message || "Upload failed. Please try again.",
+                        icon: "error",
+                        confirmButtonColor: '#ff9f43',
+                        confirmButtonText: 'OK'
+                    });
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+
+        // View Order Products Logic
+        $(document).on('click', '.view-order-products', function(e) {
+            e.preventDefault();
+            const orderId = $(this).data('order-id');
+            
+            $('#orderProductsList').html('<tr><td colspan="3" class="text-center">Loading...</td></tr>');
+            $('#orderProductsModal').modal('show');
+            
+            $.ajax({
+                url: '/ticket-get-order-products',
+                method: 'GET',
+                data: { order_id: orderId },
+                success: function(response) {
+                    let html = '';
+                    if (response.status && response.data && response.data.length > 0) {
+                        response.data.forEach(function(item) {
+                            html += `
+                                <tr>
+                                    <td>${item.name}</td>
+                                    <td>${item.qty}</td>
+                                    <td>${item.price}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html = '<tr><td colspan="3" class="text-center">No products found.</td></tr>';
+                    }
+                    $('#orderProductsList').html(html);
+                },
+                error: function() {
+                    $('#orderProductsList').html('<tr><td colspan="3" class="text-center text-danger">Failed to load products.</td></tr>');
+                }
+            });
+        });
+
+        function getSalesInvoicePrintModal() {
+            const modalEl = document.getElementById('salesInvoicePrintModal');
+            if (!modalEl) {
+                return null;
+            }
+            if (!window._salesInvoicePrintModalInstance) {
+                window._salesInvoicePrintModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl, {
+                    backdrop: 'static',
+                    keyboard: true
+                });
+            }
+            return window._salesInvoicePrintModalInstance;
+        }
+
+        function setSalesInvoicePrintLoading(isLoading) {
+            const $loader = $('#salesInvoicePrintLoading');
+            const $printBtn = $('#salesInvoicePrintBtn');
+            if (isLoading) {
+                $loader.addClass('is-visible');
+                $printBtn.prop('disabled', true);
+            } else {
+                $loader.removeClass('is-visible');
+                $printBtn.prop('disabled', false);
+            }
+        }
+
+        function syncSalesInvoicePrintModalLayout() {
+            const modalEl = document.getElementById('salesInvoicePrintModal');
+            const bodyEl = modalEl ? modalEl.querySelector('.sales-invoice-print-body') : null;
+            if (!modalEl || !bodyEl || !modalEl.classList.contains('show')) {
+                return;
+            }
+            if (window.matchMedia('(max-width: 991.98px)').matches) {
+                const contentEl = modalEl.querySelector('.sales-invoice-print-content');
+                const headerEl = modalEl.querySelector('.modal-header');
+                const footerEl = modalEl.querySelector('.sales-invoice-print-footer');
+                const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                const chromeHeight = (headerEl ? headerEl.offsetHeight : 0) + (footerEl ? footerEl.offsetHeight : 0);
+                const nextHeight = Math.max(220, viewportHeight - chromeHeight);
+                bodyEl.style.height = nextHeight + 'px';
+                bodyEl.style.maxHeight = '';
+                bodyEl.style.flex = '';
+                if (contentEl) {
+                    contentEl.style.minHeight = viewportHeight + 'px';
+                    contentEl.style.height = '';
+                    contentEl.style.maxHeight = '';
+                }
+            } else {
+                bodyEl.style.height = '';
+                bodyEl.style.maxHeight = '';
+                bodyEl.style.flex = '';
+                const dialogEl = modalEl.querySelector('.sales-invoice-print-dialog');
+                if (dialogEl) {
+                    dialogEl.style.height = '';
+                    dialogEl.style.maxHeight = '';
+                    dialogEl.style.marginTop = '';
+                    dialogEl.style.marginBottom = '';
+                }
+                const contentEl = modalEl.querySelector('.sales-invoice-print-content');
+                if (contentEl) {
+                    contentEl.style.height = '';
+                    contentEl.style.maxHeight = '';
+                    contentEl.style.minHeight = '';
+                }
+            }
+        }
+
+        function markSalesInvoicePrintReady() {
+            window._salesInvoicePrintReady = true;
+            setSalesInvoicePrintLoading(false);
+            syncSalesInvoicePrintModalLayout();
+            trySalesInvoiceAutoPrint();
+        }
+
+        function trySalesInvoiceAutoPrint() {
+            if (!window._salesInvoiceAutoPrintPending || !window._salesInvoicePrintReady) {
+                return;
+            }
+            if (window.matchMedia && window.matchMedia('(max-width: 1024.98px)').matches) {
+                window._salesInvoiceAutoPrintPending = false;
+                return;
+            }
+            if (!window.InvoiceQzPrint) {
+                return;
+            }
+            const printerName = ($('#salesPrinterSelect').val() || '').trim();
+            if (!printerName) {
+                return;
+            }
+            if (printerName === '__browser__' && !window._salesInvoiceQuickPrint) {
+                return;
+            }
+            window._salesInvoiceAutoPrintPending = false;
+            window._salesInvoiceAutoPrintTimer = setTimeout(function() {
+                const modalEl = document.getElementById('salesInvoicePrintModal');
+                if (!modalEl || !modalEl.classList.contains('show')) {
+                    return;
+                }
+                printSalesInvoiceFromModal();
+            }, 300);
+        }
+
+            function refreshSalesPrinterList(pick) {
+                function run() {
+                    if (!window.InvoiceQzPrint) {
+                        $('#salesPrinterSelect').html('<option value="">Print helper loading…</option>');
+                        $('#salesQzInstallLink').show();
+                        return Promise.reject(new Error('InvoiceQzPrint missing'));
+                    }
+                    return InvoiceQzPrint.refreshPrinters({
+                        select: '#salesPrinterSelect',
+                        status: '#salesQzStatus',
+                        installLink: '#salesQzInstallLink',
+                        storageKey: 'posSelectedPrinter',
+                        list: '#salesBtPrinterList',
+                        wifiList: '#salesWifiPrinterList',
+                        pick: !!pick
+                    }).then(function(printers) {
+                        try {
+                            var ver = window.__INVOICE_QZ_PRINT_VER || '';
+                            if (ver) {
+                                $('#salesQzStatus').attr('title', 'QZ helper ' + ver);
+                            }
+                        } catch (e) {}
+                        trySalesInvoiceAutoPrint();
+                        return printers;
+                    });
+                }
+                if (window.InvoiceQzPrint) {
+                    return run();
+                }
+                return new Promise(function(resolve, reject) {
+                    var tries = 0;
+                    var t = setInterval(function() {
+                        tries++;
+                        if (window.InvoiceQzPrint || tries > 50) {
+                            clearInterval(t);
+                            run().then(resolve).catch(reject);
+                        }
+                    }, 100);
+                });
+            }
+
+        function printSalesInvoiceFromModal() {
+            if (window.InvoiceQzPrint && InvoiceQzPrint.shouldDeferPrintForPicker(document.getElementById('salesInvoicePrintBtn'))) {
+                return;
+            }
+            const modalEl = document.getElementById('salesInvoicePrintModal');
+            if (!modalEl || !modalEl.classList.contains('show')) {
+                return;
+            }
+            if (window._salesInvoicePrintBusy) {
+                return;
+            }
+            const frame = document.getElementById('salesInvoicePrintFrame');
+            if (!frame || !frame.src || frame.src === 'about:blank' || !window._salesInvoicePrintReady) {
+                return;
+            }
+            const printerName = ($('#salesPrinterSelect').val() || '').trim();
+            const doAutoCut = $('#salesThermalAutoCut').is(':checked');
+            const pdfUrl = String(frame.src || '').split('#')[0];
+            if (!window.InvoiceQzPrint) {
+                window.open(pdfUrl, '_blank');
+                return;
+            }
+            window._salesInvoicePrintBusy = true;
+            $('#salesInvoicePrintBtn').prop('disabled', true);
+            InvoiceQzPrint.printInvoice({
+                printerName: printerName,
+                pdfUrl: pdfUrl,
+                autoCut: doAutoCut,
+                frame: frame,
+                status: '#salesQzStatus',
+                button: '#salesInvoicePrintBtn',
+                select: '#salesPrinterSelect',
+                list: '#salesBtPrinterList',
+                storageKey: 'posSelectedPrinter'
+            }).catch(function() {}).then(function() {
+                if (window._salesInvoicePrintReady) {
+                    $('#salesInvoicePrintBtn').prop('disabled', false);
+                }
+                // Short lock only to block double-tap; button is enabled again immediately above.
+                setTimeout(function() {
+                    window._salesInvoicePrintBusy = false;
+                }, 800);
+            });
+        }
+
+        window.currentPrintOrderId = null;
+
+        function salesInvoicePdfPreviewUrl(path) {
+            // Plain PDF URL — Chrome viewer scrollable like before
+            return String(path || '').split('#')[0];
+        }
+        
+        window.loadPdfTemplate = function(templateId, btnElement) {
+            if (!window.currentPrintOrderId) return;
+            
+            // Handle active button state
+            if (btnElement) {
+                $('.pdf-format-btn').removeClass('btn-primary').addClass('btn-outline-primary');
+                $(btnElement).removeClass('btn-outline-primary').addClass('btn-primary');
+            }
+            
+            const frame = document.getElementById('salesInvoicePrintFrame');
+            if (frame) {
+                setSalesInvoicePrintLoading(true);
+                window._salesInvoicePrintReady = false;
+                var tpl = parseInt(templateId, 10) || 1;
+                var hindi = $('#salesPrintHindi').is(':checked') ? '1' : '0';
+                frame.src = salesInvoicePdfPreviewUrl('/sales/invoice/pdf/' + encodeURIComponent(window.currentPrintOrderId) + '?template=' + tpl + '&hindi=' + hindi);
+                if (window.InvoiceQzPrint && InvoiceQzPrint.preparePhonePrint) {
+                    InvoiceQzPrint.preparePhonePrint(frame.src);
+                }
+            }
+        };
+
+        window.openSalesInvoicePrintModal = function(orderId, options) {
+            if (!orderId) {
+                return;
+            }
+            options = options || {};
+            
+            // Reset all format buttons to inactive state
+            $('.pdf-format-btn').removeClass('btn-primary').addClass('btn-outline-primary');
+            $('#salesPrintHindi').prop('checked', !!(window.__INVOICE_PRINT_PREFS || {}).hindi);
+            $('#salesThermalAutoCut').prop('checked', /^(bt|serial):/.test(String($('#salesPrinterSelect').val() || '')) || !!(window.__INVOICE_PRINT_PREFS || {}).autoCut);
+            
+            window.currentPrintOrderId = orderId;
+            window._salesInvoiceQuickPrint = !!options.autoPrint;
+            window._salesInvoiceAutoPrintPending = !!options.autoPrint;
+            const frame = document.getElementById('salesInvoicePrintFrame');
+            const modal = getSalesInvoicePrintModal();
+            if (!frame || !modal) {
+                return;
+            }
+            if (window._salesInvoicePrintLoadTimer) {
+                clearTimeout(window._salesInvoicePrintLoadTimer);
+            }
+            window._salesInvoicePrintReady = false;
+            setSalesInvoicePrintLoading(true);
+            frame.onload = function() {
+                if (window._salesInvoicePrintLoadTimer) {
+                    clearTimeout(window._salesInvoicePrintLoadTimer);
+                    window._salesInvoicePrintLoadTimer = null;
+                }
+                markSalesInvoicePrintReady();
+            };
+            frame.onerror = function() {
+                if (window._salesInvoicePrintLoadTimer) {
+                    clearTimeout(window._salesInvoicePrintLoadTimer);
+                    window._salesInvoicePrintLoadTimer = null;
+                }
+                setSalesInvoicePrintLoading(false);
+            };
+            var preferredTpl = parseInt($('#pdfTemplateButtons').data('preferred-template'), 10) || 1;
+            if (window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches) {
+                preferredTpl = 1;
+            }
+            preferredTpl = Math.min(5, Math.max(1, preferredTpl));
+            var prefBtn = $('.pdf-format-btn[data-template="' + preferredTpl + '"]');
+            if (prefBtn.length) {
+                prefBtn.removeClass('btn-outline-primary').addClass('btn-primary');
+            }
+            frame.src = salesInvoicePdfPreviewUrl('/sales/invoice/pdf/' + encodeURIComponent(orderId) + '?template=' + preferredTpl + '&hindi=0');
+            if (window.InvoiceQzPrint && InvoiceQzPrint.preparePhonePrint) {
+                InvoiceQzPrint.preparePhonePrint(frame.src);
+            }
+            window._salesInvoicePrintLoadTimer = setTimeout(function() {
+                if (!window._salesInvoicePrintReady) {
+                    markSalesInvoicePrintReady();
+                }
+                window._salesInvoicePrintLoadTimer = null;
+            }, 4000);
+            connectBluetoothPrinter(false);
+            modal.show();
+            setTimeout(syncSalesInvoicePrintModalLayout, 60);
+        };
+
+        var isBluetoothConnecting = false;
+
+        function connectBluetoothPrinter(isManualRefresh) {
+            isManualRefresh = isManualRefresh === true;
+            
+            var isMobile = false;
+            try {
+                if (navigator.userAgentData && navigator.userAgentData.mobile) {
+                    isMobile = true;
+                } else if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+                    isMobile = true;
+                }
+            } catch (e) {}
+
+            var hasWebBluetooth = !!(navigator.bluetooth && typeof navigator.bluetooth.requestDevice === 'function');
+            var bluetoothOpen = $('#salesBtPrinterList').is(':visible');
+
+            if (isMobile && hasWebBluetooth) {
+                if (isBluetoothConnecting && !isManualRefresh) return;
+                isBluetoothConnecting = true;
+                
+                const $status = $('#salesQzStatus');
+                $status.text('Connecting...').css('color', '#ea5455');
+                
+                let timeoutId = setTimeout(function() {
+                    isBluetoothConnecting = false;
+                    $status.text('Printer not found. Tap refresh to try again.').css('color', '#ea5455');
+                }, 30000);
+
+                let cleanup = function() {
+                    clearTimeout(timeoutId);
+                    isBluetoothConnecting = false;
+                };
+
+                let tryPicker = function() {
+                    let pickerResult;
+                    try {
+                        if (window.InvoiceQzPrint && InvoiceQzPrint.pickNearbyPrinter) {
+                            pickerResult = InvoiceQzPrint.pickNearbyPrinter({
+                                select: '#salesPrinterSelect',
+                                status: '#salesQzStatus',
+                                storageKey: 'posSelectedPrinter',
+                                list: '#salesBtPrinterList'
+                            });
+                        }
+                    } catch (e) {
+                        if (e.name === 'NotFoundError' || e.name === 'SecurityError') {
+                            cleanup();
+                            if (e.name === 'SecurityError') {
+                                $status.text('No user gesture. Tap refresh to try again.').css('color', '#ea5455');
+                            }
+                            return;
+                        }
+                    }
+                    
+                    if (pickerResult && typeof pickerResult.catch === 'function') {
+                        pickerResult.catch(function(e) {
+                            if (e && (e.name === 'NotFoundError' || e.name === 'SecurityError')) {
+                                cleanup();
+                                if (e.name === 'SecurityError') {
+                                    $status.text('No user gesture. Tap refresh to try again.').css('color', '#ea5455');
+                                }
+                            }
+                        });
+                    }
+
+                    refreshSalesPrinterList(false).then(cleanup).catch(cleanup);
+                };
+
+                if (isManualRefresh) {
+                    tryPicker();
+                    return;
+                }
+
+                if (navigator.bluetooth.getDevices) {
+                    navigator.bluetooth.getDevices().then(function(devices) {
+                        let paired = devices.filter(function(d) { return d.id && d.name; });
+                        if (paired.length > 0) {
+                            let device = paired[0];
+                            let connectPromise = Promise.resolve();
+                            if (device.gatt && !device.gatt.connected) {
+                                connectPromise = device.gatt.connect().catch(function(e) {
+                                    if (device.watchAdvertisements) {
+                                        return device.watchAdvertisements().then(function() {
+                                            return new Promise(function(resolve, reject) {
+                                                let advTimeout = setTimeout(function() { reject(new Error('timeout')); }, 5000);
+                                                device.addEventListener('advertisementreceived', function() {
+                                                    clearTimeout(advTimeout);
+                                                    device.gatt.connect().then(resolve).catch(reject);
+                                                }, { once: true });
+                                            });
+                                        });
+                                    }
+                                    throw e;
+                                });
+                            }
+                            
+                            connectPromise.then(function() {
+                                return refreshSalesPrinterList(false).then(cleanup);
+                            }).catch(function(err) {
+                                try {
+                                    tryPicker();
+                                } catch (e) {
+                                    cleanup();
+                                    $status.text('Printer not found. Tap refresh to try again.').css('color', '#ea5455');
+                                }
+                            });
+                        } else {
+                            tryPicker();
+                        }
+                    }).catch(function(err) {
+                        tryPicker();
+                    });
+                } else {
+                    tryPicker();
+                }
+            } else {
+                if (isManualRefresh && bluetoothOpen && window.InvoiceQzPrint && InvoiceQzPrint.pickNearbyPrinter) {
+                    InvoiceQzPrint.pickNearbyPrinter({
+                        select: '#salesPrinterSelect',
+                        status: '#salesQzStatus',
+                        storageKey: 'posSelectedPrinter',
+                        list: '#salesBtPrinterList'
+                    });
+                }
+                refreshSalesPrinterList(false).catch(function() {});
+            }
+        }
+
+        $('#salesInvoicePrintBtn').on('click', function() {
+            printSalesInvoiceFromModal();
+        });
+
+        $('#salesRefreshPrintersBtn').on('click', function() {
+            connectBluetoothPrinter(true);
+        });
+
+        $('#salesPrinterSelect').on('change', function() {
+            const name = $(this).val() || '';
+            try {
+                if (name) localStorage.setItem('posSelectedPrinter', name);
+            } catch (e) {}
+        });
+
+        $('#salesThermalAutoCut').on('change', function() {
+            try {
+                localStorage.setItem('posThermalAutoCut', $(this).is(':checked') ? '1' : '0');
+            } catch (e) {}
+        });
+
+        $('#salesPrintHindi').on('change', function() {
+            if (!window.currentPrintOrderId) return;
+            var active = $('.pdf-format-btn.btn-primary').data('template') || $('#pdfTemplateButtons').data('preferred-template') || 1;
+            window.loadPdfTemplate(active, null);
+        });
+
+        $('#salesInvoicePrintModal').on('shown.bs.modal', function() {
+            syncSalesInvoicePrintModalLayout();
+            if (window.innerWidth >= 768) {
+                refreshSalesPrinterList().catch(function() {});
+            }
+        });
+
+        $('#salesInvoicePrintModal').on('hidden.bs.modal', function() {
+            const frame = document.getElementById('salesInvoicePrintFrame');
+            window._salesInvoicePrintReady = false;
+            window._salesInvoicePrintBusy = false;
+            window._salesInvoiceAutoPrintPending = false;
+            window._salesInvoiceQuickPrint = false;
+            if (window._salesInvoiceAutoPrintTimer) {
+                clearTimeout(window._salesInvoiceAutoPrintTimer);
+                window._salesInvoiceAutoPrintTimer = null;
+            }
+            if (window._salesInvoicePrintLoadTimer) {
+                clearTimeout(window._salesInvoicePrintLoadTimer);
+                window._salesInvoicePrintLoadTimer = null;
+            }
+            setSalesInvoicePrintLoading(false);
+            if (frame) {
+                frame.onload = null;
+                frame.onerror = null;
+                frame.src = 'about:blank';
+            }
+            const bodyEl = this.querySelector('.sales-invoice-print-body');
+            if (bodyEl) {
+                bodyEl.style.height = '';
+            }
+        });
+
+        $(window).on('resize.salesInvoicePrint orientationchange.salesInvoicePrint', function() {
+            syncSalesInvoicePrintModalLayout();
+        });
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', syncSalesInvoicePrintModalLayout);
+        }
+
+        $(document).on('keydown.salesInvoicePrint', function(e) {
+            const modalEl = document.getElementById('salesInvoicePrintModal');
+            if (!modalEl || !modalEl.classList.contains('show')) {
+                return;
+            }
+            if (e.key === 'F10' || e.keyCode === 121) {
+                e.preventDefault();
+                e.stopPropagation();
+                printSalesInvoiceFromModal();
+            }
+        });
+    </script>
+@endpush

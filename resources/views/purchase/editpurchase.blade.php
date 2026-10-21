@@ -1,0 +1,1959 @@
+@extends('layout.app')
+
+@section('title', 'Edit Purchase')
+
+@section('content')
+    <style>
+        @media screen and (max-width: 768px) {
+            .purchase-header {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: 6px;
+            }
+
+            .purchase-header .page-title h4 {
+                font-size: 16px;
+                margin-bottom: 0;
+                text-align: left;
+            }
+
+            .purchase-header .page-title {
+                width: 100%;
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+
+            .gst-header {
+                display: flex;
+                align-items: center;
+                width: 100%;
+                padding: 0;
+                gap: 8px;
+                flex-wrap: nowrap;
+                margin-left: 0;
+                justify-content: space-between;
+                flex: 1 1 100%;
+            }
+
+            .custom-radio-label {
+                font-size: 12px;
+                font-weight: 500;
+                padding-left: 20px;
+                gap: 4px;
+            }
+
+            .custom-radio-label input[type="radio"] {
+                width: 14px;
+                height: 14px;
+            }
+
+            .custom-radio-label input[type="radio"]:checked::after {
+                width: 5px;
+                height: 5px;
+            }
+
+            .add-row-btn {
+                margin-top: 0;
+                margin-bottom: 1rem;
+            }
+
+            .add-row {
+                width: 100%;
+                text-align: center;
+            }
+
+            .remove-row {
+                width: 100%;
+                text-align: center;
+            }
+
+            .form-group {
+                margin-bottom: 10px !important
+            }
+
+            .purchase-back-btn {
+                margin-left: auto;
+                padding: 4px 10px;
+                height: 28px;
+                font-size: 12px;
+            }
+
+            .card .card-body {
+                padding: 12px 10px;
+            }
+
+            .form-row {
+                padding: 14px 8px 8px;
+                margin-bottom: 14px;
+            }
+
+            .form-row .col-6,
+            .form-row .col-12,
+            .row:not(.form-row) .col-6,
+            .row:not(.form-row) .col-12 {
+                padding-left: 6px;
+                padding-right: 6px;
+            }
+
+            .form-group label {
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .form-group .form-control,
+            .form-group .select2-container--default .select2-selection--single {
+                height: 38px;
+                font-size: 12px;
+            }
+
+            .add-row-btn {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+
+            .add-row {
+                width: 100%;
+                height: 38px;
+                border-radius: 4px;
+            }
+
+            .remove-row {
+                width: 100%;
+                height: 38px;
+                border-radius: 4px;
+            }
+
+            .product-gst-info {
+                margin-top: 4px !important;
+                font-size: 11px;
+            }
+
+            #form-container .form-row {
+                position: relative;
+            }
+
+            #form-container .form-row .add-row-btn,
+            #form-container .form-row .col-lg-1.col-sm-12.add-row-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .row.form-row > [class*="col-"] {
+                margin-bottom: 6px;
+            }
+
+            .row.form-row .form-group {
+                margin-bottom: 0 !important;
+            }
+
+            .row.form-row .col-6 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+
+            .row.form-row .col-12 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .row.form-row .select2-container {
+                width: 100% !important;
+            }
+
+            .purchase-header .page-title,
+            .gst-header {
+                width: 100%;
+            }
+        }
+
+        @media screen and (min-width: 769px) and (max-width: 1199px) {
+            .purchase-header {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: 8px;
+            }
+
+            .purchase-header .page-title {
+                width: 100%;
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+
+            .purchase-header .page-title h4 {
+                font-size: 17px;
+                margin-bottom: 0;
+                text-align: left;
+            }
+
+            .gst-header {
+                display: flex;
+                align-items: center;
+                width: 100%;
+                padding: 0;
+                gap: 10px;
+                flex-wrap: nowrap;
+                margin-left: 0;
+                justify-content: space-between;
+            }
+
+            .custom-radio-label {
+                font-size: 12px;
+                font-weight: 500;
+                padding-left: 20px;
+                gap: 4px;
+            }
+
+            .custom-radio-label input[type="radio"] {
+                width: 14px;
+                height: 14px;
+            }
+
+            .custom-radio-label input[type="radio"]:checked::after {
+                width: 5px;
+                height: 5px;
+            }
+
+            .purchase-back-btn {
+                margin-left: auto;
+                padding: 4px 10px;
+                height: 28px;
+                font-size: 12px;
+            }
+
+            .card .card-body {
+                padding: 12px 10px;
+            }
+
+            .form-row {
+                padding: 14px 8px 8px;
+                margin-bottom: 14px;
+            }
+
+            .form-group {
+                margin-bottom: 10px !important;
+            }
+
+            .form-group label {
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .form-group .form-control,
+            .form-group .select2-container--default .select2-selection--single {
+                height: 38px;
+                font-size: 12px;
+            }
+
+            .row.form-row > [class*="col-"] {
+                padding-left: 6px;
+                padding-right: 6px;
+                margin-bottom: 6px;
+            }
+
+            .row.form-row .form-group {
+                margin-bottom: 0 !important;
+            }
+
+            .row.form-row .col-lg-2,
+            .row.form-row .col-lg-1 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+
+            .row.form-row .col-lg-2.col-12,
+            .row.form-row .add-row-btn,
+            .row.form-row .col-lg-1.col-sm-12.add-row-btn {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .row.form-row .select2-container {
+                width: 100% !important;
+            }
+
+            .add-row-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+
+            .add-row,
+            .remove-row {
+                width: 100%;
+                height: 38px;
+                border-radius: 4px;
+                text-align: center;
+            }
+
+            .product-gst-info {
+                margin-top: 4px !important;
+                font-size: 11px;
+            }
+        }
+
+        .gst-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 8px 0 0;
+        }
+
+        .custom-radio-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            user-select: none;
+            position: relative;
+            padding-left: 24px;
+            margin: 0;
+            white-space: nowrap;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: color 0.2s ease;
+        }
+
+        .custom-radio-label input[type="radio"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #888;
+            border-radius: 50%;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .custom-radio-label input[type="radio"]:checked {
+            border-color: #0056b3;
+            background-color: #0056b3;
+        }
+
+        .custom-radio-label input[type="radio"]:checked::after {
+            content: "";
+            display: block;
+            width: 7px;
+            height: 7px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .custom-radio-label:hover input[type="radio"] {
+            border-color: #5a50cc;
+        }
+
+        .custom-radio-label:hover {
+            color: #0056b3;
+        }
+
+        .purchase-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid #ff9f43;
+            background: #ff9f43;
+            color: #fff;
+            border-radius: 4px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1;
+            height: 32px;
+            margin-left: 8px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .purchase-back-btn:hover {
+            background: #ff9f43;
+            color: #fff;
+        }
+
+        .vendor-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 16px;
+        }
+
+        .vendor-modal-grid .vendor-full-width {
+            grid-column: 1 / -1;
+        }
+
+        .vendor-modal-grid .form-group {
+            margin-bottom: 0 !important;
+        }
+
+        .vendor-modal-grid label {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .purchase-remark-block .form-group {
+            margin-bottom: 0;
+        }
+
+        .purchase-remark-textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-row {
+            border: 1px solid #fdc794;
+            padding: 20px 10px 10px 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            background: #fdfdfd;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .add-row-btn {
+            margin-top: 28px;
+        }
+    </style>
+    @php
+        $user = Auth()->user();
+        $branchId = $user->id ?? null;
+        $userRole = $user->role ?? '';
+        $subAdminId = session('selectedSubAdminId');
+        if ($userRole === 'sub-admin') {
+            $branchId = $user->id; // sub-admin uses own id
+        } elseif ($userRole === 'admin' && !empty($subAdminId)) {
+            $branchId = $subAdminId; // admin chooses sub-admin
+        } elseif ($userRole === 'staff') {
+            $branchId = $user->branch_id; // admin with no sub-admins
+        } else {
+            $branchId = $user->id; // for other roles, use own id
+        }
+        $vendors = App\Models\User::where('role', 'vendor')
+            ->where('isDeleted', 0) // Only non-deleted vendors
+            ->where('branch_id', $branchId) // Filter by branch_id
+            ->get();
+        $taxes = App\Models\TaxRate::where('status', 'active')
+            ->where('isDeleted', 0)
+            ->where('branch_id', $branchId)
+            ->get();
+        $products = App\Models\Product::where('isDeleted', 0)->where('branch_id', $branchId)->get();
+
+        $settings = \DB::table('settings')->where('branch_id', $branchId)->first();
+        $currencySymbol = $settings->currency_symbol ?? '₹';
+        $currencyPosition = $settings->currency_position ?? 'left';
+        $productsArray = $products->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'category_id' => $product->category_id,
+                'price' => $product->price,
+                'gst_option' => $product->gst_option,
+                'product_gst' => $product->product_gst,
+            ];
+        });
+        $productsJson = json_encode($productsArray);
+    @endphp
+    <div class="content">
+        <div class="page-header purchase-header">
+            <div class="page-title">
+                <h4>Edit Purchase</h4>
+            </div>
+            <div class="gst-header">
+
+                <label class="custom-radio-label">
+                    <input type="radio" name="gst_option" id="without_gst" value="without" checked />
+                    Without GST
+                </label>
+
+                <label class="custom-radio-label">
+                    <input type="radio" name="gst_option" id="with_gst" value="with" />
+                    With GST
+                </label>
+                <a href="{{ route('purchase.lists') }}" class="purchase-back-btn">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Back
+                </a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-4 col-sm-6 col-6">
+                        <div class="form-group">
+                            <label>Vendor Name
+                                <button type="button" class="btn btn-sm manage_btn ms-2" id="addVendorBtn" style="padding: 3px 8px; font-size: 12px;">Add Vendor</button>
+                            </label>
+                            <select id="vendor_name" name="vendor_id" class="form-control select2 vendor-select" disabled>
+                                <option value="">Select Vendor</option>
+                                @foreach ($vendors as $vendor)
+                                    <option value="{{ $vendor->id }}" data-phone="{{ $vendor->phone }}">
+                                        {{ $vendor->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-sm-6 col-6">
+                        <div class="form-group">
+                            <label>Bill No.</label>
+                            <input type="text" id="bill_no" name="bill_no" class="form-control" placeholder="Bill No">
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-sm-6 col-6">
+                        <div class="form-group">
+                            <label>Purchase Date</label>
+                            <input type="datetime-local" id="purchase_date" name="purchase_date" class="form-control">
+                            <span class="error text-danger" id="purchase_date_error"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 col-sm-12 d-none">
+                        <div class="form-group">
+                            <label>Vendor Phone</label>
+                            <input type="number" id="vendor_phone" name="phone" class="form-control"
+                                placeholder="Enter Phone" readonly>
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                {{-- <div class="mt-2"> --}}
+                <div class="row form-row">
+                    <div class="col-lg-2 col-sm-12 col-6">
+                        <div class="form-group">
+                            <label>Category Name</label>
+                            <select id="category_name" name="category_name[]" class="form-control select2 category-select">
+                                <option value="">Category Name</option>
+                                @foreach ($categories as $category)
+                                    <option value="{{ $category->id }}" data-price="{{ $category->price }}">
+                                        {{ $category->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-sm-12 col-6">
+                        <div class="form-group">
+                            <label>Product Name</label>
+                            <select id="product_name" name="product_name[]" class="form-control select2 product-select"
+                                disabled>
+                                <option value="">Product Name</option>
+                                @foreach ($products as $product)
+                                    <option value="{{ $product->id }}" data-price="{{ $product->price }}"
+                                        data-category="{{ $product->category_id }}"
+                                        data-gst-option="{{ $product->gst_option }}" data-gst='{!! $product->product_gst !!}'>
+                                        {{ $product->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="product-gst-info mt-1"></div>
+                            <div class="purchase-rate-wrap mt-1" style="display:none;">
+                                <label class="mb-0" style="font-size:12px;">Add stock to</label>
+                                <select class="form-control purchase-rate-select" style="font-size:12px;"></select>
+                            </div>
+
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-sm-12 col-6">
+                        <div class="form-group">
+                            <label>Product Price</label>
+                            <input type="text" name="price[]" class="form-control price-input" placeholder="Enter Price">
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-lg-1 col-sm-12 col-6">
+                        <div class="form-group">
+                            <label> Qty</label>
+                            <input type="number" name="quantity[]" class="form-control quantity-input" placeholder="Qty"
+                                value="1" min="0" oninput="this.value = this.value < 0 ? 0 : this.value">
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-lg-1 col-sm-12 col-6">
+                        <div class="form-group">
+                            <label>Disc%</label>
+                            <input type="number" name="product_discount[]" class="form-control product-discount-input"
+                                placeholder="0.00" value="0" min="0" max="100"
+                                oninput="this.value = this.value < 0 ? 0 : (this.value > 100 ? 100 : this.value)">
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-lg-1 col-sm-12 col-6">
+                        <div class="form-group">
+                            <label>Disc-Amt</label>
+                            <input type="number" name="product_discount_amount[]"
+                                class="form-control product-discount-amount-input" placeholder="0.00" value="0"
+                                min="0">
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-sm-12 col-12">
+                        <div class="form-group">
+                            <label>Total Amount</label>
+                            <input type="text" name="total[]" class="form-control total-input" placeholder="0"
+                                min="0" readonly>
+                        </div>
+                    </div>
+                    <div class="col-lg-1 col-sm-12 add-row-btn">
+                        <button type="button" class="btn btn-success add-row">+</button>
+                    </div>
+                </div>
+
+                <!-- Placeholder for additional rows -->
+                <div id="form-container"></div>
+                {{-- </div> --}}
+
+                <div class="row">
+                    <!-- <div class="col-lg-3 col-sm-6 col-12">
+                                                                                                                                                            <div class="form-group">
+                                                                                                                                                                <label>Discount</label>
+                                                                                                                                                                <input type="number" name="discount" id="discount" class="form-control" placeholder="0.00%">
+                                                                                                                                                                <span class="error text-danger"></span>
+                                                                                                                                                            </div>
+                                                                                                                                                        </div> -->
+                    <div class="col-lg-3 col-sm-6 col-6">
+                        <div class="form-group">
+                            <label>Shipping</label>
+                            <input type="text" name="shipping" id="shipping" class="form-control"
+                                placeholder="0.00">
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                    <!-- <div class="col-lg-3 col-sm-6 col-6">
+                        <div class="form-group">
+                            <label>Purchase Status</label>
+                            <select name="status" class="form-control" disabled>
+                                <option value="">Choose Status</option>
+                                <option value="completed">Completed</option>
+                                <option value="partially">Partially</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div> -->
+                    <div class="col-lg-3 col-sm-6 col-6">
+                        <div class="form-group">
+                            <label>Payment Status</label>
+                            <select name="payment_status" class="form-control payment_status" disabled>
+                                <option value="">Choose Status</option>
+                                <option value="completed">Completed</option>
+                                <option value="partially">Partially</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                            <span class="error text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div class="row">
+                    <div class="col-lg-6 col-sm-12 col-12 purchase-remark-block">
+                        <div class="form-group">
+                            <label>Remarks</label>
+                            <textarea name="remark" id="remark" class="form-control purchase-remark-textarea" placeholder="Enter any remarks"></textarea>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 float-md-right">
+                        <div class="total-order">
+                            <ul>
+                                <li>
+                                    <h4>Total Product Amount</h4>
+                                    <h5 style="color: green;">
+                                        @if ($currencyPosition === 'right')
+                                            <span id="total-product-amount">0.00</span>{{ $currencySymbol }}
+                                        @else
+                                            {{ $currencySymbol }}<span id="total-product-amount">0.00</span>
+                                        @endif
+                                    </h5>
+                                </li>
+
+
+                                <li>
+                                    <h4>Discount Amount</h4>
+                                    <h5 style="color: green;">
+                                        @if ($currencyPosition === 'right')
+                                            <span id="total-discount-amount">0.00</span>{{ $currencySymbol }}
+                                        @else
+                                            {{ $currencySymbol }}<span id="total-discount-amount">0.00</span>
+                                        @endif
+                                    </h5>
+                                </li>
+
+                                <li>
+                                    <h4>Price after Discount</h4>
+                                    <h5 style="color: green;">
+                                        @if ($currencyPosition === 'right')
+                                            <span id="price-after-discount">0.00</span>{{ $currencySymbol }}
+                                        @else
+                                            {{ $currencySymbol }}<span id="price-after-discount">0.00</span>
+                                        @endif
+                                    </h5>
+                                </li>
+                                <li id="gst-section" style="display:none;">
+                                    <h4>Total GST</h4>
+                                    <h5 style="color: green;">
+                                        @if ($currencyPosition === 'right')
+                                            <span id="total-gst-amount">0.00</span>{{ $currencySymbol }}
+                                        @else
+                                            {{ $currencySymbol }}<span id="total-gst-amount">0.00</span>
+                                        @endif
+                                    </h5>
+                                </li>
+
+                                <li>
+                                    <h4>Shipping</h4>
+                                    <h5 style="color: green;">
+                                        @if ($currencyPosition === 'right')
+                                            <span id="shipping-amount">0.00</span>{{ $currencySymbol }}
+                                        @else
+                                            {{ $currencySymbol }}<span id="shipping-amount">0.00</span>
+                                        @endif
+                                    </h5>
+                                </li>
+
+                                <li class="total">
+                                    <h4>Grand Total</h4>
+                                    <h5 style="color: green;">
+                                        @if ($currencyPosition === 'right')
+                                            <span id="grand-total">0.00</span>{{ $currencySymbol }}
+                                        @else
+                                            {{ $currencySymbol }}<span id="grand-total">0.00</span>
+                                        @endif
+                                    </h5>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <a href="javascript:void(0);" class="btn btn-submit me-2">Submit</a>
+                    <a href="{{ route('purchase.lists') }}" class="btn btn-cancel">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Vendor Modal
+    <div class="modal fade" id="addVendorModal" tabindex="-1" aria-labelledby="addVendorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addVendorModalLabel">Add New Vendor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <form id="addVendorForm" enctype="multipart/form-data">
+                        <div class="vendor-modal-grid">
+                            <div class="form-group">
+                                <label>Vendor Name <span class="text-danger">*</span></label>
+                                <input type="text" id="vendor_name_input" name="name" class="form-control" placeholder="Enter Vendor Name">
+                                <span class="text-danger" id="vendor_name_error"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="vendor_email_input" name="email" class="form-control" placeholder="Enter Email">
+                                <span class="text-danger" id="vendor_email_error"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone <span class="text-danger">*</span></label>
+                                <input type="text" id="vendor_phone_input" name="phone" maxlength="10" class="form-control" placeholder="Enter Phone Number">
+                                <span class="text-danger" id="vendor_phone_error"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>Country</label>
+                                <input type="text" id="country_input" name="country" class="form-control" placeholder="Enter Country">
+                                <span class="text-danger" id="country_error"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>City</label>
+                                <input type="text" id="city_input" name="city" class="form-control" placeholder="Enter City">
+                                <span class="text-danger" id="city_error"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>State Code</label>
+                                <input type="text" id="state_code_input" name="state_code" class="form-control" placeholder="Enter State Code">
+                                <span class="text-danger" id="state_code_error"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>PAN Number</label>
+                                <input type="text" id="pan_number_input" name="pan_number" class="form-control" placeholder="Enter Pan Number">
+                                <span class="text-danger" id="pan_number_error"></span>
+                            </div>
+                            <div class="form-group">
+                                <label>GST Number</label>
+                                <input type="text" id="gst_number_input" name="gst_number" class="form-control" placeholder="Enter GST Number">
+                                <span class="text-danger" id="gst_number_error"></span>
+                            </div>
+                            <div class="form-group vendor-full-width">
+                                <label>Address</label>
+                                <textarea id="vendor_address_input" name="address" class="form-control" rows="3" placeholder="Enter Address"></textarea>
+                                <span class="text-danger" id="vendor_address_error"></span>
+                            </div>
+                            <div class="form-group vendor-full-width">
+                                <label>Photo</label>
+                                <input type="file" id="photo_input" name="photo" class="form-control" placeholder="Upload Photo" accept="image">
+                                <span class="text-danger" id="photo_error"></span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn text-white" id="saveVendorBtn" style="background-color:#ff9f43;">Save Vendor</button>
+                </div>
+            </div>
+        </div>
+    </div> -->
+@endsection
+
+@push('js')
+    <script>
+        const products = @json($productsArray);
+    </script>
+    <script>
+        function purchaseRetailRates(product) {
+            if (!product) return [];
+            let rates = product.selling_prices;
+            if (typeof rates === 'string') {
+                try { rates = JSON.parse(rates); } catch (e) { rates = []; }
+            }
+            if (!Array.isArray(rates)) rates = [];
+            const mainPrice = parseFloat(product.price) || 0;
+            const mainQty = parseFloat(product.quantity) || 0;
+            const options = [];
+            const seen = {};
+            const pushRate = function(name, price, qty) {
+                const key = Number(price).toFixed(4);
+                if (seen[key]) return;
+                seen[key] = true;
+                options.push({
+                    name: name,
+                    price: parseFloat(price) || 0,
+                    qty: parseFloat(qty) || 0
+                });
+            };
+            pushRate('Rate 1', mainPrice, mainQty);
+            rates.forEach(function(rate) {
+                if (!rate || rate.price === undefined || rate.price === null || rate.price === '') return;
+                const name = String(rate.name || '');
+                if (/wholesale/i.test(name)) return;
+                const price = parseFloat(rate.price);
+                if (Math.abs(price - mainPrice) < 0.0001) return;
+                pushRate(name || ('Rate ' + (options.length + 1)), price, rate.qty);
+            });
+            return options;
+        }
+
+        function fillPurchaseRateSelect($row, selectedPrice) {
+            const $wrap = $row.find('.purchase-rate-wrap');
+            const $select = $row.find('.purchase-rate-select');
+            if (!$wrap.length) return;
+            const productId = $row.find('.product-select').val();
+            const product = (typeof products !== 'undefined' ? products : []).find(function(p) {
+                return String(p.id) === String(productId);
+            });
+            const rates = purchaseRetailRates(product);
+            if (rates.length < 2) {
+                $wrap.hide();
+                $select.empty();
+                return;
+            }
+            $select.empty();
+            rates.forEach(function(rate) {
+                const label = rate.name + ' · ₹' + rate.price + ' · Stock ' + rate.qty;
+                $select.append($('<option>', { value: rate.price, text: label }));
+            });
+            if (selectedPrice !== undefined && selectedPrice !== null && selectedPrice !== '') {
+                const match = rates.find(function(rate) {
+                    return Math.abs(parseFloat(rate.price) - parseFloat(selectedPrice)) < 0.0001;
+                });
+                if (match) $select.val(String(match.price));
+            }
+            $wrap.show();
+        }
+
+        $(document).ready(function() {
+            var authToken = localStorage.getItem("authToken");
+            if ($('.purchase-datepicker').length > 0 && typeof $.fn.datetimepicker === 'function') {
+                $('.purchase-datepicker').datetimepicker({
+                    format: 'DD/MM/YYYY',
+                    icons: {
+                        up: "fas fa-angle-up",
+                        down: "fas fa-angle-down",
+                        next: 'fas fa-angle-right',
+                        previous: 'fas fa-angle-left'
+                    }
+                });
+            }
+
+            $('#addVendorBtn').on('click', function() {
+                $('#addVendorModal').modal('show');
+                $('#addVendorForm')[0].reset();
+                $('#addVendorForm .text-danger').text('');
+            });
+
+            $('#saveVendorBtn').on('click', function() {
+                let $btn = $(this);
+                let originalText = $btn.text();
+                $('#addVendorForm .text-danger').text('');
+
+                let vendorData = {
+                    name: $('#vendor_name_input').val().trim(),
+                    email: $('#vendor_email_input').val().trim(),
+                    phone: $('#vendor_phone_input').val().trim(),
+                    address: $('#vendor_address_input').val().trim(),
+                    country: $('#country_input').val().trim(),
+                    city: $('#city_input').val().trim(),
+                    state_code: $('#state_code_input').val().trim(),
+                    pan_number: $('#pan_number_input').val().trim(),
+                    gst_number: $('#gst_number_input').val().trim(),
+                    photo: $('#photo_input')[0].files[0] || null,
+                    selectedSubAdminId: localStorage.getItem('selectedSubAdminId') || null
+                };
+
+                let hasError = false;
+                if (!vendorData.name) {
+                    $('#vendor_name_error').text('Vendor name is required');
+                    hasError = true;
+                }
+                if (!vendorData.phone) {
+                    $('#vendor_phone_error').text('Phone number is required');
+                    hasError = true;
+                } else if (!/^[0-9]{10}$/.test(vendorData.phone)) {
+                    $('#vendor_phone_error').text('Please enter a valid 10 digit phone number');
+                    hasError = true;
+                }
+                if (vendorData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vendorData.email)) {
+                    $('#vendor_email_error').text('Please enter a valid email');
+                    hasError = true;
+                }
+                if (hasError) {
+                    return;
+                }
+
+                $btn.html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...').prop('disabled', true);
+                $.ajax({
+                    url: '/api/createSupplier',
+                    type: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                        'Authorization': 'Bearer ' + authToken,
+                    },
+                    contentType: 'application/json',
+                    data: JSON.stringify(vendorData),
+                    success: function(response) {
+                        $btn.text(originalText).prop('disabled', false);
+                        if (response.success || response.status) {
+                            let newVendor = response.vendor;
+                            if (!newVendor || !newVendor.id || !newVendor.name) {
+                                Swal.fire({ title: 'Error', text: 'Vendor was created, but vendor details were not returned. Please refresh the page.', icon: 'error', confirmButtonText: 'OK' });
+                                return;
+                            }
+                            let newOption = new Option(newVendor.name, newVendor.id, true, true);
+                            $(newOption).attr('data-phone', newVendor.phone || '');
+                            $('#vendor_name').append(newOption);
+                            $('#vendor_name').val(newVendor.id).trigger('change');
+                            $('#vendor_phone').val(newVendor.phone || '');
+                            $('#addVendorModal').modal('hide');
+                            Swal.fire({ title: 'Success', text: response.message || 'Vendor added successfully', icon: 'success', confirmButtonText: 'OK', confirmButtonColor: '#ff9f43' });
+                        } else {
+                            Swal.fire({ title: 'Error', text: response.message || 'Failed to add vendor', icon: 'error', confirmButtonText: 'OK' });
+                        }
+                    },
+                    error: function(xhr) {
+                        $btn.text(originalText).prop('disabled', false);
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            let errors = xhr.responseJSON.errors;
+                            if (errors.name) $('#vendor_name_error').text(errors.name[0]);
+                            if (errors.email) $('#vendor_email_error').text(errors.email[0]);
+                            if (errors.phone) $('#vendor_phone_error').text(errors.phone[0]);
+                            if (errors.state_code) $('#state_code_error').text(errors.state_code[0]);
+                            if (errors.pan_number) $('#pan_number_error').text(errors.pan_number[0]);
+                            if (errors.gst_number) $('#gst_number_error').text(errors.gst_number[0]);
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            Swal.fire({ title: 'Error', text: xhr.responseJSON.message, icon: 'error', confirmButtonText: 'OK' });
+                        } else {
+                            Swal.fire({ title: 'Error', text: 'Something went wrong!', icon: 'error', confirmButtonText: 'OK' });
+                        }
+                    }
+                });
+            });
+
+            $('#addVendorModal').on('hidden.bs.modal', function() {
+                $('#addVendorForm')[0].reset();
+                $('#addVendorForm .text-danger').text('');
+            });
+            // ✅ Extract invoice ID from URL
+            let urlSegments = window.location.pathname.split("/");
+            let invoiceId = urlSegments[urlSegments.length - 1]; // Get last segment
+
+            if (!isNaN(invoiceId) && invoiceId > 0) {
+                loadPurchaseData(invoiceId); // Fetch purchase details
+            }
+
+
+            // Initialize Select2
+            // $(".select2, .category-select").select2({
+            //     tags: true,
+            // });
+            $(".vendor-select,.product-select,.category-select").select2({});
+            // Add new form row dynamically
+            $(document).on("click", ".add-row", function() {
+                let row = `
+                                                                                <div class="row form-row">
+
+                                                                                    <div class="col-lg-2 col-sm-12 col-6">
+                                                                                        <div class="form-group">
+                                                                                            <label>Category Name</label>
+                                                                                            <select name="category_name[]" class="form-control category-select">
+                                                                                                <option value="">Category Name</option>
+                                                                                                @foreach ($categories as $category)
+                                                                                                    <option value="{{ $category->id }}" data-price="{{ $category->price }}">{{ $category->name }}</option>
+                                                                                                @endforeach
+                                                                                            </select>
+                                                                                            <span class="error text-danger"></span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="col-lg-2 col-sm-12 col-6">
+                                                                                        <div class="form-group">
+                                                                                            <label>Product Name</label>
+                                                                                            <select name="product_name[]" class="form-control select2 product-select" disabled>
+                                                                                                <option value="">Product Name</option>
+                                                                                                @foreach ($products as $product)
+                                                                                                    <option value="{{ $product->id }}"
+                                                                                                        data-price="{{ $product->price }}"
+                                                                                                        data-category="{{ $product->category_id }}"
+                                                                                                        data-gst-option="{{ $product->gst_option }}"
+                                                                                                        data-gst='{!! $product->product_gst !!}'>
+                                                                                                        {{ $product->name }}
+                                                                                                    </option>
+                                                                                                @endforeach
+                                                                                            </select>
+                                                                                            <div class="product-gst-info mt-1"></div>
+                                                                                            <div class="purchase-rate-wrap mt-1" style="display:none;">
+                                                                                                <label class="mb-0" style="font-size:12px;">Add stock to</label>
+                                                                                                <select class="form-control purchase-rate-select" style="font-size:12px;"></select>
+                                                                                            </div>
+                                                                                            <span class="error text-danger"></span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="col-lg-2 col-sm-12 col-6">
+                                                                                        <div class="form-group">
+                                                                                            <label>Product Price</label>
+                                                                                            <input type="text" name="price[]" class="form-control price-input" placeholder="Enter Price">
+                                                                                            <span class="error text-danger"></span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="col-lg-1 col-sm-12 col-6">
+                                                                                        <div class="form-group">
+                                                                                            <label> Qty</label>
+                                                                                            <input type="number" name="quantity[]" class="form-control quantity-input" placeholder="Qty" value="1" min="0" oninput="this.value = this.value < 0 ? 0 : this.value">
+                                                                                            <span class="error text-danger"></span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="col-lg-1 col-sm-12 col-6">
+                                                                                        <div class="form-group">
+                                                                                            <label>Disc%</label>
+                                                                                            <input type="number" name="product_discount[]" class="form-control product-discount-input" placeholder="0.00" value="0" min="0" max="100" oninput="this.value = this.value < 0 ? 0 : (this.value > 100 ? 100 : this.value)">
+                                                                                            <span class="error text-danger"></span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="col-lg-1 col-sm-12 col-6">
+                                                                                        <div class="form-group">
+                                                                                            <label>Disc Amt</label>
+                                                                                            <input type="number" name="product_discount_amount[]" class="form-control product-discount-amount-input" placeholder="0.00" value="0" min="0">
+                                                                                            <span class="error text-danger"></span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="col-lg-2 col-sm-12 col-12">
+                                                                                        <div class="form-group">
+                                                                                            <label>Total Amount</label>
+                                                                                            <input type="text" name="total[]" class="form-control total-input" placeholder="0" readonly>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="col-lg-1 col-sm-12 add-row-btn">
+                                                                                        <button type="button" class="btn btn-danger remove-row">-</button>
+                                                                                    </div>
+                                                                                </div>`;
+
+                let newRow = $(row).appendTo("#form-container");
+
+                // Reinitialize Select2 for dynamically added elements
+                newRow.find(".select2, .category-select").select2({});
+
+                // Scroll to the new row
+                newRow[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            });
+
+            // Remove form row dynamically
+            $(document).on("click", ".remove-row", function() {
+                $(this).closest(".form-row").remove();
+                calculateTotal();
+            });
+
+            // Event Listeners
+            $(document).on('change', '.category-select', function() {
+                var selectedCategory = $(this).val();
+
+                var $row = $(this).closest('.form-row'); // find the row of this select
+                var $productDropdown = $row.find('.product-select');
+
+                // Clear current options
+                $productDropdown.empty();
+
+                if (selectedCategory) {
+                    $productDropdown.prop('disabled', false);
+
+                    $productDropdown.append('<option value="">Product Name</option>');
+
+                    // Filter products by category
+                    var filteredProducts = products.filter(p => p.category_id ==
+                        selectedCategory);
+
+                    filteredProducts.forEach(function(product) {
+                        $productDropdown.append(
+                            `<option value="${product.id}"
+                                    data-price="${product.price}"
+                                    data-gst-option="${product.gst_option}"
+                                    data-gst='${JSON.stringify(product.product_gst)}'>
+                                    ${product.name}
+                                </option>`
+                        );
+                    });
+                } else {
+                    $productDropdown.prop('disabled', true);
+                    $productDropdown.append('<option value="">Product Name</option>');
+                }
+
+                // Refresh Select2
+                $productDropdown.select2('destroy').select2();
+            });
+
+            // Delegated change event for product-select
+            $(document).on('change', '.product-select', function() {
+                let selectedOption = $(this).find("option:selected");
+                let price = selectedOption.data("price") || 0;
+
+                let $row = $(this).closest('.form-row');
+                if ($row.data('loading-purchase')) {
+                    return;
+                }
+                $row.find(".price-input").val(parseFloat(price)).trigger("input");
+                updateProductGstInfo($row);
+                fillPurchaseRateSelect($row);
+            });
+
+            $(document).on('change', 'input[name="gst_option"]', function() {
+
+                $(".form-row").each(function() {
+
+                    let row = $(this);
+
+                    // update GST display
+                    updateProductGstInfo(row);
+
+                    // 🔹 recalc discount percent → amount
+                    row.find(".product-discount-input").trigger("input");
+
+                    // 🔹 recalc discount amount → percent
+                    row.find(".product-discount-amount-input").trigger("input");
+
+                });
+
+                calculateTotal();
+            });
+
+            function formatIndianNumber(num) {
+                if (isNaN(num) || num === null) return "0.00";
+                return parseFloat(num).toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            function parseIndianNumber(str) {
+                if (typeof str === 'number') return str;
+                if (!str) return 0;
+                return parseFloat(str.toString().replace(/,/g, '')) || 0;
+            }
+
+            function updateProductGstInfo($row) {
+                let selectedOption = $row.find(".product-select option:selected");
+                let gstOption = selectedOption.data("gst-option");
+                let gstData = selectedOption.data("gst");
+                let price = parseIndianNumber($row.find(".price-input").val()) || 0;
+                let quantity = parseInt($row.find(".quantity-input").val()) || 0;
+                let total = price * quantity;
+
+                let $gstContainer = $row.find(".product-gst-info");
+                $gstContainer.empty();
+
+                // Check global toggle first
+                if (!$('#with_gst').is(':checked')) {
+                    return;
+                }
+
+                if (gstOption === 'with_gst' && gstData) {
+                    try {
+                        let taxes = gstData;
+                        if (typeof taxes === "string") {
+                            if (taxes === "undefined" || taxes === "") taxes = "[]";
+                            taxes = JSON.parse(taxes);
+                        }
+                        if (typeof taxes === "string") taxes = JSON.parse(taxes);
+
+                        if (Array.isArray(taxes)) {
+                            let totalTaxAmount = 0;
+                            let taxDetails = taxes.map(tax => {
+                                let taxName = tax.tax_name || tax.name;
+                                let taxRate = parseFloat(tax.tax_rate || tax.rate) || 0;
+                                let taxAmount = (total * taxRate) / 100;
+                                totalTaxAmount += taxAmount;
+                                return `${taxName}: ${taxRate}%`;
+                            }).join(', ');
+
+                            let gstHtml = `<div style="font-size: 11px; color: #666; background: #f8f9fa; padding: 5px; border-radius: 4px; border-left: 3px solid #1b2850; margin-top: 5px;">
+                                        <div><strong>Total GST: {{ $currencySymbol }}${formatIndianNumber(totalTaxAmount)}</strong></div>
+                                        <div style="font-size: 10px;">(${taxDetails})</div>
+                                    </div>`;
+                            $gstContainer.html(gstHtml);
+                        }
+                    } catch (e) {
+                        // console.error("Error parsing GST data", e);
+                    }
+                } else if (gstOption === 'without_gst') {
+                    $gstContainer.html(
+                        '<small class="text-muted" style="font-size: 11px;">No GST for this product</small>'
+                    );
+                }
+            }
+
+            $(document).on("input", ".price-input, .quantity-input, .product-discount-input", function() {
+                let row = $(this).closest(".form-row");
+                let price = parseIndianNumber(row.find(".price-input").val()) || 0;
+                let quantity = parseInt(row.find(".quantity-input").val()) || 0;
+                let discountPercent = parseFloat(row.find(".product-discount-input").val()) || 0;
+
+                let baseTotal = price * quantity;
+
+                // Calculate GST first (to match create order logic)
+                let gstAmount = 0;
+                if ($('#with_gst').is(':checked')) {
+                    let selectedOption = row.find(".product-select option:selected");
+                    let gstData = selectedOption.data("gst");
+                    if (gstData) {
+                        try {
+                            let taxes = gstData;
+                            if (typeof taxes === "string") {
+                                if (taxes === "undefined" || taxes === "") taxes = "[]";
+                                taxes = JSON.parse(taxes);
+                            }
+                            if (typeof taxes === "string") taxes = JSON.parse(taxes);
+
+                            if (Array.isArray(taxes)) {
+                                taxes.forEach(tax => {
+                                    let taxRate = parseFloat(tax.tax_rate || tax.rate) || 0;
+                                    gstAmount += (baseTotal * taxRate) / 100;
+                                });
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                let totalWithGst = baseTotal + gstAmount;
+                let discountAmount = (totalWithGst * discountPercent) / 100;
+                let finalRowTotal = totalWithGst - discountAmount;
+
+                row.find(".product-discount-amount-input").val(formatIndianNumber(discountAmount));
+                row.find(".total-input").val(formatIndianNumber(finalRowTotal));
+                updateProductGstInfo(row);
+                calculateTotal();
+            });
+
+            $(document).on("input", ".product-discount-amount-input", function() {
+                let row = $(this).closest(".form-row");
+                let price = parseIndianNumber(row.find(".price-input").val()) || 0;
+                let quantity = parseInt(row.find(".quantity-input").val()) || 0;
+                let discountAmount = parseIndianNumber(row.find(".product-discount-amount-input").val()) ||
+                    0;
+
+                let baseTotal = price * quantity;
+
+                // Calculate GST first (to match create order logic)
+                let gstAmount = 0;
+                if ($('#with_gst').is(':checked')) {
+                    let selectedOption = row.find(".product-select option:selected");
+                    let gstData = selectedOption.data("gst");
+                    if (gstData) {
+                        try {
+                            let taxes = gstData;
+                            if (typeof taxes === "string") {
+                                if (taxes === "undefined" || taxes === "") taxes = "[]";
+                                taxes = JSON.parse(taxes);
+                            }
+                            if (typeof taxes === "string") taxes = JSON.parse(taxes);
+
+                            if (Array.isArray(taxes)) {
+                                taxes.forEach(tax => {
+                                    let taxRate = parseFloat(tax.tax_rate || tax.rate) || 0;
+                                    gstAmount += (baseTotal * taxRate) / 100;
+                                });
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                let totalWithGst = baseTotal + gstAmount;
+
+                // Avoid division by zero
+                let discountPercent = 0;
+                if (totalWithGst > 0) {
+                    discountPercent = (discountAmount / totalWithGst) * 100;
+                    if (discountPercent > 100) discountPercent = 100;
+                    if (discountAmount > totalWithGst) {
+                        discountAmount = totalWithGst;
+                        $(this).val(formatIndianNumber(discountAmount));
+                    }
+                }
+
+                let finalRowTotal = totalWithGst - discountAmount;
+
+                row.find(".product-discount-input").val(discountPercent.toFixed(2));
+                row.find(".total-input").val(formatIndianNumber(finalRowTotal));
+                updateProductGstInfo(row);
+                calculateTotal();
+            });
+
+            function calculateTotal() {
+                let totalAmount = 0;
+                let products = [];
+                let taxTotals = {};
+                let totalTaxAmount = 0;
+
+                $(".form-row").each(function() {
+                    let productOption = $(this).find(".product-select option:selected");
+                    let productId = productOption.val();
+                    let categoryId = $(this).find(".category-select").val();
+                    let price = parseIndianNumber($(this).find(".price-input").val()) || 0;
+                    let quantity = parseInt($(this).find(".quantity-input").val()) || 0;
+                    let discountPercent = parseFloat($(this).find(".product-discount-input").val()) || 0;
+
+                    let subTotal = price * quantity;
+                    let rowGstAmount = 0;
+
+                    // Product-wise GST calculation
+                    if ($('#with_gst').is(':checked')) {
+                        let gstData = productOption.data("gst");
+                        if (gstData) {
+                            try {
+                                let taxes = gstData;
+                                if (typeof taxes === "string") {
+                                    if (taxes === "undefined" || taxes === "") taxes = "[]";
+                                    taxes = JSON.parse(taxes);
+                                }
+                                if (typeof taxes === "string") taxes = JSON.parse(taxes);
+
+                                if (Array.isArray(taxes)) {
+                                    taxes.forEach(tax => {
+                                        let taxName = tax.tax_name || tax.name;
+                                        let taxRate = parseFloat(tax.tax_rate || tax.rate) || 0;
+                                        let taxAmount = (subTotal * taxRate) / 100;
+                                        rowGstAmount += taxAmount;
+                                        totalTaxAmount += taxAmount;
+
+                                        if (!taxTotals[taxName]) {
+                                            taxTotals[taxName] = {
+                                                id: tax.tax_id || tax.id,
+                                                rate: taxRate,
+                                                amount: 0
+                                            };
+                                        }
+                                        taxTotals[taxName].amount += taxAmount;
+                                    });
+                                }
+                            } catch (e) {
+                                // console.error("Error parsing GST data in calculation", e);
+                            }
+                        }
+                    }
+
+                    let rowTotalWithGst = subTotal + rowGstAmount;
+                    let discountAmount = (rowTotalWithGst * discountPercent) / 100;
+                    let finalRowTotal = rowTotalWithGst - discountAmount;
+
+                    if (productId) {
+                        let line = {
+                            id: productId,
+                            category_id: categoryId,
+                            price: price,
+                            quantity: quantity,
+                            discount_percent: discountPercent,
+                            discount_amount: discountAmount,
+                            total: finalRowTotal,
+                        };
+                        let $rateWrap = $(this).find('.purchase-rate-wrap');
+                        let ratePrice = $(this).find('.purchase-rate-select').val();
+                        if ($rateWrap.is(':visible') && ratePrice !== undefined && ratePrice !== '') {
+                            line.selling_rate_price = ratePrice;
+                        }
+                        products.push(line);
+                    }
+
+                    totalAmount += subTotal;
+                    $(this).find(".total-input").val(formatIndianNumber(finalRowTotal));
+                });
+
+                // ✅ Update Total Product Amount
+                $("#total-product-amount").text(formatIndianNumber(totalAmount));
+
+                let shipping = parseIndianNumber($("#shipping").val()) || 0;
+
+                if ($('#with_gst').is(':checked')) {
+                    $('#gst-section').show();
+                    // $("#total-gst-amount").text(totalTaxAmount.toFixed(2));
+                    $("#total-gst-amount").text(formatIndianNumber(totalTaxAmount));
+                } else {
+                    $('#gst-section').hide();
+                    $("#total-gst-amount").text('0.00');
+                }
+
+                let grandTotal = totalAmount + shipping + totalTaxAmount;
+
+                // Subtract individual item discounts from grand total
+                let totalDiscountAmount = 0;
+                products.forEach(p => {
+                    totalDiscountAmount += p.discount_amount;
+                });
+                grandTotal -= totalDiscountAmount;
+
+                // $("#grand-total").text(grandTotal.toFixed(2));
+                // $("#shipping-amount").text(shipping.toFixed(2));
+                // $("#total-discount-amount").text(totalDiscountAmount.toFixed(2));
+                // $("#price-after-discount").text((totalAmount - totalDiscountAmount).toFixed(2));
+
+                $("#grand-total").text(formatIndianNumber(grandTotal));
+                $("#shipping-amount").text(formatIndianNumber(shipping));
+                $("#total-discount-amount").text(formatIndianNumber(totalDiscountAmount));
+                $("#price-after-discount").text(formatIndianNumber(totalAmount - totalDiscountAmount));
+
+                return {
+                    products: products,
+                    totalProductAmount: totalAmount,
+                    totalAmount: totalAmount,
+                    taxAmount: totalTaxAmount,
+                    taxTotals: taxTotals,
+                    shipping: shipping,
+                    grandTotal: grandTotal,
+                    gstOption: $('#with_gst').is(':checked') ? 'with' : 'without'
+                };
+            }
+
+
+            // ✅ Format price only when user leaves the field
+            $(document).on("focus", ".price-input", function() {
+                let val = parseIndianNumber($(this).val());
+                $(this).val(val > 0 ? val : "");
+            });
+
+            $(document).on("blur", ".price-input", function() {
+                let val = parseIndianNumber($(this).val());
+                $(this).val(formatIndianNumber(val));
+                calculateTotal();
+            });
+
+            $(document).on("focus", ".product-discount-amount-input", function() {
+                let val = parseIndianNumber($(this).val());
+                $(this).val(val > 0 ? val : "");
+            });
+
+            $(document).on("blur", ".product-discount-amount-input", function() {
+                let val = parseIndianNumber($(this).val());
+                $(this).val(formatIndianNumber(val));
+                calculateTotal();
+            });
+
+            $(document).on("focus", "#shipping", function() {
+                let val = parseIndianNumber($(this).val());
+                $(this).val(val > 0 ? val : "");
+            });
+
+            $(document).on("blur", "#shipping", function() {
+                let val = parseIndianNumber($(this).val());
+                $(this).val(formatIndianNumber(val));
+                calculateTotal();
+            });
+
+            // ✅ Recalculate when inputs change
+            $(document).on("input", "#shipping", function() {
+                calculateTotal();
+            });
+            calculateTotal();
+
+
+            function validateForm() {
+                let isValid = true;
+
+                // Clear previous errors
+                $(".error").text("");
+
+                // Validate Vendor
+                if ($("#vendor_name").val() === "") {
+                    $("#vendor_name").closest(".form-group").find(".error").text("Vendor is required.");
+                    isValid = false;
+                }
+                  if ($("#bill_no").val() === "") {
+                    $("#bill_no").closest(".form-group").find(".error").text("Bill Number is required.");
+                    isValid = false;
+                }
+
+                // Validate Product Fields only if category is selected
+                $(".form-row").each(function() {
+                    let productSelect = $(this).find(".product-select");
+                    let categorySelect = $(this).find(".category-select");
+                    let priceInput = $(this).find(".price-input");
+                    let quantityInput = $(this).find(".quantity-input");
+
+                    let categoryVal = categorySelect.val();
+
+                    // 🌟 If category is selected, validate product, price, and quantity
+                    if (categoryVal !== "") {
+                        if (productSelect.val() === "") {
+                            productSelect.closest(".form-group").find(".error").text(
+                                "Product is required.");
+                            isValid = false;
+                        }
+                        if (priceInput.val().trim() === "" || parseIndianNumber(priceInput.val()) <= 0) {
+                            priceInput.closest(".form-group").find(".error").text(
+                                "Valid price is required.");
+                            isValid = false;
+                        }
+                        if (quantityInput.val().trim() === "" || parseInt(quantityInput.val()) <= 0) {
+                            quantityInput.closest(".form-group").find(".error").text(
+                                "Valid quantity is required.");
+                            isValid = false;
+                        }
+                    }
+                });
+
+                // Validate Discount & Shipping
+                let discount = parseFloat($("#discount").val()) || 0;
+                let shipping = parseIndianNumber($("#shipping").val()) || 0;
+
+                if (discount < 0 || discount > 100) {
+                    $("#discount").closest(".form-group").find(".error").text("Discount must be between 0-100%.");
+                    isValid = false;
+                }
+                if (shipping < 0) {
+                    $("#shipping").closest(".form-group").find(".error").text("Shipping cost cannot be negative.");
+                    isValid = false;
+                }
+
+                // Validate Status
+                if ($("select[name='status']").val() === "") {
+                    $("select[name='status']").closest(".form-group").find(".error").text(
+                        "Please select a status.");
+                    isValid = false;
+                }
+
+
+                return isValid;
+            }
+            // ✅ Function to load purchase data
+            function loadPurchaseData(invoiceId) {
+                var authToken = localStorage.getItem("authToken");
+                const selectedSubAdminId = localStorage.getItem("selectedSubAdminId");
+
+                $.ajax({
+                    url: "/api/purchase_get/" + invoiceId,
+                    type: "GET",
+                    data: {
+                        selectedSubAdminId: selectedSubAdminId
+                    },
+                    dataType: "json",
+                    headers: {
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            let taxes = response.taxes; // ✅ Get taxes from API response
+                            let data = response.data;
+                            let invoice = response.invoice;
+
+                            // console.log('xfdsf',invoice.bill_no);
+
+                            $("#vendor_phone").val(data.vendor_phone);
+                            $("#bill_no").val(invoice.bill_no);
+                            $("#purchase_date").val(invoice.purchase_date || invoice.bill_date || '');
+                            $("#remark").val(invoice.remark || data.remark || '');
+                            // ✅ Set Shipping Cost
+                            $("#shipping").val(formatIndianNumber(data.shipping));
+                            $("#shipping-amount").text(formatIndianNumber(data.shipping));
+
+                            // ✅ Set Purchase Status
+                            $("select[name='status']").val(data.status);
+
+                            // ✅ Set Total Product Amount
+                            $("#total-product-amount").text(formatIndianNumber(data.total_amount));
+
+                            // ✅ Populate vendor details
+                            $("#vendor_name").val(data.vendor_id).trigger("change");
+                            $(".payment_status").val(data.payment_status).trigger("change");
+                            $("#vendor_phone").val(data.vendor_phone);
+
+                            if (data.gst_option) {
+                                let val = (data.gst_option === 'with_gst' || data.gst_option ===
+                                    'with') ? 'with' : 'without';
+                                $("input[name='gst_option'][value='" + val + "']")
+                                    .prop("checked", true)
+                                    .trigger("change"); // 🔥 This triggers GST toggle
+                            }
+
+                            $("#total-product-amount").text(parseFloat(data.total_amount).toFixed(2));
+
+                            // ✅ Show Tax Amounts from DB
+                            // ✅ Show Tax Amounts from DB
+                            if (data.gst_option === "with_gst") {
+                                $(".tax-section").show();
+
+                                taxes.forEach(function(tax) {
+                                    let $el = $("#tax-" + tax.id);
+                                    if ($el.length) {
+                                        $el.text(parseFloat(tax.amount).toFixed(2));
+                                        $el.attr("data-rate", tax.rate); // keep rate synced
+                                    }
+                                });
+                            } else {
+                                $(".tax-section").hide();
+                            }
+
+
+                            // ✅ Show Grand Total from DB (already includes taxes)
+                            $("#grand-total").text(parseFloat(data.grand_total).toFixed(2));
+
+
+                            // ✅ Split product data
+                            let productIds = data.product_ids.split(", ");
+                            let productNames = data.product_names.split(", ");
+                            let productPrices = data.product_prices.split(", ");
+                            let sellingRatePrices = data.selling_rate_prices ? String(data.selling_rate_prices).split(", ") : [];
+                            let productQuantities = data.product_quantities.split(", ");
+                            let discountPercents = data.discount_percents ? data.discount_percents
+                                .split(", ") : [];
+                            let discountAmounts = data.discount_amounts ? data.discount_amounts.split(
+                                ", ") : [];
+                            let categoryIds = data.category_ids.split(", ");
+                            let categoryNames = data.category_names.split(", ");
+                            let productGstDetails = data.product_gst_details ? data.product_gst_details
+                                .split("|||") : [];
+
+                            // ✅ Clear previous product rows
+                            $(".form-row").remove();
+                            $("#form-container").empty();
+
+                            // ✅ Loop through products & add rows
+                            for (let i = 0; i < productIds.length; i++) {
+                                let productObj = products.find(p => p.id == productIds[i]);
+                                let gstOption = productObj ? productObj.gst_option : "";
+                                let discountPercent = discountPercents[i] || 0;
+                                let discountAmount = discountAmounts[i] || 0;
+
+                                // Priority: 1. Saved GST details from purchase, 2. Master product GST
+                                let gstData = "[]";
+                                let itemGstTotal = 0;
+                                if (productGstDetails[i] && productGstDetails[i] !== "null" &&
+                                    productGstDetails[i] !== "[]") {
+                                    gstData = productGstDetails[i];
+                                    try {
+                                        let parsedGst = JSON.parse(gstData);
+                                        if (Array.isArray(parsedGst)) {
+                                            let subTotal = parseFloat(productPrices[i]) * parseFloat(
+                                                productQuantities[i]);
+                                            parsedGst.forEach(tg => {
+                                                itemGstTotal += (subTotal * parseFloat(tg
+                                                    .tax_rate || tg.rate || 0)) / 100;
+                                            });
+                                        }
+                                    } catch (e) {}
+                                } else if (productObj && productObj.product_gst) {
+                                    gstData = typeof productObj.product_gst === 'string' ?
+                                        productObj.product_gst :
+                                        JSON.stringify(productObj.product_gst);
+                                    try {
+                                        let parsedGst = JSON.parse(gstData);
+                                        if (Array.isArray(parsedGst)) {
+                                            let subTotal = parseFloat(productPrices[i]) * parseFloat(
+                                                productQuantities[i]);
+                                            parsedGst.forEach(tg => {
+                                                itemGstTotal += (subTotal * parseFloat(tg
+                                                    .tax_rate || tg.rate || 0)) / 100;
+                                            });
+                                        }
+                                    } catch (e) {}
+                                }
+
+                                // Get all products for this category to populate dropdown
+                                let categoryProducts = products.filter(p => p.category_id ==
+                                    categoryIds[i]);
+                                let productOptions = `<option value="">Product Name</option>`;
+
+                                // If current product is not in master list (e.g. deleted or custom), add it manually
+                                if (!categoryProducts.find(p => p.id == productIds[i])) {
+                                    productOptions +=
+                                        `<option value="${productIds[i]}" selected data-price="${productPrices[i]}" data-gst-option="${gstOption}" data-gst='${gstData}'>${productNames[i]}</option>`;
+                                }
+
+                                categoryProducts.forEach(p => {
+                                    let selected = p.id == productIds[i] ? 'selected' : '';
+                                    let pGst = typeof p.product_gst === 'string' ? p
+                                        .product_gst : JSON.stringify(p.product_gst);
+                                    productOptions +=
+                                        `<option value="${p.id}" ${selected} data-price="${p.price}" data-gst-option="${p.gst_option}" data-gst='${pGst}'>${p.name}</option>`;
+                                });
+
+                                let buttonHtml =
+                                    i === 0 ?
+                                    `<button type="button" class="btn btn-success add-row">+</button>` :
+                                    `<button type="button" class="btn btn-danger remove-row">-</button>`;
+
+                                let subTotal = parseFloat(productPrices[i]) * parseFloat(
+                                    productQuantities[i]);
+                                let rowTotalWithGst = subTotal + itemGstTotal;
+                                let discountAmt = (rowTotalWithGst * parseFloat(discountPercent)) / 100;
+                                let finalRowTotal = rowTotalWithGst - discountAmt;
+
+                                let rowHtml = `
+                                    <div class="row form-row">
+                                        <div class="col-lg-2 col-sm-12 col-6">
+                                            <div class="form-group">
+                                                <label>Category Name</label>
+                                                <select name="category_name[]" class="form-control select2 category-select">
+                                                    <option value="">Category Name</option>
+                                                    @foreach ($categories as $category)
+                                                        <option value="{{ $category->id }}" data-price="{{ $category->price }}">
+                                                            {{ $category->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <span class="error text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-2 col-sm-12 col-6">
+                                            <div class="form-group">
+                                                <label>Product Name</label>
+                                                <select name="product_name[]" class="form-control select2 product-select">
+                                                    ${productOptions}
+                                                </select>
+                                                <div class="product-gst-info mt-1"></div>
+                                                <div class="purchase-rate-wrap mt-1" style="display:none;">
+                                                    <label class="mb-0" style="font-size:12px;">Add stock to</label>
+                                                    <select class="form-control purchase-rate-select" style="font-size:12px;"></select>
+                                                </div>
+                                                <span class="error text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-2 col-sm-12 col-6">
+                                            <div class="form-group">
+                                                <label>Product Price</label>
+                                                <input type="text" name="price[]" class="form-control price-input"
+                                                    value="${formatIndianNumber(productPrices[i])}">
+                                                <span class="error text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-1 col-sm-12 col-6">
+                                            <div class="form-group">
+                                                <label>Quantity</label>
+                                                <input type="number" name="quantity[]" class="form-control quantity-input"
+                                                    value="${productQuantities[i]}" min="0" oninput="this.value = this.value < 0 ? 0 : this.value">
+                                                <span class="error text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-1 col-sm-12 col-6">
+                                            <div class="form-group">
+                                                <label>Disc%</label>
+                                                <input type="number" name="product_discount[]" class="form-control product-discount-input"
+                                                    value="${discountPercent}" min="0" max="100" oninput="this.value = this.value < 0 ? 0 : (this.value > 100 ? 100 : this.value)">
+                                                <span class="error text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-1 col-sm-12 col-6">
+                                            <div class="form-group">
+                                                <label>Disc-Amt</label>
+                                                <input type="text" name="product_discount_amount[]" class="form-control product-discount-amount-input"
+                                                    value="${formatIndianNumber(discountAmount)}">
+                                                <span class="error text-danger"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-2 col-sm-12 col-12">
+                                            <div class="form-group">
+                                                <label>Total Amount</label>
+                                                <input type="text" name="total[]" class="form-control total-input"
+                                                    value="${formatIndianNumber(finalRowTotal)}" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-1 col-sm-12 add-row-btn">
+                                            ${buttonHtml}
+                                        </div>
+                                    </div>`;
+
+                                let $newRow = $(rowHtml).appendTo("#form-container");
+
+                                // ✅ Set the category value
+                                $newRow.data('loading-purchase', true);
+                                $newRow.find(".category-select").val(categoryIds[i]);
+
+                                // ✅ Reinitialize Select2 for the new row
+                                $newRow.find(".select2, .category-select").select2({});
+                                $newRow.removeData('loading-purchase');
+                                fillPurchaseRateSelect($newRow, sellingRatePrices[i]);
+                            }
+
+                            $(".form-row").each(function() {
+                                updateProductGstInfo($(this));
+                            });
+                            calculateTotal();
+
+                        } else {
+                            Swal.fire("Error!", "Purchase not found!", "error");
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire("Error!", "Purchase not found!", "error");
+                        // window.location.href = "{{ route('purchase.lists') }}";
+                    }
+                });
+            }
+
+            $(document).on("click", ".btn-submit", function(e) {
+                e.preventDefault();
+
+                const $btn = $(this);
+                const originalText = $btn.html();
+
+                // Show loader
+                $btn.html(
+                        '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...'
+                    )
+                    .prop('disabled', true);
+
+                if (!validateForm()) {
+                    $btn.html(originalText).prop('disabled', false);
+                    $btn.html(originalContent).css("pointer-events", "auto");
+                    return;
+                }
+                const selectedSubAdminId = localStorage.getItem("selectedSubAdminId");
+
+                let formData = calculateTotal();
+                formData.vendor_id = $("#vendor_name").val();
+                formData.vendor_phone = $("#vendor_phone").val();
+                formData.status = $("select[name='status']").val();
+                formData.payment_status = $("select[name='payment_status']").val();
+                formData.bill_no =$("#bill_no").val();
+                formData.purchase_date = $("#purchase_date").val();
+                formData.remark = $("#remark").val();
+
+                // ✅ Collect Tax Data
+                let taxArray = [];
+                for (let taxName in formData.taxTotals) {
+                    let taxData = formData.taxTotals[taxName];
+                    taxArray.push({
+                        name: taxName,
+                        id: taxData.id,
+                        rate: taxData.rate,
+                        amount: taxData.amount,
+                    });
+                }
+
+                formData.taxes = taxArray;
+
+                $.ajax({
+                    url: "/api/purchase_update/" + invoiceId,
+                    type: "POST",
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        vendor_id: formData.vendor_id,
+                        vendor_phone: formData.vendor_phone,
+                        status: formData.status,
+                        payment_status: formData.payment_status,
+                        discount: formData.discount,
+                        shipping: formData.shipping,
+                        bill_no:formData.bill_no,
+                        purchase_date: formData.purchase_date,
+                        remark: formData.remark,
+                        grand_total: formData.grandTotal,
+                        taxes: formData.taxes,
+                        products: formData.products,
+                        gst_option: formData.gstOption,
+                        selectedSubAdminId: selectedSubAdminId
+                    }),
+                    success: function(response) {
+                        // Reset button
+                        $btn.html(originalText).prop('disabled', false);
+
+                        if (response.success) {
+                            Swal.fire({
+                                title: "Success!",
+                                text: "Purchase updated successfully!",
+                                icon: "success",
+                                confirmButtonText: "OK",
+                                confirmButtonColor: "#ff9f43" // your custom color
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href =
+                                        "{{ route('purchase.lists') }}";
+                                }
+                            });
+                        } else {
+                            alert("Error: " + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $btn.html(originalText).prop('disabled', false);
+
+
+                        // console.error(xhr.responseText);
+                    }
+                });
+            });
+
+
+
+            $(document).on("input", ".quantity-input", function() {
+                let value = parseFloat($(this).val()) || 0;
+                if (value < 0) value = 0; // no negatives
+                $(this).val(value);
+            });
+
+
+
+
+            calculateTotal();
+        });
+    </script>
+@endpush
+

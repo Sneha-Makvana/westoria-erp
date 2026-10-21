@@ -1,0 +1,891 @@
+@extends('layout.app')
+
+@section('title', 'Category List')
+
+@section('content')
+    <style>
+        .sorting_1 {
+            display: flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+        }
+
+        /* Category name proper word wrapping */
+        table.datanew tbody td:first-child a {
+            display: flex;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        /* Correct wrapping behaviour */
+        .category-name {
+            display: inline-block;
+            max-width: calc(100% - 50px);
+            margin-left: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+
+            white-space: normal !important;
+            /* allow wrapping */
+            word-break: keep-all !important;
+            /* DO NOT break words */
+            overflow-wrap: normal !important;
+            /* wrap only at spaces */
+        }
+
+        /* Hide default DataTables search box completely */
+        .dataTables_filter,
+        .dataTables_length,
+        .dataTables_info,
+        .dataTables_paginate {
+            display: none !important;
+        }
+
+        /* Remove extra top spacing created by DataTables */
+        .dataTables_wrapper .row:first-child {
+            display: none !important;
+        }
+
+        /* Remove unwanted search input alignment space */
+        .dataTables_wrapper {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        @media screen and (min-width: 768px) and (max-width: 1024.98px) {
+            .page-wrapper {
+                padding-top: 0 !important;
+            }
+
+            .page-wrapper > .content.mm-page {
+                margin-top: 0 !important;
+                padding-top: 6px !important;
+            }
+
+            .mm-page > .page-header {
+                display: none !important;
+            }
+
+            .mm-page > .mm-head.d-md-none {
+                display: flex !important;
+            }
+
+            .mm-page .mm-card-list {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                align-items: start;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .table-scroll-top {
+                display: block;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .table-responsive {
+                /* overflow-x: auto; */
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .search-set {
+                margin-right: 1rem !important;
+            }
+        }
+
+        /* Desktop: show all columns normally */
+        @media (min-width: 769px) {
+
+            table.datanew thead th,
+            table.datanew tbody td {
+                display: table-cell !important;
+            }
+
+            /* Hide the Details toggle column on desktop */
+            table.datanew thead th.details-column,
+            table.datanew tbody td:nth-child(2) {
+                display: none !important;
+            }
+        }
+
+        /* Mobile: hide non-essential columns, show Details toggle */
+        @media (max-width: 768px) {
+
+            .collapse .card-body .mt-2 {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                gap: 15px;
+                flex-wrap: wrap;
+            }
+
+            .collapse .card-body .mt-2 a {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 44px;
+                /* Better touch target */
+                min-height: 44px;
+                padding: 8px;
+                /* background-color: #f8f9fa; */
+                border-radius: 6px;
+                transition: background-color 0.2s;
+            }
+
+            .collapse .card-body .mt-2 a:hover,
+            .collapse .card-body .mt-2 a:active {
+                background-color: #e9ecef;
+            }
+
+            .collapse .card-body .mt-2 img {
+                width: 25px;
+                height: 25px;
+            }
+
+            /* Adjust toggle icon size and alignment */
+            .toggle-details {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 35px;
+            }
+
+            .toggle-details i {
+                font-size: 24px;
+            }
+
+            table.datanew thead th:nth-child(n+3),
+            table.datanew tbody td:nth-child(n+3) {
+                display: none !important;
+            }
+
+            table.datanew thead th.details-column,
+            table.datanew tbody td:nth-child(2) {
+                display: table-cell !important;
+                text-align: center;
+                vertical-align: top !important;
+                width: 56px !important;
+                min-width: 56px !important;
+                max-width: 56px !important;
+                padding: 12px 6px !important;
+            }
+
+            /* .toggle-details i {
+                    font-size: 18px;
+                } */
+
+            /* Style for category name wrapping */
+            table.datanew tbody td:first-child {
+                display: flex !important;
+                align-items: center !important;
+                max-width: calc(100vw - 100px) !important;
+            }
+
+            table.datanew tbody td:first-child a {
+                /* display: flex !important; */
+                align-items: center !important;
+                text-align: left !important;
+                max-width: 100% !important;
+                word-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+                line-height: 1.3 !important;
+            }
+
+            .category-name {
+                display: inline-block !important;
+                max-width: calc(100% - 50px) !important;
+                margin-left: 8px !important;
+                font-size: 14px !important;
+                word-break: break-word !important;
+                hyphens: auto !important;
+                -webkit-hyphens: auto !important;
+                -ms-hyphens: auto !important;
+            }
+
+            /* Limit to 2 lines with ellipsis */
+            .category-name.truncated {
+                display: -webkit-box !important;
+                -webkit-line-clamp: 2 !important;
+                -webkit-box-orient: vertical !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+        }
+
+        /* Fade out animation for error messages */
+        .fade-out {
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .fade-out.hidden {
+            opacity: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .table-top .search-set {
+                display: flex;
+                justify-content: flex-start !important;
+                width: 100%;
+            }
+
+            .table-top .search-input {
+                margin-left: 0 !important;
+            }
+        }
+
+        /* Custom Pagination Styling */
+        .pagination .page-item .page-link {
+            background-color: #5d6d7e;
+            /* Dark gray for other pages */
+            color: #fff;
+            border: none;
+              margin: 0 3px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        /* Previous and Next buttons */
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            background-color: #fff;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-item:first-child .page-link:hover,
+        .pagination .page-item:last-child .page-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #ff9f43 !important;
+            /* Orange for active page */
+            color: #fff;
+        }
+
+        .pagination .page-item .page-link:hover {
+            background-color: #4a5766;
+            color: #fff;
+        }
+
+        .pagination .page-item.active .page-link:hover {
+            background-color: #e68a35 !important;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background-color: #fff !important;
+            color: #dee2e6 !important;
+            border: 1px solid #dee2e6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+
+        /* Search input styling */
+        .search-input input {
+            padding-left: 35px !important;
+            border-radius: 5px;
+        }
+
+        .search-input {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-searchset {
+            position: absolute;
+            left: 10px;
+            z-index: 10;
+            padding: 0;
+            top: 7px !important;
+        }
+    </style>
+
+    @if (session('error'))
+        <div class="alert alert-danger" id="error-message">
+            {{ session('error') }}
+        </div>
+
+        <script>
+            setTimeout(function() {
+                let alert = document.getElementById('error-message');
+                if (alert) {
+                    alert.classList.add('hidden');
+                    setTimeout(function() {
+                        alert.style.display = 'none';
+                    }, 500);
+                }
+            }, 4000);
+        </script>
+    @endif
+
+    <div class="content mm-page">
+        <div class="mm-head d-md-none">
+            <div>
+                <div class="mm-title">All Categories</div>
+                <div class="mm-count" id="mmCount"></div>
+            </div>
+            @if (app('hasPermission')(6, 'add'))
+                <a href="{{ route('category.add') }}" class="btn btn-sm mm-add"><i class="fas fa-plus me-1"></i> New Category</a>
+            @endif
+        </div>
+
+        <div class="page-header">
+            <div class="page-title">
+                <h4>All Categories</h4>
+            </div>
+            <div class="page-btn">
+                @if (app('hasPermission')(6, 'add'))
+                <a href="{{ route('category.add') }}" class="btn btn-sm btn-added">
+                    <img src="{{ env('ImagePath') . 'admin/assets/img/icons/plus.svg' }}" class="me-1" alt="img">New
+                    Category
+                </a>
+                @endif
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-2 mm-search">
+                    <div class="search-set d-flex justify-content-md-start justify-content-start w-100">
+                        <div class="search-path"></div>
+                        <div class="search-input">
+                            <a class="btn btn-searchset">
+                                <img src="{{ env('ImagePath') . 'admin/assets/img/icons/search-white.svg' }}"
+                                    alt="img">
+                            </a>
+                            <input type="text" id="search-input" class="form-control" placeholder="Search...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="table datanew">
+                        <thead>
+                            <tr>
+                                <th>Category Name</th>
+                                <th class="details-column">Details</th>
+                                <th>Created At</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mm-card-list d-md-none" id="mmCardList"></div>
+                <!-- Pagination Controls -->
+                <div
+                    class="pagination-controls d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+                    <div class="d-flex align-items-center mb-3 mb-md-0">
+                        <span class="me-2" style="font-size: 14px; color: #555;">Show per page :</span>
+                        <select id="per-page-select" class="form-select form-select-sm"
+                            style="width: auto; border: 1px solid #ddd;">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="ms-3" style="font-size: 14px; color: #555;">
+                            <span id="pagination-from">0</span> - <span id="pagination-to">0</span> of <span
+                                id="pagination-total">0</span> items
+                        </span>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0" id="pagination-numbers">
+                            <!-- Page numbers will be populated by JS -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@push('js')
+    @include('partials.master-mobile-ui')
+    <script>
+        $(document).ready(function() {
+            var authToken = localStorage.getItem("authToken");
+            var table = $('.datanew').DataTable({
+                "destroy": true,
+                "bFilter": false,
+                "paging": false,
+                "info": false,
+                "searching": false,
+                "dom": 't',
+                "ordering": false
+            }); // Initialize DataTable
+            const selectedSubAdminId = localStorage.getItem('selectedSubAdminId');
+
+
+
+            // Pagination state
+            let currentPage = 1;
+            let lastPage = 1;
+            let perPage = 10;
+            let searchQuery = '';
+
+            // Initial fetch
+            fetchCategories(currentPage);
+
+            // Handle search input
+            $('#search-input').on('keyup', function() {
+                searchQuery = $(this).val();
+                fetchCategories(1);
+            });
+
+
+            // let url = "/api/getAllCategory";
+            // if (selectedSubAdminId) {
+            //     url += `?selectedSubAdminId=${selectedSubAdminId}`;
+            // }
+
+            // fetchCategories(); // Call function to load data
+
+            // function fetchCategories() {
+            //     $.ajax({
+            //         url: url,
+            //         type: "GET",
+            //         dataType: "json",
+            //         headers: {
+            //             "Authorization": "Bearer " + authToken,
+            //         },
+            //         success: function(response) {
+            //             if (response.status) {
+            //                 let categories = response.data;
+            //                 let tableBody = [];
+
+            //                 // Function to capitalize first letter of each word
+            //                 function capitalizeWords(str) {
+            //                     if (!str || str.trim() === '') return 'N/A';
+            //                     return str.replace(/\b\w/g, function(char) {
+            //                         return char.toUpperCase();
+            //                     });
+            //                 }
+
+            //                 categories.forEach((category) => {
+            //                     // let createdAt = category.created_at ? category.created_at.split("T")[0] : "N/A";
+            //                     let createdAt = "N/A";
+            //                     if (category.created_at) {
+            //                         let dateParts = category.created_at.split("T")[0].split(
+            //                         "-");
+            //                         if (dateParts.length === 3) {
+            //                             createdAt = dateParts[2] + "/" + dateParts[1] + "/" +
+            //                                 dateParts[0];
+            //                         }
+            //                     }
+            //                     let categoryName = capitalizeWords(category.name);
+
+            //                     // Details toggle for mobile
+            //                     let detailsToggle = `
+        //                         <a href="#details-${category.id}" class="toggle-details" data-bs-toggle="collapse">
+        //                             <i class="fas fa-plus-circle" style="color: #ff9f43;"></i>
+        //                         </a>
+        //                     `;
+
+            //                     // Image URL
+            //                     let imageUrl = category.image ?
+            //                         '{{ env('ImagePath') . 'storage/' }}' + category.image :
+            //                         '{{ env('ImagePath') . '/admin/assets/img/product/noimage.png' }}';
+
+            //                     tableBody.push([
+            //                         // Column 1: Category Name with image AND collapsible details
+            //                         `<div>
+        //                             <div style="display: flex; align-items: center;">
+        //                                 <a href="javascript:void(0);" class="d-flex align-items-center">
+        //                                     <img src="${imageUrl}"
+        //                                         alt="category"
+        //                                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px; margin-right: 10px;">
+        //                                     <span class="category-name truncated">${categoryName}</span>
+        //                                 </a>
+        //                             </div>
+
+        //                             <!-- Collapsible Details (visible only on mobile) - AFTER the category name -->
+        //                             <div class="collapse mt-2 d-lg-none" id="details-${category.id}">
+        //                                 <div class="card card-body p-2 bg-light border">
+        //                                     <p class="mb-1"><strong>Created At:</strong> ${createdAt}</p>
+        //                                     <div class="mt-2">
+        //                                         ${getActionButtons(category.id)}
+        //                                     </div>
+        //                                 </div>
+        //                             </div>
+        //                         </div>`,
+
+            //                         // Column 2: Details Toggle (only for mobile)
+            //                         detailsToggle,
+
+            //                         // Column 3: Created At (hidden on mobile)
+            //                         createdAt,
+
+            //                         // Column 4: Action Buttons (hidden on mobile)
+            //                         getActionButtons(category.id)
+            //                     ]);
+            //                 });
+
+            //                 table.clear().rows.add(tableBody).draw();
+
+            //                 // Sync top scrollbar
+            //                 const topScroll = document.querySelector('.table-scroll-top');
+            //                 const tableResponsive = document.querySelector('.table-responsive');
+            //                 const tableElement = document.querySelector('.datanew');
+
+            //                 if (topScroll && tableResponsive && tableElement) {
+            //                     const topInnerDiv = topScroll.querySelector('div');
+            //                     topInnerDiv.style.width = tableElement.scrollWidth + 'px';
+
+            //                     topScroll.onscroll = () => {
+            //                         tableResponsive.scrollLeft = topScroll.scrollLeft;
+            //                     };
+            //                     tableResponsive.onscroll = () => {
+            //                         topScroll.scrollLeft = tableResponsive.scrollLeft;
+            //                     };
+            //                 }
+            //             } else {
+            //                 table.clear().draw();
+            //                 $(".datanew tbody").html(
+            //                     '<tr><td colspan="4">No categories found</td></tr>');
+            //             }
+            //         },
+            //         error: function(xhr) {
+            //             // console.log("Error:", xhr);
+            //         },
+            //     });
+            // }
+
+            // Function to fetch categories with pagination
+            function fetchCategories(page = 1) {
+                let url = `/api/getAllCategory?page=${page}&per_page=${perPage}`;
+                if (selectedSubAdminId) {
+                    url += `&selectedSubAdminId=${selectedSubAdminId}`;
+                }
+                if (searchQuery) {
+                    url += `&search=${encodeURIComponent(searchQuery)}`;
+                }
+
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    dataType: "json",
+                    headers: {
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    success: function(response) {
+                        if (response.status) {
+                            let categories = response.data;
+                            let pagination = response.pagination;
+
+                            // Update pagination state
+                            currentPage = pagination.current_page;
+                            lastPage = pagination.last_page;
+
+                            // Update pagination UI
+                            updatePaginationUI(pagination);
+
+                            // Build table rows (same as before)
+                            let tableBody = [];
+                            let mmCards = [];
+
+                            // Function to capitalize first letter of each word
+                            function capitalizeWords(str) {
+                                if (!str || str.trim() === '') return 'N/A';
+                                return str.replace(/\b\w/g, function(char) {
+                                    return char.toUpperCase();
+                                });
+                            }
+
+                            categories.forEach((category) => {
+                                let createdAt = "N/A";
+                                if (category.created_at) {
+                                    let dateParts = category.created_at.split("T")[0].split(
+                                        "-");
+                                    if (dateParts.length === 3) {
+                                        createdAt = dateParts[2] + "/" + dateParts[1] + "/" +
+                                            dateParts[0];
+                                    }
+                                }
+                                let categoryName = capitalizeWords(category.name);
+
+                                let detailsToggle = `
+                            <a href="#details-${category.id}" class="toggle-details" data-bs-toggle="collapse">
+                                <i class="fas fa-plus-circle" style="color: #ff9f43;"></i>
+                            </a>
+                        `;
+
+                                let imageUrl = category.image ?
+                                    '{{ env('ImagePath') . 'storage/' }}' + category.image :
+                                    '{{ env('ImagePath') . '/admin/assets/img/product/noimage.png' }}';
+
+                                tableBody.push([
+                                    `<div>
+                                <div style="display: flex; align-items: center;">
+                                    <a href="javascript:void(0);" class="d-flex align-items-center">
+                                        <img src="${imageUrl}"
+                                            alt="category"
+                                            style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px; margin-right: 10px;">
+                                        <span class="category-name truncated">${categoryName}</span>
+                                    </a>
+                                </div>
+                                <div class="collapse mt-2 d-lg-none" id="details-${category.id}">
+                                    <div class="card-body p-2 ">
+                                        <p class="mb-1"><strong>Created At:</strong> ${createdAt}</p>
+                                        <div class="mt-2">
+                                            ${getActionButtons(category.id)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`,
+                                    detailsToggle,
+                                    createdAt,
+                                    getActionButtons(category.id)
+                                ]);
+
+                                mmCards.push(MasterMobileUI.card({
+                                    title: categoryName,
+                                    image: category.image ? imageUrl : '',
+                                    sub: 'Created ' + createdAt,
+                                    actions: getMobileActions(category.id)
+                                }));
+                            });
+
+                            table.clear().rows.add(tableBody).draw();
+                            MasterMobileUI.render(mmCards, 'No categories found');
+                        } else {
+                            table.clear().draw();
+                            $(".datanew tbody").html(
+                                '<tr><td colspan="4">No categories found</td></tr>');
+                            MasterMobileUI.render([], 'No categories found');
+                            // Hide pagination if no data
+                            $('.pagination-controls').hide();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error("Error fetching categories:", xhr);
+                        MasterMobileUI.render([], 'Error loading categories');
+                    },
+                });
+            }
+            // Helper function to generate action buttons
+            function getActionButtons(categoryId) {
+                return `
+                @if (app('hasPermission')(6, 'edit'))
+                    <a class="me-3 edit-category" href="/edit-category/${categoryId}">
+                        <img src="{{ env('ImagePath') . '/admin/assets/img/icons/edit.svg' }}" alt="img">
+                    </a>
+                @endif
+                @if (app('hasPermission')(6, 'delete'))
+                    <a class="me-3 confirm-text delete-category" data-id="${categoryId}" href="javascript:void(0);">
+                        <img src="{{ env('ImagePath') . '/admin/assets/img/icons/delete.svg' }}" alt="img">
+                    </a>
+                @endif
+                `;
+            }
+
+            function getMobileActions(categoryId) {
+                return `
+                @if (app('hasPermission')(6, 'edit'))
+                    <a class="mm-act is-edit edit-category" href="/edit-category/${categoryId}" title="Edit"><i class="fas fa-pen"></i></a>
+                @endif
+                @if (app('hasPermission')(6, 'delete'))
+                    <a class="mm-act is-delete confirm-text delete-category" data-id="${categoryId}" href="javascript:void(0);" title="Delete"><i class="fas fa-trash"></i></a>
+                @endif
+                `;
+            }
+
+            // Update pagination controls and info
+            function updatePaginationUI(pagination) {
+                let from = (pagination.current_page - 1) * pagination.per_page ;
+                let to = pagination.current_page * pagination.per_page;
+                if (to > pagination.total) to = pagination.total;
+                if (pagination.total === 0) from = 0;
+
+                $('#pagination-from').text(from);
+                $('#pagination-to').text(to);
+                $('#pagination-total').text(pagination.total);
+
+                let paginationHtml = '';
+
+                // Previous button
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0);" data-page="${pagination.current_page - 1}">Previous</a>
+                    </li>
+                `;
+
+                // Show only 3 page numbers at a time
+                const visiblePageCount = 2;
+                let startPage = Math.floor((pagination.current_page - 1) / visiblePageCount) * visiblePageCount + 1;
+                let endPage = Math.min(pagination.last_page, startPage + visiblePageCount - 1);
+
+                // Show previous ellipsis if there are pages before startPage
+                if (startPage > 1) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link" href="javascript:void(0);" data-page="${startPage - 1}" data-action="prev-group">..</a>
+                        </li>
+                    `;
+                }
+
+                // Generate page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += `
+                        <li class="page-item ${i === pagination.current_page ? 'active' : ''}">
+                            <a class="page-link" href="javascript:void(0);" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                }
+
+                // Show next ellipsis if there are more pages after endPage
+                if (endPage < pagination.last_page) {
+                    // Add dots if there's a gap
+                    if (endPage < pagination.last_page - 1) {
+                        paginationHtml += `
+                            <li class="page-item disabled">
+                                <a class="page-link" href="javascript:void(0);">..</a>
+                            </li>
+                        `;
+                    }
+
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link" href="javascript:void(0);" data-page="${pagination.last_page}">${pagination.last_page}</a>
+                        </li>
+                    `;
+                }
+
+                // Next button
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === pagination.last_page || pagination.last_page === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0);" data-page="${pagination.current_page + 1}">Next</a>
+                    </li>
+                `;
+
+                $('#pagination-numbers').html(paginationHtml);
+                // Show pagination container if there's data
+                $('.pagination-controls').show();
+            }
+
+            // Handle page number clicks with ellipsis support
+            $(document).on('click', '#pagination-numbers .page-link', function(e) {
+                e.preventDefault();
+                let page = $(this).data('page');
+                let action = $(this).data('action');
+
+                // Handle ellipsis clicks to load next/previous groups
+                if (action === 'next-group') {
+                    // Load the page that starts the next group
+                    if (page && page <= lastPage) {
+                        fetchCategories(page);
+                    }
+                    return;
+                }
+
+                if (action === 'prev-group') {
+                    // Load the previous group's starting page
+                    let prevStartPage = Math.max(1, page - 2);
+                    if (prevStartPage >= 1 && prevStartPage <= lastPage) {
+                        fetchCategories(prevStartPage);
+                    }
+                    return;
+                }
+
+                // Regular page navigation
+                if (page && page !== currentPage && page >= 1 && page <= lastPage) {
+                    fetchCategories(page);
+                }
+            });
+
+            // Handle per-page change
+            $('#per-page-select').on('change', function() {
+                perPage = $(this).val();
+                fetchCategories(1);
+            });
+
+
+            // Toggle details icon
+            $(document).on('click', '.toggle-details', function() {
+                let icon = $(this).find('i');
+                if (icon.hasClass('fa-plus-circle')) {
+                    icon.removeClass('fa-plus-circle')
+                        .addClass('fa-minus-circle')
+                        .css('color', 'red');
+                } else {
+                    icon.removeClass('fa-minus-circle')
+                        .addClass('fa-plus-circle')
+                        .css('color', '#ff9f43');
+                }
+            });
+
+            // Delete category function
+            $(document).on('click', '.delete-category', function() {
+                var categoryId = $(this).data('id');
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#ff9f43",
+                    cancelButtonColor: "#6c757d",
+                    confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/api/deleteCategory/${categoryId}`,
+                            type: 'POST',
+                            headers: {
+                                "Authorization": "Bearer " + authToken,
+                            },
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content')
+                            },
+                            success: function(response) {
+                                if (response.status) {
+                                    Swal.fire({
+                                        title: "Deleted!",
+                                        text: response.message,
+                                        icon: "success",
+                                        confirmButtonColor: "#ff9f43",
+                                        confirmButtonText: "OK"
+                                    }).then(() => {
+                                        fetchCategories(); // Refresh the table
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: "Error!",
+                                        text: response.message,
+                                        icon: "error",
+                                        confirmButtonColor: "#ff9f43",
+                                        confirmButtonText: "OK"
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                let message = "Something went wrong!";
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                }
+
+                                Swal.fire({
+                                    title: "Error!",
+                                    text: message,
+                                    icon: "error",
+                                    confirmButtonColor: "#ff9f43",
+                                    confirmButtonText: "OK"
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+@endpush

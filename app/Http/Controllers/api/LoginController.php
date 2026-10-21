@@ -1,0 +1,764 @@
+<?php
+
+namespace App\Http\Controllers\api;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Models\FaceLoginAudit;
+use App\Models\CustomInvoice;
+use App\Models\LogAttendance;
+use App\Models\Attendance;
+use App\Models\Setting;
+use App\Services\FaceRecognitionService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
+use App\Models\{PurchaseInvoice, Order, Expense, Notification, Product};
+
+class LoginController extends Controller
+{
+
+    public function login(Request $request)
+    {
+    // dd('asd');
+        $request->validate([
+            'email' => 'required|string|email',
+            'password' => 'required|string',
+        ]);
+        // $key = 'login-attempts-' . $request->ip();
+        $force = filter_var($request->input('force', false), FILTER_VALIDATE_BOOLEAN);
+        // if (RateLimiter::tooManyAttempts($key, 5)) {
+        //     return response()->json([
+        //         'status' => false,
+        //         'error' => 'Too many login attempts. Please try again after 10 minutes.'
+        //     ], 429);
+        // }
+        $authResult = $this->authenticateByEmailPassword(
+            $request->email,
+            $request->password
+        );
+
+        if ($authResult['error']) {
+            $statusCode = $authResult['error'] === 'Wrong Login credentials entered.' ? 401 : 403;
+
+            return response()->json([
+                'status' => false,
+                'error'  => $authResult['error'],
+            ], $statusCode);
+        }
+
+        $user = $authResult['user'];
+
+        // Plan expiry validation for Admin
+        if ($user->role === 'admin' || $user->role !== 'staff') {
+            $planCheck = $user->checkPlanExpiryStatus();
+            if ($planCheck['status'] === 'expired') {
+                $plan = $user->getActivePlan();
+                return response()->json([
+                    'status'     => false,
+                    'is_expired' => true,
+                    'error'      => $planCheck['message'],
+                    'plan_name'  => $plan?->name ?? 'Active Plan',
+                    'end_date'   => $planCheck['end_date'] ?? 'N/A',
+                ], 403);
+            }
+            if ($planCheck['status'] === 'warning') {
+                $request->session()->flash('plan_expiry_warning', $planCheck['message']);
+            }
+        }
+
+        Auth::login($user);
+        $request->session()->put('showTodayAlertsModal', $user->role === 'admin');
+
+        $token = $user->createToken('LaravelPassportToken')->accessToken;
+
+        // Get permissions
+        $permissions = $user->permissions()->with('module')->get();
+        $formattedPermissions = [];
+        foreach ($permissions as $permission) {
+            $moduleName = $permission->module->module ?? 'Unknown';
+            $formattedPermissions[$moduleName] = [
+                'id' => $permission->id,
+                'user_id' => $permission->user_id,
+                'module_id' => $permission->module_id,
+                'view' => $permission->view,
+                'create' => $permission->add,
+                'update' => $permission->edit,
+                'delete' => $permission->delete,
+                'created_at' => $permission->created_at,
+            ];
+        }
+
+        $redirect = route('auth.dashboard');
+
+        // Keep notification logging optional so missing table/config won't block login.
+        $this->createLoginNotification($user);
+
+        if ($user->role === 'staff') {
+            $redirect = route('auth.staff-dashboard');
+        }
+
+        $isMobile = preg_match('/Mobile|Android|BlackBerry|IEMobile|Silk/i', $request->header('User-Agent'));
+        if ($isMobile) {
+            $redirect = url('/sales');
+        }
+
+        return response()->json([
+            'status' => true,
+            'token' => $token,
+            'user' => $user,
+            'redirect' => $redirect,
+            'permissions' => $formattedPermissions,
+            'showAppointments' => ($user->role !== 'staff'),
+        ]);
+    }
+
+    /**
+     * Authenticate by email/password, preferring the newest active account when
+     * duplicate emails exist (e.g. after a soft-deleted staff record).
+     */
+    protected function authenticateByEmailPassword(string $email, string $password): array
+    {
+        $candidates = User::where('email', $email)->orderByDesc('id')->get();
+        $inactiveMatch = null;
+
+        foreach ($candidates as $candidate) {
+            if (! Hash::check($password, $candidate->password)) {
+                continue;
+            }
+
+            if ($this->isAccountActive($candidate)) {
+                return ['user' => $candidate, 'error' => null];
+            }
+
+            $inactiveMatch = $candidate;
+        }
+
+        if ($inactiveMatch) {
+            return [
+                'user'  => null,
+                'error' => 'Your account is inactive , Please contact admin',
+            ];
+        }
+
+        return ['user' => null, 'error' => 'Wrong Login credentials entered.'];
+    }
+
+    protected function isAccountActive(User $user): bool
+    {
+        return (int) ($user->isDeleted ?? 0) !== 1
+            && (int) ($user->status ?? 1) !== 0;
+    }
+
+    /**
+     * Login with Face Recognition.
+     * Accepts a 128-element face descriptor and matches it against all staff users.
+     */
+    public function faceLogin(Request $request)
+    {
+        $request->validate([
+            'face_descriptor'   => 'required|array|size:128',
+            'face_descriptor.*' => 'numeric',
+        ]);
+
+        // $key = 'face-login-attempts-' . $request->ip();
+
+        // if (RateLimiter::tooManyAttempts($key, 5)) {
+        //     $this->logFaceAttempt($request, null, 'failed', null, null, 'Too many face login attempts.');
+        //     return response()->json([
+        //         'status' => false,
+        //         'error'  => 'Too many face login attempts. Please try again after 10 minutes.',
+        //     ], 429);
+        // }
+
+        $descriptor = $this->faceRecognition()->normalizeDescriptor($request->input('face_descriptor'));
+        if (!$descriptor) {
+            // RateLimiter::hit($key, 600);
+            $this->logFaceAttempt($request, null, 'failed', null, null, 'Invalid face descriptor payload.');
+            return response()->json([
+                'status' => false,
+                'error'  => 'Invalid face descriptor provided.',
+            ], 422);
+        }
+
+        $faceRecognition = $this->faceRecognition();
+        $staffCandidates = User::query()
+            ->where('isDeleted', 0)
+            ->whereNotNull('face_descriptor')
+            ->orderBy('id')
+            ->get(['id', 'name', 'branch_id', 'role', 'isDeleted', 'face_descriptor']);
+
+        $matchResult = $faceRecognition->resolveLoginMatch($descriptor, $staffCandidates);
+        $bestMatch   = $matchResult['match'] ?? null;
+
+        if (($matchResult['reason'] ?? null) !== 'matched' || !$bestMatch) {
+            // RateLimiter::hit($key, 600);
+            $this->logFaceAttempt(
+                $request,
+                $bestMatch['user'] ?? null,
+                'failed',
+                $bestMatch['distance'] ?? null,
+                $bestMatch['confidence'] ?? null,
+                $this->faceLoginFailureMessage($matchResult['reason'] ?? null)
+            );
+            return response()->json([
+                'status' => false,
+                'error'  => $this->faceLoginFailureMessage($matchResult['reason'] ?? null),
+            ], 401);
+        }
+
+        $staff = $bestMatch['user'];
+
+        Auth::guard('web')->login($staff, true);
+        $request->session()->regenerate();
+        // RateLimiter::clear($key);
+
+        $this->logFaceAttempt(
+            $request, $staff, 'success',
+            $bestMatch['distance'], $bestMatch['confidence'],
+            'Staff face login successful.'
+        );
+
+        if (! $this->isAccountActive($staff)) {
+            Auth::guard('web')->logout();
+            return response()->json([
+                'status' => false,
+                'error'  => 'Your account is inactive. Please contact admin.',
+            ], 403);
+        }
+
+        if ($staff->role === 'admin' || $staff->role !== 'staff') {
+            $planCheck = $staff->checkPlanExpiryStatus();
+            if ($planCheck['status'] === 'expired') {
+                Auth::guard('web')->logout();
+                $plan = $staff->getActivePlan();
+                return response()->json([
+                    'status'     => false,
+                    'is_expired' => true,
+                    'error'      => $planCheck['message'],
+                    'plan_name'  => $plan?->name ?? 'Active Plan',
+                    'end_date'   => $planCheck['end_date'] ?? 'N/A',
+                ], 403);
+            }
+            if ($planCheck['status'] === 'warning') {
+                $request->session()->flash('plan_expiry_warning', $planCheck['message']);
+            }
+        }
+
+        $token               = $staff->createToken('LaravelPassportToken')->accessToken;
+        $formattedPermissions = $this->formatPermissionsForUser($staff);
+        $redirect            = route('auth.dashboard');
+        
+        if ($staff->role === 'staff') {
+            $redirect = route('auth.staff-dashboard');
+        }
+
+        $isMobile = preg_match('/Mobile|Android|BlackBerry|IEMobile|Silk/i', $request->header('User-Agent'));
+        if ($isMobile) {
+            $redirect = url('/sales');
+        }
+
+        $this->createLoginNotification($staff);
+
+        return response()->json([
+            'status'      => true,
+            'token'       => $token,
+            'user'        => $staff,
+            'redirect'    => $redirect,
+            'permissions' => $formattedPermissions,
+            'login_method' => 'face',
+            'showAppointments' => false,
+        ]);
+    }
+
+    protected function logFaceAttempt(
+        Request $request,
+        ?User $user,
+        string $status,
+        ?float $distance,
+        ?float $confidence,
+        string $message
+    ): void {
+        try {
+            FaceLoginAudit::create([
+                'user_id'    => $user?->id,
+                'branch_id'  => $user?->branch_id,
+                'status'     => $status,
+                'method'     => 'face',
+                'distance'   => $distance,
+                'confidence' => $confidence,
+                'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'message'    => $message,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Face login audit skipped: ' . $e->getMessage());
+        }
+    }
+
+    protected function faceRecognition(): FaceRecognitionService
+    {
+        return app(FaceRecognitionService::class);
+    }
+
+    protected function faceLoginFailureMessage(?string $reason): string
+    {
+        return match ($reason) {
+            'ambiguous_match' => 'Face verification is too close to another staff record. Please contact admin and re-register your face.',
+            default           => 'Face not recognized. Please try again or use password.',
+        };
+    }
+
+    protected function formatPermissionsForUser(User $user): array
+    {
+        $permissions          = $user->permissions()->with('module')->get();
+        $formattedPermissions = [];
+        foreach ($permissions as $permission) {
+            $moduleName = $permission->module->module ?? 'Unknown';
+            $formattedPermissions[$moduleName] = [
+                'id'         => $permission->id,
+                'user_id'    => $permission->user_id,
+                'module_id'  => $permission->module_id,
+                'view'       => $permission->view,
+                'create'     => $permission->add,
+                'update'     => $permission->edit,
+                'delete'     => $permission->delete,
+                'created_at' => $permission->created_at,
+            ];
+        }
+        return $formattedPermissions;
+    }
+
+    private function createLoginNotification($user): void
+    {
+        if (!Schema::hasTable('notifications')) {
+            return;
+        }
+
+        try {
+            if (in_array($user->role, ['admin', 'staff'])) {
+                $roleName = ucfirst($user->role);
+
+                $loginMessage = match($user->role) {
+                    'admin' => "Admin {$user->name} has successfully logged in",
+                    'staff' => "Staff {$user->name} has successfully logged in",
+                    default => "User {$user->name} has successfully logged in"
+                };
+
+                Notification::create([
+                    'user_id'   => $user->id,
+                    'type'      => 'login',
+                    'title'     => "{$roleName} Login Successful",
+                    'message'   => $loginMessage . ' at ' . now('Asia/Kolkata')->format('h:i A') . ' on ' . now('Asia/Kolkata')->format('d M Y'),
+                    'link'      => '/profile',
+                    'is_read'   => 0,
+                    'is_sound'  => 0,
+                    'branch_id' => $user->branch_id ?? 1,
+                ]);
+            } elseif ($user->role === 'vendor') {
+                Notification::create([
+                    'user_id'   => 1,
+                    'type'      => 'vendor_login',
+                    'title'     => 'Vendor Login Alert',
+                    'message'   => "Vendor {$user->name} has successfully logged in at " . now('Asia/Kolkata')->format('h:i A') . ' on ' . now('Asia/Kolkata')->format('d M Y'),
+                    'link'      => '/profile',
+                    'is_read'   => 0,
+                    'is_sound'  => 0,
+                    'branch_id' => $user->branch_id ?? 1,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Login notification skipped: ' . $e->getMessage());
+        }
+    }
+
+    // Logout User
+    public function logout(Request $request)
+    {
+        $user = Auth::user();
+
+        // ✅ Standard logout process
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/');
+    }
+
+    public function logoutapi(Request $request)
+    {
+        $user = $request->user('api');
+
+        // ✅ Revoke access token (Passport)
+        $request->user('api')->token()->revoke();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Logout Successfully',
+        ], 200);
+    }
+
+
+    public function dashboardApi(Request $request)
+    {
+        $user = Auth::guard('api')->user();
+        $role = $user->role;
+
+        // Default branch is the logged-in user's branch
+        $BranchID = $user->id;
+
+        // Admin can override with selected sub-admin
+        $selectedSubAdminId = $request->query('selectedSubAdminId');
+
+        if ($role === 'admin' && !empty($selectedSubAdminId)) {
+            $subAdmin = User::where('id', $selectedSubAdminId)
+                ->where('role', 'sub-admin')
+                ->first();
+
+            if ($subAdmin) {
+                $BranchID = $subAdmin->id; // ✅ use branch_id, not id
+            }
+        } elseif ($role === 'sub-admin') {
+            // Sub-admin: only their branch
+            $BranchID = $user->id;
+        } elseif ($role === 'staff') {
+            // Staff: only their branch
+            $BranchID = $user->id;
+        }
+        //  dd($BranchID);
+        // dd($selectedSubAdminId);
+
+        $currentYear = Carbon::now()->year;
+        $previousYear = $currentYear - 1;
+        $currentMonth = Carbon::now()->month;
+
+        // ✅ Charts
+        $salesChartThisMonth = $this->getSalesDataByMonth($currentMonth, $BranchID);
+        $purchaseChartThisMonth = $this->getPurchaseDataByMonth($currentMonth, $BranchID);
+
+        $salesChartThisYear = $this->getSalesDataByYear($currentYear, $BranchID);
+        $salesChartPreviousYear = $this->getSalesDataByYear($previousYear, $BranchID);
+
+        $purchaseChartThisYear = $this->getPurchaseDataByYear($currentYear, $BranchID);
+        $purchaseChartPreviousYear = $this->getPurchaseDataByYear($previousYear, $BranchID);
+
+        // ✅ Totals
+        $totalPurchaseAmount = PurchaseInvoice::where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->sum('grand_total');
+
+        $totalSalesAmount = Order::where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->sum('total_amount');
+
+        $totalExpenseAmount = Expense::where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->sum('amount');
+
+
+        $totalInvoiceAmount = CustomInvoice::where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->sum('grand_total');
+
+        // ✅ Counts
+        $customerCount = User::where('role', 'customer')
+            ->where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->count();
+
+
+        $vendorCount = User::where('role', 'vendor')
+            ->where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->count();
+
+        $purchaseInvoiceCount = PurchaseInvoice::where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->count();
+
+        $salesInvoiceCount = Order::where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->count();
+
+        // ✅ Recent Products
+        $recentProducts = Product::where('isDeleted', '!=', 1)
+            ->where('branch_id', $BranchID)
+            ->latest()
+            ->take(4)
+            ->get();
+
+        // ✅ Latest Sales
+        $latestSales = DB::table('order_items')
+            ->join('products', function ($join) {
+                $join->on('order_items.product_id', '=', 'products.id')
+                    ->where('products.isDeleted', '!=', 1);
+            })
+            ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->join('orders', function ($join) use ($BranchID) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.isDeleted', '!=', 1)
+                    ->where('orders.branch_id', '=', $BranchID);
+            })
+            ->where('order_items.isDeleted', '!=', 1)
+            ->select(
+                'order_items.*',
+                'products.id as product_id',
+                'products.SKU as product_code',
+                'products.name as product_name',
+                'products.images',
+                'brands.name as brand_name',
+                'categories.name as category_name',
+                'orders.id as order_id',
+                'orders.created_at as order_date',
+                'orders.total_amount',
+                'orders.payment_method',
+                'orders.order_number'
+            )
+            ->orderBy('order_items.created_at', 'desc')
+            ->limit(4)
+            ->get();
+
+        // ✅ Append image_url to each item
+        $basePath = env('ImagePath', '/');
+
+        $latestSales = $latestSales->map(function ($item) use ($basePath) {
+            $decoded = json_decode($item->images, true);
+
+            if (is_array($decoded)) {
+                $item->image_url = array_map(function ($img) use ($basePath) {
+                    return url($basePath . 'storage/' . $img);
+                }, $decoded);
+            } elseif ($item->images) {
+                $item->image_url = [url($basePath . 'storage/' . $item->images)];
+            } else {
+                $item->image_url = [url($basePath . 'admin/assets/img/product/noimage.png')];
+            }
+
+            return $item;
+        });
+
+        // ✅ Latest Purchases
+        $latestPurchases = DB::table('purchases as pur')
+            ->leftJoin('products as pr', function ($join) {
+                $join->on('pr.id', '=', 'pur.item')
+                    ->where('pr.isDeleted', '!=', 1);
+            })
+            ->leftJoin('purchase_invoice as pi', 'pi.id', '=', 'pur.invoice_id')
+            ->leftJoin('brands as br', 'pr.brand_id', '=', 'br.id')
+            ->leftJoin('categories as cat', 'pr.category_id', '=', 'cat.id')
+            ->where('pur.isDeleted', '!=', 1)
+            ->where('pi.isDeleted', '!=', 1)
+            ->where('pi.branch_id', '=', $BranchID)
+            ->select(
+                'pi.id as invoice_id',
+                'pur.created_at as purchase_date',
+                'pr.id as product_id',
+                'pr.name as product_name',
+                'pr.SKU as product_code',
+                'pr.images',
+                'cat.name as category_name',
+                'br.name as brand_name',
+                'pur.amount_total',
+                'pi.invoice_number',
+                'pi.grand_total'
+            )
+            ->orderBy('pur.created_at', 'desc')
+            ->limit(4)
+            ->get();
+
+        // ✅ Append image_url to each purchase record
+        $basePath = env('ImagePath', '/');
+
+        $latestPurchases = $latestPurchases->map(function ($item) use ($basePath) {
+            $decoded = json_decode($item->images, true);
+
+            if (is_array($decoded)) {
+                $item->image_url = array_map(function ($img) use ($basePath) {
+                    return url($basePath . 'storage/' . $img);
+                }, $decoded);
+            } elseif ($item->images) {
+                $item->image_url = [url($basePath . 'storage/' . $item->images)];
+            } else {
+                $item->image_url = [url($basePath . 'admin/assets/img/product/noimage.png')];
+            }
+
+            return $item;
+        });
+        // ✅ Monthly Sales Chart
+        $salesData = DB::table('order_items')
+            ->join('orders', function ($join) use ($BranchID) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.isDeleted', '!=', 1)
+                    ->where('orders.branch_id', '=', $BranchID);
+            })
+            ->where('order_items.isDeleted', '!=', 1)
+            ->select(DB::raw("MONTH(order_items.created_at) as month"), DB::raw("SUM(order_items.total_amount) as total"))
+            ->groupBy(DB::raw("MONTH(order_items.created_at)"))
+            ->pluck('total', 'month')
+            ->toArray();
+
+        $purchasesData = DB::table('purchases')
+            ->leftJoin('purchase_invoice', function ($join) use ($BranchID) {
+                $join->on('purchase_invoice.id', '=', 'purchases.invoice_id')
+                    ->where('purchase_invoice.isDeleted', '!=', 1)
+                    ->where('purchase_invoice.branch_id', '=', $BranchID);
+            })
+            ->where('purchases.isDeleted', '!=', 1)
+            ->select(DB::raw("MONTH(purchases.created_at) as month"), DB::raw("SUM(purchases.amount_total) as total"))
+            ->groupBy(DB::raw("MONTH(purchases.created_at)"))
+            ->pluck('total', 'month')
+            ->toArray();
+
+        $salesChart = [];
+        $purchaseChart = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $salesChart[] = (float) ($salesData[$m] ?? 0);
+            $purchaseChart[] = (float) ($purchasesData[$m] ?? 0);
+        }
+
+        // ✅ Settings
+        $settings = DB::table('settings')->where('branch_id', $BranchID)->first();
+        $currencySymbol = $settings->currency_symbol ?? '₹';
+        $currencyPosition = $settings->currency_position ?? 'left';
+
+        return response()->json([
+            'status' => true,
+            'branch_id' => $BranchID,
+            'data' => [
+                'totals' => [
+                    'purchase' => $totalPurchaseAmount,
+                    'sales' => $totalSalesAmount,
+                    'expense' => $totalExpenseAmount,
+                ],
+                'counts' => [
+                    'customers' => $customerCount,
+                    'vendors' => $vendorCount,
+                    'purchaseInvoices' => $purchaseInvoiceCount,
+                    'salesInvoices' => $salesInvoiceCount,
+                ],
+                'recentProducts' => $recentProducts,
+                'latestSales' => $latestSales,
+                'latestPurchases' => $latestPurchases,
+                'charts' => [
+                    'sales' => $salesChart,
+                    'purchases' => $purchaseChart,
+                    'salesThisYear' => $salesChartThisYear,
+                    'salesPreviousYear' => $salesChartPreviousYear,
+                    'purchaseThisYear' => $purchaseChartThisYear,
+                    'purchasePreviousYear' => $purchaseChartPreviousYear,
+                    'salesThisMonth' => $salesChartThisMonth,
+                    'purchaseThisMonth' => $purchaseChartThisMonth,
+                ],
+                'currency' => [
+                    'symbol' => $currencySymbol,
+                    'position' => $currencyPosition,
+                ],
+            ]
+        ], 200);
+    }
+    private function getSalesDataByMonth($month, $BranchID)
+    {
+        $salesData = DB::table('order_items')
+            ->join('orders', function ($join) use ($BranchID) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.isDeleted', '!=', 1)
+                    ->where('orders.branch_id', '=', $BranchID);
+            })
+            ->whereMonth('orders.created_at', $month)
+            ->where('order_items.isDeleted', '!=', 1)
+            ->select(
+                DB::raw("DAY(orders.created_at) as day"),
+                DB::raw("SUM(order_items.total_amount) as total")
+            )
+            ->groupBy(DB::raw("DAY(orders.created_at)"))
+            ->pluck('total', 'day')
+            ->toArray();
+
+        $chartData = [];
+        for ($d = 1; $d <= 31; $d++) {
+            $chartData[] = (float) ($salesData[$d] ?? 0);
+        }
+        return $chartData;
+    }
+
+    private function getPurchaseDataByMonth($month, $BranchID)
+    {
+        $purchaseData = DB::table('purchases')
+            ->join('purchase_invoice', function ($join) use ($BranchID) {
+                $join->on('purchase_invoice.id', '=', 'purchases.invoice_id')
+                    ->where('purchase_invoice.isDeleted', '!=', 1)
+                    ->where('purchase_invoice.branch_id', '=', $BranchID);
+            })
+            ->whereMonth('purchases.created_at', $month)
+            ->where('purchases.isDeleted', '!=', 1)
+            ->select(
+                DB::raw("DAY(purchases.created_at) as day"),
+                DB::raw("SUM(purchases.amount_total) as total")
+            )
+            ->groupBy(DB::raw("DAY(purchases.created_at)"))
+            ->pluck('total', 'day')
+            ->toArray();
+
+        $chartData = [];
+        for ($d = 1; $d <= 31; $d++) {
+            $chartData[] = (float) ($purchaseData[$d] ?? 0);
+        }
+        return $chartData;
+    }
+
+    private function getSalesDataByYear($year, $BranchID)
+    {
+        $salesData = DB::table('order_items')
+            ->join('orders', function ($join) use ($BranchID) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.isDeleted', '!=', 1)
+                    ->where('orders.branch_id', '=', $BranchID);
+            })
+            ->whereYear('orders.created_at', $year)
+            ->where('order_items.isDeleted', '!=', 1)
+            ->select(
+                DB::raw("MONTH(orders.created_at) as month"),
+                DB::raw("SUM(order_items.total_amount) as total")
+            )
+            ->groupBy(DB::raw("MONTH(orders.created_at)"))
+            ->pluck('total', 'month')
+            ->toArray();
+
+        $chart = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $chart[] = (float) ($salesData[$m] ?? 0);
+        }
+        return $chart;
+    }
+
+    private function getPurchaseDataByYear($year, $BranchID)
+    {
+        $purchaseData = DB::table('purchases')
+            ->join('purchase_invoice', function ($join) use ($BranchID) {
+                $join->on('purchase_invoice.id', '=', 'purchases.invoice_id')
+                    ->where('purchase_invoice.isDeleted', '!=', 1)
+                    ->where('purchase_invoice.branch_id', '=', $BranchID);
+            })
+            ->whereYear('purchases.created_at', $year)
+            ->where('purchases.isDeleted', '!=', 1)
+            ->select(
+                DB::raw("MONTH(purchases.created_at) as month"),
+                DB::raw("SUM(purchases.amount_total) as total")
+            )
+            ->groupBy(DB::raw("MONTH(purchases.created_at)"))
+            ->pluck('total', 'month')
+            ->toArray();
+
+        $chart = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $chart[] = (float) ($purchaseData[$m] ?? 0);
+        }
+        return $chart;
+    }
+}

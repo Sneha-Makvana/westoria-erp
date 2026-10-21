@@ -1,0 +1,1344 @@
+@extends('layout.app')
+
+@section('title', 'Staff List')
+
+@section('content')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" />
+    <style>
+        /* .sorting_1 {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 5px !important;
+                } */
+
+        .table-scroll-top {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .table-scroll-top div {
+            height: 1px;
+        }
+
+        .table-scroll-top {
+            display: none;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table.datanew {
+            width: 100%;
+        }
+
+        table.datanew td.sorting_1 {
+            display: table-cell !important;
+        }
+
+
+        /* Desktop and general rules for the first column */
+        table.datanew tbody td:first-child {
+            max-width: 260px;
+            width: 260px;
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+        }
+
+        /* The anchor containing image and name */
+        table.datanew tbody td:first-child a.d-flex {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .staff-name {
+            display: block;
+            flex: 1;
+            min-width: 80px;
+            max-width: 200px;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+          /* Add styles for search input and pagination (from category list) */
+        .search-input {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input input {
+            padding-left: 35px !important;
+            border-radius: 5px;
+        }
+
+        .btn-searchset {            position: absolute;
+            left: 10px;
+            z-index: 10;
+            padding: 0;
+            top: 7px !important;
+        }
+
+        /* Custom Pagination Styling */
+        .pagination .page-item .page-link {
+            background-color: #5d6d7e;
+            /* Dark gray for other pages */
+            color: #fff;
+            border: none;
+            margin: 0 3px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 576px) {
+            .pagination .page-item .page-link {
+                padding: 4px 10px;
+                margin: 0 3px;
+                font-size: 12px;
+            }
+        }
+
+        /* Previous and Next buttons */
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            background-color: #fff;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-item:first-child .page-link:hover,
+        .pagination .page-item:last-child .page-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #ff9f43 !important;
+            /* Orange for active page */
+            color: #fff;
+        }
+
+        .pagination .page-item .page-link:hover {
+            background-color: #4a5766;
+            color: #fff;
+        }
+
+        .pagination .page-item.active .page-link:hover {
+            background-color: #e68a35 !important;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background-color: #fff !important;
+            color: #dee2e6 !important;
+            border: 1px solid #dee2e6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+
+
+        @media screen and (max-width: 768px) {
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .search-set {
+                margin-right: 1rem !important;
+            }
+        }
+
+        /* Desktop: show all columns normally */
+        @media (min-width: 1025px) {
+            table.datanew {
+                min-width: 1100px;
+            }
+
+            .staff-name {
+                display: block !important;
+                max-width: 250px;
+                /* adjust as needed */
+                margin-left: 8px !important;
+                font-size: 14px !important;
+                word-break: break-word !important;
+                hyphens: auto !important;
+            }
+
+            table.datanew thead th,
+            table.datanew tbody td {
+                display: table-cell !important;
+            }
+
+            .staff-name {
+                display: block !important;
+                max-width: 250px;
+                /* Adjust based on your layout */
+                margin-left: 8px !important;
+                font-size: 14px !important;
+                word-break: break-word !important;
+                hyphens: auto !important;
+            }
+        }
+
+        /* Fade out animation for error messages */
+        .fade-out {
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .fade-out.hidden {
+            opacity: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .table-top .search-set {
+                display: flex;
+                justify-content: flex-start !important;
+                width: 100%;
+            }
+
+            .table-top .search-input {
+                margin-left: 0 !important;
+            }
+        }
+
+        /* Staff specific styling */
+        .staff-image {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-right: 10px;
+
+        }
+
+        /* Collapsible details styling */
+        /* .collapse-details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #ff9f43;
+        } */
+
+        .detail-item {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            min-width: 100px;
+            color: #495057;
+        }
+
+        .detail-value {
+            color: #212529;
+            flex: 1;
+        }
+
+        .mobile-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .mobile-actions a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            /* background-color: #f8f9fa; */
+            transition: all 0.3s ease;
+        }
+
+        .mobile-actions a:hover {
+            background-color: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .mobile-actions svg {
+            width: 18px;
+            height: 18px;
+        }
+         /* ✅ Hide default DataTables search box completely */
+        .dataTables_filter,
+        .dataTables_length,
+        .dataTables_info,
+        .dataTables_paginate {
+            display: none !important;
+        }
+        /* ---------- New Staff UI (mobile + tablet) ---------- */
+        .st-quick-links,
+        .st-fab-new,
+        .st-card { display: none; }
+
+        @media (max-width: 1024.98px),
+            (width: 1032px) and (height: 1376px),
+            (width: 1280px) and (height: 800px) {
+
+            /* Quick header */
+            .st-quick-links {
+                display: block;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16,24,40,.08);
+                padding: 12px 10px;
+                margin-bottom: 10px;
+            }
+            .st-quick-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .st-quick-title { font-size: 15px; font-weight: 600; color: #1b2850; margin-left: 4px; }
+            .st-quick-head .btn { height: 30px; padding: 0 10px !important; font-size: 12px !important; font-weight: 600; }
+
+            /* juno page-header hide */
+            .content:has(.st-quick-links) > .page-header { display: none !important; }
+            .content:has(.st-quick-links) { padding-left: 6px !important; padding-right: 6px !important; }
+
+            /* card wrapper transparent */
+            .content:has(.st-quick-links) > .card {
+                background: transparent !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            .content:has(.st-quick-links) > .card > .card-body { padding: 0 !important; }
+
+            /* search box white card */
+            .content:has(.st-quick-links) .card-body > .mb-2 {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16,24,40,.08);
+                padding: 8px 10px;
+                margin-bottom: 8px !important;
+            }
+
+            /* Table -> Cards */
+            .table-container,
+            .table-responsive { overflow: visible !important; border: 0 !important; padding: 0 !important; }
+
+            table.datanew,
+            table.datanew tbody {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                border: 0 !important;
+            }
+            table.datanew thead { display: none !important; }
+
+            table.datanew tbody tr {
+                display: block !important;
+                position: relative;
+                background: #fff;
+                border: 1px solid #eef0f4;
+                border-radius: 10px;
+                box-shadow: 0 1px 3px rgba(16,24,40,.06);
+                margin: 0 0 10px;
+                padding: 12px 12px 12px 14px;
+            }
+
+            /* badha td hide, fakt pehlo (card) ane Action (6th) batavo */
+            table.datanew tbody tr > td { display: none !important; }
+
+            table.datanew tbody tr > td:first-child {
+                display: block !important;
+                width: 100% !important;
+                max-width: none !important;
+                min-width: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                background: transparent !important;
+            }
+
+            table.datanew tbody tr > td:nth-child(6):not(.dataTables_empty) {
+                display: flex !important;
+                align-items: center;
+                gap: 4px;
+                position: absolute;
+                right: 8px;
+                bottom: 10px;
+                width: auto !important;
+                padding: 0 !important;
+                border: 0 !important;
+                background: transparent !important;
+            }
+            table.datanew tbody tr > td:nth-child(6) a {
+                margin: 0 !important;
+                width: 30px;
+                height: 30px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            table.datanew tbody td.dataTables_empty {
+                display: block !important;
+                text-align: center;
+                padding: 16px !important;
+            }
+
+            /* desktop link hide, card batavo */
+            table.datanew tbody td:first-child a.st-desktop-only { display: none !important; }
+
+            .st-card { display: block; cursor: pointer; padding-right: 110px; }
+            .st-card-top { display: flex; align-items: center; gap: 10px; }
+            .st-card .staff-image { width: 44px; height: 44px; margin: 0; }
+            .st-card-name {
+                font-size: 15px;
+                font-weight: 600;
+                color: #1b2850;
+                text-transform: uppercase;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .st-card-sub { font-size: 12px; color: #8b93a7; margin-top: 2px; }
+            .st-card-badge {
+                display: inline-block;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 3px 10px;
+                border-radius: 12px;
+                background: #fff3df;
+                color: #e8960c;
+                margin-top: 6px;
+            }
+            .st-card-meta { margin-top: 8px; font-size: 12px; color: #595b5d; line-height: 1.6; word-break: break-word; }
+            .st-card-meta i { width: 16px; color: #8b93a7; }
+
+            /* Floating button */
+            .st-fab-new {
+                position: fixed;
+                left: 50%;
+                bottom: 74px;
+                transform: translateX(-50%);
+                z-index: 1030;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 24px;
+                border-radius: 30px;
+                background: #e8334a;
+                color: #fff !important;
+                font-size: 15px;
+                font-weight: 600;
+                text-decoration: none;
+                box-shadow: 0 6px 16px rgba(232,51,74,.35);
+                white-space: nowrap;
+            }
+            .content:has(.st-fab-new) { padding-bottom: 100px !important; }
+            /* Search bar full width */
+            .content:has(.st-quick-links) .card-body > .mb-2 .search-set {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+            .content:has(.st-quick-links) .card-body > .mb-2 .search-input {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+            .content:has(.st-quick-links) .card-body > .mb-2 #search-input {
+                width: 100% !important;
+                height: 38px !important;
+                font-size: 13px;
+                border-radius: 8px;
+            }
+            .content:has(.st-quick-links) .card-body > .mb-2 .btn-searchset {
+                top: 9px !important;
+            }
+            /* ---- Card 2 line + 3-dot center ---- */
+            .st-card { padding-right: 50px; min-height: 44px; }
+            .st-card-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            table.datanew tbody tr { padding: 10px 12px !important; }
+            table.datanew tbody tr > td:nth-child(6):not(.dataTables_empty) {
+                top: 50%;
+                bottom: auto;
+                transform: translateY(-50%);
+                right: 8px;
+            }
+                        .st-card-text { min-width: 0; flex: 1; }
+            .st-card-line1 {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .st-card-line1 .st-card-name { white-space: nowrap; max-width: 100%; }
+            .st-card-line1 .st-card-sub { margin: 0; }
+            .st-card-line1 .st-card-badge { margin: 0; padding: 2px 8px; font-size: 10px; }
+            .st-card-line2 {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 2px 12px;
+                margin-top: 4px;
+                font-size: 11px;
+                color: #595b5d;
+            }
+            .st-card-line2 span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+            .st-card-line2 i { width: 14px; color: #8b93a7; }
+            .staff-action-dropdown .action-menu-toggle {
+                background: transparent;
+                border: 0;
+                box-shadow: none;
+                color: #8b93a7;
+                width: 24px;
+                height: 30px;
+                font-size: 16px;
+            }
+            .staff-action-dropdown .action-menu-toggle:hover,
+            .staff-action-dropdown .action-menu-toggle:focus {
+                background: transparent;
+                border: 0;
+                color: #1b2850;
+            }
+            .staff-action-dropdown .icon-desktop { display: none !important; }
+            .staff-action-dropdown .icon-mobile { display: inline-block !important; }
+        }
+
+        /* Tablet: 2 column grid */
+        @media screen and (min-width: 768px) and (max-width: 1024.98px),
+            screen and (width: 1032px) and (height: 1376px),
+            screen and (width: 1280px) and (height: 800px) {
+            table.datanew tbody {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                align-items: start;
+            }
+            table.datanew tbody tr { margin: 0 !important; }
+            table.datanew tbody tr:has(> td.dataTables_empty) { grid-column: 1 / -1; }
+            .st-fab-new { bottom: 86px; font-size: 16px; }
+                
+        }
+        .staff-action-dropdown .action-menu-toggle {
+            align-items: center;
+            background: #fff;
+            border: 1px solid #d7dde8;
+            border-radius: 4px;
+            color: #1b2850;
+            display: inline-flex;
+            height: 28px;
+            width: 34px;
+            justify-content: center;
+            padding: 0;
+        }
+        .staff-action-dropdown .action-menu-toggle:hover,
+        .staff-action-dropdown .action-menu-toggle:focus {
+            background: #f8fafc;
+            border-color: #b8c2d2;
+            color: #1b2850;
+        }
+        .staff-action-dropdown .icon-mobile { display: none !important; }
+        .staff-action-dropdown .icon-desktop { display: inline-block !important; }
+        .staff-action-dropdown .icon-mobile { display: none !important; }
+        .staff-action-dropdown .icon-desktop { display: inline-block !important; }
+        .staff-action-menu {
+            border: 1px solid #e8ebed;
+            border-radius: 6px;
+            box-shadow: 0 8px 20px rgba(15,23,42,.12);
+            min-width: 150px;
+            padding: 6px;
+        }
+        .staff-action-menu-floating { position: fixed !important; z-index: 999999 !important; margin: 0 !important; }
+        .staff-action-menu .dropdown-item {
+            align-items: center;
+            display: flex;
+            font-size: 12px;
+            gap: 8px;
+            padding: 7px 8px;
+            border-radius: 4px;
+            color: #344054;
+        }
+        .staff-action-menu .dropdown-item i { width: 15px; text-align: center; color: #667085; }
+        .staff-action-menu .dropdown-item.text-danger,
+        .staff-action-menu .dropdown-item.text-danger i { color: #ea5455 !important; }
+        .staff-action-menu .dropdown-item:hover { background: #f4f6f8; }
+        /* iPad Mini / small tablet: top space nathi joitu */
+        @media screen and (min-width: 768px) and (max-width: 1024.98px) {
+            .page-wrapper:has(.st-quick-links) { padding-top: 0 !important; }
+            .content:has(.st-quick-links) {
+                padding-top: 6px !important;
+                margin-top: 0 !important;
+            }
+        }
+
+        /* iPad Pro (1032x1376) ane Nest Hub Max (1280x800): fixed header niche content */
+        @media screen and (width: 1032px) and (height: 1376px),
+            screen and (width: 1280px) and (height: 800px) {
+            .content:has(.st-quick-links) {
+                padding-top: 16px !important;
+            }
+        }
+        @media (max-width: 1024.98px),
+            (width: 1032px) and (height: 1376px),
+            (width: 1280px) and (height: 800px) {
+            .staff-action-dropdown .action-menu-toggle {
+                background: transparent;
+                border: 0;
+                box-shadow: none;
+                color: #8b93a7;
+                width: 24px;
+                height: 30px;
+                font-size: 16px;
+            }
+            .staff-action-dropdown .action-menu-toggle:hover,
+            .staff-action-dropdown .action-menu-toggle:focus {
+                background: transparent;
+                border: 0;
+                color: #1b2850;
+            }
+            .staff-action-dropdown .icon-desktop { display: none !important; }
+            .staff-action-dropdown .icon-mobile { display: inline-block !important; }
+        }
+    </style>
+
+    <div class="content">
+        <div class="page-header">
+            <div class="page-title">
+                <h4>All Staffs</h4>
+            </div>
+            <div class="page-btn">
+                @if (app('hasPermission')(8, 'add'))
+                <a href="{{ route('staff.add') }}" class="btn btn-added btn-sm">
+                    <img src="{{ env('ImagePath') . 'admin/assets/img/icons/plus.svg' }}" class="me-1" alt="img">New
+                    Staff
+                </a>
+                @endif
+            </div>
+        </div>
+        <div class="st-quick-links">
+            <div class="st-quick-head">
+                <div class="st-quick-title">All Staffs</div>
+                @if (app('hasPermission')(8, 'add'))
+                    <a href="{{ route('staff.add') }}" class="btn btn-sm btn-added">
+                        <i class="fas fa-plus me-1"></i> New Staff
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        @if (app('hasPermission')(8, 'add'))
+            <a href="{{ route('staff.add') }}" class="st-fab-new">
+                <i class="fas fa-user-plus"></i> Add New Staff
+            </a>
+        @endif
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-2">
+                    <div class="search-set d-flex justify-content-md-start justify-content-start w-100">
+                        <div class="search-path"></div>
+                        <div class="search-input">
+                            <a class="btn btn-searchset">
+                                <img src="{{ env('ImagePath') . 'admin/assets/img/icons/search-white.svg' }}"
+                                    alt="img">
+                            </a>
+                            <input type="text" id="search-input" class="form-control" placeholder="Search...">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- <div class="table-scroll-top">
+                    <div></div>
+                </div> --}}
+                {{-- <div class="table-responsive">
+                    <table class="table datanew"> --}}
+<div class="table-container table-responsive">
+                    <table class="table datanew">
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Email</th>
+                                {{-- <th>Staff Role</th> --}}
+                                <th>Phone</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                                <!-- Pagination Controls (same as category list) -->
+                <div class="pagination-controls d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+                    <div class="d-flex align-items-center mb-3 mb-md-0">
+                        <span class="me-2" style="font-size: 14px; color: #555;">Show per page :</span>
+                        <select id="per-page-select" class="form-select form-select-sm"
+                            style="width: auto; border: 1px solid #ddd;">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="ms-3" style="font-size: 14px; color: #555;">
+                            <span id="pagination-from">0</span> - <span id="pagination-to">0</span> of <span
+                                id="pagination-total">0</span> items
+                        </span>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0" id="pagination-numbers">
+                            <!-- page numbers will be inserted here -->
+                        </ul>
+                    </nav>
+                </div>
+
+            </div>
+        </div>
+    </div>
+@endsection
+
+@push('js')
+    {{-- <script>
+        $(document).ready(function() {
+            var authToken = localStorage.getItem("authToken");
+            var table = $('.datanew').DataTable(); // Initialize DataTable
+            const selectedSubAdminId = localStorage.getItem('selectedSubAdminId');
+            let url = "/api/getAllStaff";
+            if (selectedSubAdminId) {
+                url += `?selectedSubAdminId=${selectedSubAdminId}`;
+            }
+
+            fetchStaff(); // Call function to load data
+
+            function fetchStaff() {
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    dataType: "json",
+                    headers: {
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    success: function(response) {
+                        if (response.status) {
+                            let staffs = response.data;
+                            let tableBody = [];
+
+                            // Function to capitalize first letter of each word
+                            function capitalizeWords(str) {
+                                if (!str || str.trim() === '') return 'N/A';
+                                return str.replace(/\b\w/g, function(char) {
+                                    return char.toUpperCase();
+                                });
+                            }
+
+                            staffs.forEach((staff) => {
+                                let staffName = capitalizeWords(staff.name);
+
+                                // Image URL
+                                let imageUrl = staff.profile_image ?
+                                    '{{ env('ImagePath') . '/storage/' }}' + staff
+                                    .profile_image :
+                                    '{{ env('ImagePath') . 'admin/assets/img/customer/customer5.jpg' }}';
+
+                                // Prepare action buttons
+                                let actionButtons = `
+                                    <a class="me-2" href="/staff-view/${staff.id}">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 9C11.206 9.00524 10.4459 9.32299 9.88447 9.88447C9.32299 10.4459 9.00524 11.206 9 12C9 13.642 10.358 15 12 15C13.641 15 15 13.642 15 12C15 10.359 13.641 9 12 9Z" fill="#092C4C"></path>
+                                            <path d="M12 5C4.36704 5 2.07304 11.617 2.05204 11.684L1.94604 12L2.05105 12.316C2.07305 12.383 4.36704 19 12 19C19.633 19 21.927 12.383 21.948 12.316L22.054 12L21.949 11.684C21.927 11.617 19.633 5 12 5ZM12 17C6.64904 17 4.57604 13.154 4.07404 12C4.57804 10.842 6.65204 7 12 7C17.351 7 19.424 10.846 19.926 12C19.422 13.158 17.348 17 12 17Z" fill="#092C4C"></path>
+                                        </svg>
+                                    </a>
+                                    <a class="me-2" href="/edit-staff/${staff.id}">
+                                        <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15.045 5.401C15.423 5.023 15.631 4.521 15.631 3.987C15.631 3.453 15.423 2.951 15.045 2.573L13.459 0.987001C13.081 0.609001 12.579 0.401001 12.045 0.401001C11.511 0.401001 11.009 0.609001 10.632 0.986001L0 11.585V16H4.413L15.045 5.401ZM12.045 2.401L13.632 3.986L12.042 5.57L10.456 3.985L12.045 2.401ZM2 14V12.415L9.04 5.397L10.626 6.983L3.587 14H2ZM0 18H16V20H0V18Z" fill="#092C4C"></path>
+                                        </svg>
+                                    </a>
+                                    <a class="me-2 confirm-text delete-staff" data-id="${staff.id}" href="javascript:void(0);">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M5 20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V8H21V6H17V4C17 3.46957 16.7893 2.96086 16.4142 2.58579C16.0391 2.21071 15.5304 2 15 2H9C8.46957 2 7.96086 2.21071 7.58579 2.58579C7.21071 2.96086 7 3.46957 7 4V6H3V8H5V20ZM9 4H15V6H9V4ZM8 8H17V20H7V8H8Z" fill="#092C4C"></path>
+                                            <path d="M9 10H11V18H9V10ZM13 10H15V18H13V10Z" fill="#092C4C"></path>
+                                        </svg>
+                                    </a>
+                                `;
+
+                                tableBody.push([
+                                    // Column 1: Staff Name with image AND collapsible details
+                                    `<div>
+
+                                            <a href="javascript:void(0);" class="d-flex align-items-center">
+                                                <img src="${imageUrl}"
+                                                    alt="staff"
+                                                    class="staff-image">
+                                                <span class="staff-name">${staffName}</span>
+                                            </a>
+
+
+                                        <!-- Collapsible Details (visible only on mobile) -->
+                                        <div class="collapse mt-2 d-lg-none" id="details-${staff.id}">
+                                            <div class="collapse-details">
+                                                 <div class="detail-item">
+                                                    <span class="detail-label">Email:</span>
+                                                    <span class="detail-value">${staff.email || 'N/A'}</span>
+                                                </div>
+
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Phone:</span>
+                                                    <span class="detail-value">${staff.phone || 'N/A'}</span>
+                                                </div>
+
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Country:</span>
+                                                    <span class="detail-value">${staff.country || 'N/A'}</span>
+                                                </div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">City:</span>
+                                                    <span class="detail-value">${staff.city || 'N/A'}</span>
+                                                </div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">GST:</span>
+                                                    <span class="detail-value">${staff.gst_number || 'N/A'}</span>
+                                                </div>
+                                                <div class="detail-item">
+                                                    <span class="detail-label">PAN:</span>
+                                                    <span class="detail-value">${staff.pan_number || 'N/A'}</span>
+                                                </div>
+
+                                                <div class="mobile-actions">
+                                                    <a href="/staff-view/${staff.id}">
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M12 9C11.206 9.00524 10.4459 9.32299 9.88447 9.88447C9.32299 10.4459 9.00524 11.206 9 12C9 13.642 10.358 15 12 15C13.641 15 15 13.642 15 12C15 10.359 13.641 9 12 9Z" fill="#092C4C"></path>
+                                                            <path d="M12 5C4.36704 5 2.07304 11.617 2.05204 11.684L1.94604 12L2.05105 12.316C2.07305 12.383 4.36704 19 12 19C19.633 19 21.927 12.383 21.948 12.316L22.054 12L21.949 11.684C21.927 11.617 19.633 5 12 5ZM12 17C6.64904 17 4.57604 13.154 4.07404 12C4.57804 10.842 6.65204 7 12 7C17.351 7 19.424 10.846 19.926 12C19.422 13.158 17.348 17 12 17Z" fill="#092C4C"></path>
+                                                        </svg>
+                                                    </a>
+                                                    <a href="/edit-staff/${staff.id}">
+                                                        <svg width="16" height="20" viewBox="0 0 16 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M15.045 5.401C15.423 5.023 15.631 4.521 15.631 3.987C15.631 3.453 15.423 2.951 15.045 2.573L13.459 0.987001C13.081 0.609001 12.579 0.401001 12.045 0.401001C11.511 0.401001 11.009 0.609001 10.632 0.986001L0 11.585V16H4.413L15.045 5.401ZM12.045 2.401L13.632 3.986L12.042 5.57L10.456 3.985L12.045 2.401ZM2 14V12.415L9.04 5.397L10.626 6.983L3.587 14H2ZM0 18H16V20H0V18Z" fill="#092C4C"></path>
+                                                        </svg>
+                                                    </a>
+                                                    <a class="delete-staff" data-id="${staff.id}" href="javascript:void(0);">
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M5 20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V8H21V6H17V4C17 3.46957 16.7893 2.96086 16.4142 2.58579C16.0391 2.21071 15.5304 2 15 2H9C8.46957 2 7.96086 2.21071 7.58579 2.58579C7.21071 2.96086 7 3.46957 7 4V6H3V8H5V20ZM9 4H15V6H9V4ZM8 8H17V20H7V8H8Z" fill="#092C4C"></path>
+                                                            <path d="M9 10H11V18H9V10ZM13 10H15V18H13V10Z" fill="#092C4C"></path>
+                                                        </svg>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>`,
+
+                                    // Column 2: Staff Role
+                                    // staff.role || 'N/A',
+                                    // Column 6: Email
+                                    staff.email || 'N/A',
+
+                                    // Column 3: Phone
+                                    staff.phone || 'N/A',
+
+                                    // Column 4: GST Number
+                                    staff.gst_number || 'N/A',
+
+                                    // Column 5: PAN Number
+                                    staff.pan_number || 'N/A',
+
+
+
+                                    // Column 7: Country
+                                    staff.country || 'N/A',
+
+                                    // Column 8: City
+                                    staff.city || 'N/A',
+
+                                    // Column 9: Action Buttons (hidden on mobile)
+                                    actionButtons,
+
+                                    // Column 10: Details Toggle (only for mobile)
+                                    detailsToggle
+                                ]);
+                            });
+
+                            table.clear().rows.add(tableBody).draw();
+
+                            // Sync top scrollbar
+                            const topScroll = document.querySelector('.table-scroll-top');
+                            const tableResponsive = document.querySelector('.table-responsive');
+                            const tableElement = document.querySelector('.datanew');
+
+                            if (topScroll && tableResponsive && tableElement) {
+                                const topInnerDiv = topScroll.querySelector('div');
+                                topInnerDiv.style.width = tableElement.scrollWidth + 'px';
+
+                                topScroll.onscroll = () => {
+                                    tableResponsive.scrollLeft = topScroll.scrollLeft;
+                                };
+                                tableResponsive.onscroll = () => {
+                                    topScroll.scrollLeft = tableResponsive.scrollLeft;
+                                };
+                            }
+                        } else {
+                            table.clear().draw();
+                            $(".datanew tbody").html('<tr><td colspan="10">No staff found</td></tr>');
+                        }
+                    },
+                    error: function(xhr) {
+                        // console.log("Error:", xhr);
+                        table.clear().draw();
+                        $(".datanew tbody").html(
+                            '<tr><td colspan="10">Error loading staff data</td></tr>');
+                    },
+                });
+            }
+
+            // Toggle details icon
+            $(document).on('click', '.toggle-details', function() {
+                let icon = $(this).find('i');
+                if (icon.hasClass('fa-plus-circle')) {
+                    icon.removeClass('fa-plus-circle')
+                        .addClass('fa-minus-circle')
+                        .css('color', 'red');
+                } else {
+                    icon.removeClass('fa-minus-circle')
+                        .addClass('fa-plus-circle')
+                        .css('color', '#ff9f43');
+                }
+            });
+
+            // Delete staff function
+            $(document).on('click', '.delete-staff', function() {
+                var staffId = $(this).data('id');
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#ff9f43",
+                    cancelButtonColor: "#6c757d",
+                    confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/api/deleteStaff/${staffId}`,
+                            type: 'POST',
+                            headers: {
+                                "Authorization": "Bearer " + authToken,
+                            },
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content')
+                            },
+                            success: function(response) {
+                                if (response.status) {
+                                    Swal.fire({
+                                        title: "Deleted!",
+                                        text: response.message,
+                                        icon: "success",
+                                        confirmButtonColor: "#ff9f43",
+                                        confirmButtonText: "OK"
+                                    }).then(() => {
+                                        fetchStaff(); // Refresh the table
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: "Error!",
+                                        text: response.message,
+                                        icon: "error",
+                                        confirmButtonColor: "#ff9f43",
+                                        confirmButtonText: "OK"
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                let message = "Something went wrong!";
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                }
+
+                                Swal.fire({
+                                    title: "Error!",
+                                    text: message,
+                                    icon: "error",
+                                    confirmButtonColor: "#ff9f43",
+                                    confirmButtonText: "OK"
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script> --}}
+       <script>
+        $(document).ready(function() {
+            var authToken = localStorage.getItem("authToken");
+            var table = $('.datanew').DataTable({
+                destroy: true,
+                paging: false,
+                info: false,
+                searching: false,
+                dom: 't',
+                ordering: false
+            });
+
+            const selectedSubAdminId = localStorage.getItem('selectedSubAdminId');
+
+            // Pagination state
+            let currentPage = 1;
+            let lastPage = 1;
+            let perPage = 10;
+            let searchQuery = '';
+
+            // Initial fetch
+            fetchStaff(currentPage);
+
+            // Search input handler
+            $('#search-input').on('keyup', function() {
+                searchQuery = $(this).val();
+                fetchStaff(1);
+            });
+
+            // Per-page change handler
+            $('#per-page-select').on('change', function() {
+                perPage = $(this).val();
+                fetchStaff(1);
+            });
+            // Build headers: only include Authorization if a real token exists
+            function getAuthHeaders() {
+                var headers = {};
+                if (authToken && authToken !== 'null' && authToken !== 'undefined') {
+                    headers["Authorization"] = "Bearer " + authToken;
+                }
+                return headers;
+            }
+
+            // Fetch staff with server‑side pagination & search
+            function fetchStaff(page = 1) {
+                let url = `/api/getAllStaff?page=${page}&per_page=${perPage}`;
+                if (selectedSubAdminId) {
+                    url += `&selectedSubAdminId=${selectedSubAdminId}`;
+                }
+                if (searchQuery) {
+                    url += `&search=${encodeURIComponent(searchQuery)}`;
+                }
+
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    dataType: "json",
+                    headers: getAuthHeaders(),
+                    success: function(response) {
+                        if (response.status) {
+                            let staffs = response.data;
+                            let pagination = response.pagination;
+
+                            // Update state
+                            currentPage = pagination.current_page;
+                            lastPage = pagination.last_page;
+
+                            // Update pagination UI
+                            updatePaginationUI(pagination);
+
+                            // Build table rows
+                            let tableBody = [];
+
+                            function capitalizeWords(str) {
+                                if (!str || str.trim() === '') return 'N/A';
+                                return str.replace(/\b\w/g, function(char) {
+                                    return char.toUpperCase();
+                                });
+                            }
+
+                            staffs.forEach((staff) => {
+                                let staffName = capitalizeWords(staff.name);
+                                let departmentName = staff.department_name || 'N/A';
+                                let designationName = staff.designation_name || 'N/A';
+                                let imageUrl = staff.profile_image ?
+                                    '{{ env('ImagePath') . '/storage/' }}' + staff.profile_image :
+                                    '{{ env('ImagePath') . 'admin/assets/img/customer/customer5.jpg' }}';
+
+
+                                let menuItems = '';
+@if (app('hasPermission')(8, 'view'))
+menuItems += `<a class="dropdown-item" href="/staff-view/${staff.id}"><i class="fas fa-eye"></i><span>View</span></a>`;
+@endif
+@if (app('hasPermission')(8, 'edit'))
+menuItems += `<a class="dropdown-item" href="/edit-staff/${staff.id}"><i class="fas fa-edit"></i><span>Edit</span></a>`;
+@endif
+@if (app('hasPermission')(8, 'delete'))
+menuItems += `<a class="dropdown-item text-danger delete-staff" href="javascript:void(0);" data-id="${staff.id}"><i class="fas fa-trash"></i><span>Delete</span></a>`;
+@endif
+if (!menuItems) {
+    menuItems = '<span class="dropdown-item text-muted">No actions</span>';
+}
+
+let actionButtons = `
+    <div class="dropdown staff-action-dropdown">
+        <button class="btn action-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Actions">
+            <i class="fas fa-ellipsis-h icon-desktop"></i>
+            <i class="fas fa-ellipsis-v icon-mobile"></i>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end staff-action-menu">${menuItems}</div>
+    </div>`;    
+
+                                let firstColumn = `
+    <a href="/staff-view/${staff.id}" class="d-flex align-items-center st-desktop-only">
+        <img src="${imageUrl}" alt="staff" class="staff-image">
+        <span class="staff-name">${staffName}</span>
+    </a>
+
+        <div class="st-card" data-staff-id="${staff.id}">
+        <div class="st-card-top">
+            <img src="${imageUrl}" alt="staff" class="staff-image">
+            <div class="st-card-text">
+                <div class="st-card-line1">
+                    <span class="st-card-name">${staffName}</span>
+                    <span class="st-card-sub">${designationName}</span>
+                    <span class="st-card-badge">${departmentName}</span>
+                </div>
+                <div class="st-card-line2">
+                    <span><i class="fas fa-phone"></i> ${staff.phone || 'N/A'}</span>
+                    <span><i class="fas fa-envelope"></i> ${staff.email || 'N/A'}</span>
+                </div>
+            </div>
+        </div>
+    </div>`;
+                                tableBody.push([
+                                    firstColumn,
+                                    staff.email || 'N/A',
+                                    staff.phone || 'N/A',
+                                    departmentName,
+                                    designationName,
+                                    actionButtons
+                                ]);
+                            });
+
+                            table.clear().rows.add(tableBody).draw();
+
+                            // Sync top scrollbar
+                            const topScroll = document.querySelector('.table-scroll-top');
+                            const tableResponsive = document.querySelector('.table-responsive');
+                            const tableElement = document.querySelector('.datanew');
+                            if (topScroll && tableResponsive && tableElement) {
+                                const topInnerDiv = topScroll.querySelector('div');
+                                topInnerDiv.style.width = tableElement.scrollWidth + 'px';
+                                topScroll.onscroll = () => tableResponsive.scrollLeft = topScroll.scrollLeft;
+                                tableResponsive.onscroll = () => topScroll.scrollLeft = tableResponsive.scrollLeft;
+                            }
+                        } else {
+                            table.clear().draw();
+                            $(".datanew tbody").html('<tr><td colspan="7">No staff found</td></tr>');
+                            $('.pagination-controls').hide();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error("Error fetching staff:", xhr);
+                        table.clear().draw();
+                        $(".datanew tbody").html('<tr><td colspan="7">Error loading staff data</td></tr>');
+                        $('.pagination-controls').hide();
+                    }
+                });
+            }
+
+            // Update pagination numbers and info
+            function updatePaginationUI(pagination) {
+                currentPage = pagination.current_page;
+                lastPage = pagination.last_page;
+                let from = (pagination.current_page - 1) * pagination.per_page + 1;
+                let to = pagination.current_page * pagination.per_page;
+
+                if (to > pagination.total) {
+                    to = pagination.total;
+                }
+
+                if (pagination.total === 0) {
+                    from = 0;
+                }
+
+                $('#pagination-from').text(from);
+                $('#pagination-to').text(to);
+                $('#pagination-total').text(pagination.total);
+
+                let paginationHtml = '';
+
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === 1 ? 'disabled' : ''}">
+                        <a class="page-link staff-page-link" href="javascript:void(0);" data-page="${pagination.current_page - 1}">Previous</a>
+                    </li>
+                `;
+
+                // Show only 2 page numbers at a time
+                const visiblePageCount = 2;
+                let startPage = Math.floor((pagination.current_page - 1) / visiblePageCount) * visiblePageCount + 1;
+                let endPage = Math.min(pagination.last_page, startPage + visiblePageCount - 1);
+
+                // Show previous ellipsis if there are pages before startPage
+                if (startPage > 1) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link staff-page-link" href="javascript:void(0);" data-page="${startPage - 1}" data-action="prev-group">..</a>
+                        </li>
+                    `;
+                }
+
+                // Generate page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += `
+                        <li class="page-item ${i === pagination.current_page ? 'active' : ''}">
+                            <a class="page-link staff-page-link" href="javascript:void(0);" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                }
+
+                // Show next ellipsis if there are more pages after endPage
+                if (endPage < pagination.last_page) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link staff-page-link" href="javascript:void(0);" data-page="${endPage + 1}" data-action="next-group">..</a>
+                        </li>
+                    `;
+                }
+
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === pagination.last_page || pagination.last_page === 0 ? 'disabled' : ''}">
+                        <a class="page-link staff-page-link" href="javascript:void(0);" data-page="${pagination.current_page + 1}">Next</a>
+                    </li>
+                `;
+
+                $('#pagination-numbers').html(paginationHtml);
+                $('.pagination-controls').toggle(pagination.total > 0);
+            }
+
+            // Handle page number clicks with ellipsis support
+            $(document).on('click', '.staff-page-link', function(e) {
+                e.preventDefault();
+                let page = $(this).data('page');
+                let action = $(this).data('action');
+
+                // Handle ellipsis clicks to load next/previous groups
+                if (action === 'next-group') {
+                    // Load the page that starts the next group
+                    if (page && page <= lastPage) {
+                        fetchStaff(page);
+                    }
+                    return;
+                }
+
+                if (action === 'prev-group') {
+                    // Load the previous group's starting page
+                    let prevStartPage = Math.max(1, page - 2);
+                    if (prevStartPage >= 1 && prevStartPage <= lastPage) {
+                        fetchStaff(prevStartPage);
+                    }
+                    return;
+                }
+
+                // Regular page navigation
+                if (page && page !== currentPage && page >= 1 && page <= lastPage) {
+                    fetchStaff(page);
+                }
+            });
+
+            $(document).on('click', '.st-card', function (e) {
+                if ($(e.target).closest('a, button').length) return;
+                window.location.href = '/staff-view/' + $(this).data('staff-id');
+            });
+
+            $(document).on('show.bs.dropdown', '.staff-action-dropdown', function () {
+                const $dd = $(this), $menu = $dd.find('.staff-action-menu');
+                if (!$menu.length) return;
+                $dd.data('floating-menu', $menu).data('menu-parent', $menu.parent());
+                $menu.addClass('staff-action-menu-floating').appendTo('body');
+            });
+
+            $(document).on('shown.bs.dropdown', '.staff-action-dropdown', function () {
+                const $dd = $(this), $menu = $dd.data('floating-menu');
+                const btn = $dd.find('.action-menu-toggle')[0];
+                if (!$menu || !btn) return;
+                const r = btn.getBoundingClientRect();
+                const w = $menu[0].offsetWidth || 160, h = $menu[0].offsetHeight || 120;
+                let left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+                let top = r.bottom + 4;
+                if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 4);
+                $menu.css({ position: 'fixed', left: left + 'px', top: top + 'px', transform: 'none' });
+            });
+
+            $(document).on('hidden.bs.dropdown', '.staff-action-dropdown', function () {
+                const $dd = $(this), $menu = $dd.data('floating-menu'), $parent = $dd.data('menu-parent');
+                if ($menu && $parent) {
+                    $menu.removeClass('staff-action-menu-floating').removeAttr('style');
+                    $parent.append($menu);
+                }
+            });
+
+            $(window).on('scroll resize', function () {
+                $('.staff-action-dropdown.show .action-menu-toggle').dropdown('hide');
+            });
+
+            // Delete staff (unchanged)
+            $(document).on('click', '.delete-staff', function() {
+                var staffId = $(this).data('id');
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#ff9f43",
+                    cancelButtonColor: "#6c757d",
+                    confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/api/deleteStaff/${staffId}`,
+                            type: 'POST',
+                            headers: getAuthHeaders(),
+                            data: { _token: $('meta[name="csrf-token"]').attr('content') },
+                            success: function(response) {
+                                if (response.status) {
+                                    Swal.fire({
+                                        title: "Deleted!",
+                                        text: response.message,
+                                        icon: "success",
+                                        confirmButtonColor: "#ff9f43",
+                                        confirmButtonText: "OK"
+                                    }).then(() => {
+                                        fetchStaff(currentPage);
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: "Error!",
+                                        text: response.message,
+                                        icon: "error",
+                                        confirmButtonColor: "#ff9f43",
+                                        confirmButtonText: "OK"
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                let message = "Something went wrong!";
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                }
+                                Swal.fire({
+                                    title: "Error!",
+                                    text: message,
+                                    icon: "error",
+                                    confirmButtonColor: "#ff9f43",
+                                    confirmButtonText: "OK"
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+@endpush

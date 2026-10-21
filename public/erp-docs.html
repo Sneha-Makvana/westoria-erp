@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ERP System Documentation</title>
+  <meta name="description" content="Complete ERP documentation for Laravel inventory, billing, accounting, GST, POS, PWA, reports, APIs, deployment, and maintenance.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --surface: #fff;
+      --text: #121826;
+      --muted: #73717a;
+      --border: #e5e2df;
+      --accent: #ef4e2a;
+      --accent-2: #d93d1d;
+      --accent-soft: #fff0ec;
+      --accent-border: #ffc7b8;
+      --charcoal: #3f3f42;
+      --code: #1f2329;
+      --nav-h: 72px;
+      --side-w: 292px;
+      --toc-w: 238px;
+      --bs-primary: var(--accent);
+      --bs-primary-rgb: 239, 78, 42;
+      --bs-link-color: var(--accent);
+      --bs-link-hover-color: var(--accent-2);
+    }
+    [data-bs-theme="dark"] {
+      --bg: #151515;
+      --surface: #1e1e20;
+      --text: #f5f5f5;
+      --muted: #b4b0ad;
+      --border: #343235;
+      --accent-soft: #351c15;
+      --accent-border: #7c3524;
+      --charcoal: #f2f2f2;
+      --code: #101010;
+      --hero-glow-1: rgba(239, 78, 42, .09);
+      --hero-glow-2: rgba(239, 78, 42, .06);
+    }
+    html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 15.5px;
+      font-weight: 500;
+      line-height: 1.72;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    h1, h2, h3, h4, h5, h6,
+    .navbar-brand,
+    .side-heading {
+      font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .doc-nav {
+      min-height: var(--nav-h);
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(16px);
+      z-index: 1040;
+    }
+    .brand-mark {
+      width: 90px; 
+      display: block;
+      object-fit: contain;
+    }
+    .search-wrap { max-width: 520px; width: min(44vw, 520px); }
+    .search-wrap .form-control {
+      border-color: var(--border);
+      background: var(--bg);
+      padding-left: 2.45rem;
+      border-radius: 12px;
+    }
+    .search-icon { position: absolute; left: .9rem; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .layout {
+      max-width: 1480px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: var(--side-w) minmax(0, 1fr) var(--toc-w);
+      gap: 28px;
+      padding: 28px 24px 64px;
+    }
+    .left-sidebar, .right-toc {
+      position: sticky;
+      top: calc(var(--nav-h) + 20px);
+      align-self: start;
+      max-height: calc(100vh - var(--nav-h) - 36px);
+      overflow: auto;
+    }
+    .panel, .section, .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .panel { padding: 14px; }
+    .side-link, .toc-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      padding: 7px 10px;
+      border-radius: 9px;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .side-link:hover, .side-link.active, .toc-link:hover, .toc-link.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .side-heading {
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font-weight: 700;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 10px;
+      border-radius: 9px;
+    }
+    .side-heading:hover { background: rgba(100,116,139,.08); }
+    .hero {
+      padding: clamp(28px, 5vw, 56px);
+      margin-bottom: 24px;
+      background:
+        radial-gradient(circle at 18% 0%, var(--hero-glow-1, rgba(239, 78, 42, .12)), transparent 34%),
+        radial-gradient(circle at 88% 18%, var(--hero-glow-2, rgba(255, 199, 184, .42)), transparent 30%),
+        var(--surface);
+    }
+    .hero h1 { max-width: 900px; font-size: clamp(2rem, 2.5vw, 4rem); line-height: 1.08; letter-spacing: 0; font-weight: 800; }
+    .section { padding: clamp(22px, 3vw, 38px); margin-bottom: 22px; }
+    .section h2 { font-size: clamp(1.55rem, 2.4vw, 2.15rem); margin-bottom: 14px; font-weight: 800; }
+    .section h3 { font-size: 1.2rem; margin-top: 28px; margin-bottom: 10px; font-weight: 700; }
+    .lead-muted { color: var(--muted); font-size: 1.04rem; }
+    .module-card {
+      height: 100%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 12px;
+    }
+    .icon-box {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: grid; place-items: center;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .callout {
+      margin: 18px 0;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 12px;
+      background: var(--accent-soft);
+    }
+    .callout.tip { border-left-color: #10b981; background: rgba(16,185,129,.08); }
+    .callout.warning { border-left-color: #f59e0b; background: rgba(245,158,11,.09); }
+    .code-shell {
+      position: relative;
+      margin: 16px 0;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #263244;
+      background: var(--code);
+    }
+    .code-title {
+      color: #cbd5e1;
+      background: rgba(255,255,255,.04);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      padding: 8px 12px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    pre { margin: 0; padding: 18px; color: #e5e7eb; overflow: auto; font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: 13.5px; line-height: 1.55; }
+    .copy-btn {
+      border: 1px solid rgba(255,255,255,.18);
+      color: #e5e7eb;
+      background: rgba(255,255,255,.06);
+      border-radius: 8px;
+      padding: 4px 9px;
+      font-size: 12px;
+    }
+    .table { --bs-table-bg: transparent; border-color: var(--border); }
+    .table thead th { background: rgba(100,116,139,.08); color: var(--text); white-space: nowrap; }
+    .badge-soft { color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-border); font-weight: 600; }
+    .step-list { counter-reset: step; list-style: none; padding-left: 0; }
+    .step-list li { counter-increment: step; position: relative; padding-left: 46px; margin-bottom: 16px; }
+    .step-list li::before {
+      content: counter(step);
+      position: absolute; left: 0; top: 1px;
+      width: 30px; height: 30px; border-radius: 50%;
+      display: grid; place-items: center;
+      color: #fff; font-weight: 700; font-size: 13px;
+      background: var(--accent);
+    }
+    .btn-primary {
+      --bs-btn-bg: var(--accent);
+      --bs-btn-border-color: var(--accent);
+      --bs-btn-hover-bg: var(--accent-2);
+      --bs-btn-hover-border-color: var(--accent-2);
+      --bs-btn-active-bg: var(--accent-2);
+      --bs-btn-active-border-color: var(--accent-2);
+      --bs-btn-color: #fff;
+      box-shadow: 0 10px 22px rgba(239, 78, 42, .18);
+    }
+    .btn-outline-secondary {
+      --bs-btn-color: var(--text);
+      --bs-btn-border-color: var(--border);
+      --bs-btn-hover-bg: var(--accent-soft);
+      --bs-btn-hover-border-color: var(--accent-border);
+      --bs-btn-hover-color: var(--accent);
+      --bs-btn-active-bg: var(--accent-soft);
+      --bs-btn-active-border-color: var(--accent-border);
+      --bs-btn-active-color: var(--accent);
+    }
+    .mobile-menu { display: none; }
+    .search-empty { display: none; color: var(--muted); padding: 12px; font-size: 14px; }
+    .offcanvas { background: var(--surface); color: var(--text); }
+    @media (max-width: 1199px) {
+      .layout { grid-template-columns: var(--side-w) minmax(0, 1fr); }
+      .right-toc { display: none; }
+    }
+    @media (max-width: 991px) {
+      .layout { display: block; padding: 18px 14px 48px; }
+      .left-sidebar { display: none; }
+      .mobile-menu { display: inline-flex; }
+      .search-wrap { width: 100%; max-width: none; order: 5; margin-top: 12px; }
+      .doc-nav .container-fluid { flex-wrap: wrap; }
+      .section, .hero { border-radius: 14px; }
+    }
+    @media (max-width: 575px) {
+      .hero, .section { padding: 20px; }
+      .nav-actions { width: 100%; margin-top: 12px; }
+      .nav-actions .btn { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg sticky-top doc-nav">
+    <div class="container-fluid px-3 px-lg-4">
+      <button class="btn btn-outline-secondary mobile-menu me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-label="Open documentation menu">
+        <i class="bi bi-list"></i>
+      </button>
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold me-3" href="#introduction">
+        <img class="brand-mark" src="https://www.fableadtechnolabs.com/static/media/250x150%20(1).b3f5a4db48c7770366ef.webp" alt="Fablead Technolabs logo">
+      </a>
+      <div class="position-relative search-wrap mx-lg-auto">
+        <i class="bi bi-search search-icon"></i>
+        <input id="docSearch" class="form-control" type="search" placeholder="Search documentation, modules, APIs..." aria-label="Search documentation">
+      </div>
+      <div class="nav-actions d-flex align-items-center gap-2 ms-lg-3">
+        <button id="themeToggle" class="btn btn-outline-secondary" type="button" aria-label="Toggle theme"><i class="bi bi-moon-stars"></i></button>
+        <a class="btn btn-primary" href="#getting-started">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+    <div class="offcanvas-header border-bottom">
+      <h5 class="offcanvas-title" id="mobileSidebarLabel">Documentation</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body" id="mobileSidebarBody"></div>
+  </div>
+
+  <div class="layout">
+    <aside class="left-sidebar" aria-label="Documentation sidebar">
+      <div class="panel" id="desktopSidebar">
+        <div class="small fw-bold text-uppercase text-secondary px-2 mb-2">Guides</div>
+        <a class="side-link" href="#introduction"><i class="bi bi-info-circle"></i> Introduction</a>
+        <a class="side-link" href="#getting-started"><i class="bi bi-rocket-takeoff"></i> Getting Started</a>
+        <a class="side-link" href="#system-requirements"><i class="bi bi-cpu"></i> System Requirements</a>
+        <a class="side-link" href="#installation-setup"><i class="bi bi-terminal"></i> Installation & Setup</a>
+        <a class="side-link" href="#environment-configuration"><i class="bi bi-sliders"></i> Environment Configuration</a>
+        <a class="side-link" href="#database-setup"><i class="bi bi-database"></i> Database Setup</a>
+        <button class="side-heading mt-2" data-bs-toggle="collapse" data-bs-target="#moduleNav" aria-expanded="true">Modules <i class="bi bi-chevron-down"></i></button>
+        <div class="collapse show" id="moduleNav">
+          <a class="side-link" href="#admin-dashboard-guide">Dashboard</a>
+          <a class="side-link" href="#module-wise-user-guide">Module-wise User Guide</a>
+          <a class="side-link" href="#role-permission-guide">Roles & Permissions</a>
+          <a class="side-link" href="#accounting-workflow">Accounting Workflow</a>
+          <a class="side-link" href="#gst-tax-workflow">GST & Tax Workflow</a>
+          <a class="side-link" href="#sales-workflow">Sales Workflow</a>
+          <a class="side-link" href="#purchase-workflow">Purchase Workflow</a>
+          <a class="side-link" href="#inventory-workflow">Inventory Workflow</a>
+          <a class="side-link" href="#pos-workflow">POS Workflow</a>
+          <a class="side-link" href="#reports-guide">Reports Guide</a>
+          <a class="side-link" href="#pwa-setup-guide">PWA Setup</a>
+        </div>
+        <button class="side-heading mt-2" data-bs-toggle="collapse" data-bs-target="#technicalNav" aria-expanded="true">Technical <i class="bi bi-chevron-down"></i></button>
+        <div class="collapse show" id="technicalNav">
+          <a class="side-link" href="#common-issues-fixes">Common Issues & Fixes</a>
+          <a class="side-link" href="#api-documentation">API Documentation</a>
+          <a class="side-link" href="#deployment-guide">Deployment Guide</a>
+          <a class="side-link" href="#backup-maintenance">Backup & Maintenance</a>
+          <a class="side-link" href="#faq">FAQ</a>
+        </div>
+        <div class="search-empty" id="searchEmpty">No matching sections found.</div>
+      </div>
+    </aside>
+
+    <main id="mainContent">
+      <header class="hero doc-section" id="introduction">
+        <span class="badge badge-soft rounded-pill px-3 py-2 mb-3">Laravel ERP Documentation</span>
+        <h1 class="fw-bold mb-3">Complete guide for Inventory, Billing, Accounting, GST, POS, PWA, and Reporting.</h1>
+        <p class="lead-muted mb-4">This documentation helps administrators, accountants, sales teams, purchase teams, inventory managers, HR users, and developers configure and operate the ERP from installation through production maintenance.</p>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-primary btn-lg" href="#getting-started"><i class="bi bi-play-circle me-1"></i> Start Setup</a>
+          <a class="btn btn-outline-secondary btn-lg" href="#module-wise-user-guide"><i class="bi bi-boxes me-1"></i> Explore Modules</a>
+        </div>
+      </header>
+
+      <section class="section doc-section" id="getting-started">
+        <h2>Getting Started</h2>
+        <p>The ERP is organized around core business flows: purchase inventory, sell goods or services, collect payments, manage returns, post accounting entries, generate GST-ready reports, and monitor performance from dashboards.</p>
+        <div class="callout tip"><strong>Recommended rollout:</strong> configure company settings first, then taxes, chart of accounts, product categories, suppliers, customers, opening stock, roles, and users.</div>
+        <ol class="step-list">
+          <li><strong>Install dependencies.</strong> Prepare Laravel packages and frontend assets with Composer and npm.</li>
+          <li><strong>Configure environment.</strong> Set database, mail, queue, cache, session, currency, GST, POS, PWA, and application URL values.</li>
+          <li><strong>Run migrations and seeders.</strong> Create tables, permissions, default roles, chart of accounts, and starter settings.</li>
+          <li><strong>Create admin user.</strong> Assign the Super Admin role and verify that the user can access settings.</li>
+          <li><strong>Test workflows.</strong> Create a product, customer, supplier, purchase bill, sales invoice, return, and payment.</li>
+        </ol>
+      </section>
+
+      <section class="section doc-section" id="system-requirements">
+        <h2>System Requirements</h2>
+        <p>Use this baseline for a stable production deployment. Increase resources when invoice volume, report exports, POS terminals, and background jobs grow.</p>
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle">
+            <thead><tr><th>Component</th><th>Minimum</th><th>Recommended</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>PHP</td><td>8.1</td><td>8.2 or 8.3</td><td>Enable BCMath, Ctype, Fileinfo, JSON, Mbstring, OpenSSL, PDO, Tokenizer, XML, ZIP, GD/Imagick.</td></tr>
+              <tr><td>Database</td><td>MySQL 8 / MariaDB 10.6</td><td>MySQL 8+</td><td>Use InnoDB and utf8mb4 collation.</td></tr>
+              <tr><td>Web Server</td><td>Apache / Nginx</td><td>Nginx + PHP-FPM</td><td>Document root should point to Laravel <code>public</code>.</td></tr>
+              <tr><td>Memory</td><td>2 GB RAM</td><td>4 GB+ RAM</td><td>Large PDF/Excel exports may need more.</td></tr>
+              <tr><td>Node.js</td><td>18 LTS</td><td>20 LTS</td><td>Required for frontend builds.</td></tr>
+              <tr><td>Queue</td><td>Database queue</td><td>Redis queue</td><td>Recommended for scheduled reports and sync jobs.</td></tr>
+              <tr><td>SSL</td><td>Optional local</td><td>Required production</td><td>Required for PWA install and secure cookies.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section doc-section" id="installation-setup">
+        <h2>Installation & Setup</h2>
+        <p>Run these commands from the project root. Replace repository and domain placeholders with your actual values.</p>
+        <div class="code-shell"><div class="code-title"><span>Terminal</span><button class="copy-btn">Copy</button></div><pre><code>git clone https://example.com/your-company/erp-system.git
+cd erp-system
+
+composer install --no-dev --optimize-autoloader
+npm install
+npm run build
+
+cp .env.example .env
+php artisan key:generate
+php artisan storage:link</code></pre></div>
+        <div class="callout warning"><strong>Production note:</strong> never run production with <code>APP_DEBUG=true</code>. Debug mode can expose stack traces, database names, and server paths.</div>
+      </section>
+
+      <section class="section doc-section" id="environment-configuration">
+        <h2>Environment Configuration</h2>
+        <p>The <code>.env</code> file controls application URL, database connection, mail, queues, storage, taxation, currency, POS behavior, and PWA settings.</p>
+        <div class="code-shell"><div class="code-title"><span>.env</span><button class="copy-btn">Copy</button></div><pre><code>APP_NAME="ERP System"
+APP_ENV=production
+APP_KEY=base64:GENERATED_APPLICATION_KEY
+APP_DEBUG=false
+APP_URL=https://erp.example.com
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=erp_database
+DB_USERNAME=erp_user
+DB_PASSWORD=replace_with_secure_password
+
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+SESSION_LIFETIME=120
+
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=notifications@example.com
+MAIL_PASSWORD=replace_with_mail_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=notifications@example.com
+MAIL_FROM_NAME="ERP Notifications"
+
+DEFAULT_CURRENCY=INR
+DEFAULT_TIMEZONE=Asia/Kolkata
+GST_ENABLED=true
+GST_STATE_CODE=27
+INVOICE_PREFIX=INV
+PURCHASE_PREFIX=PUR
+POS_RECEIPT_PREFIX=POS
+
+PWA_ENABLED=true
+PWA_CACHE_VERSION=v1
+OFFLINE_SYNC_ENABLED=true
+BARCODE_FORMAT=CODE128
+THERMAL_PRINTER_WIDTH=80</code></pre></div>
+      </section>
+
+      <section class="section doc-section" id="database-setup">
+        <h2>Database Setup</h2>
+        <p>Create a database and user, then migrate and seed the schema. Seeders should create roles, permissions, settings, units, tax rates, and a starter chart of accounts.</p>
+        <div class="code-shell"><div class="code-title"><span>MySQL</span><button class="copy-btn">Copy</button></div><pre><code>CREATE DATABASE erp_database CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'erp_user'@'localhost' IDENTIFIED BY 'replace_with_secure_password';
+GRANT ALL PRIVILEGES ON erp_database.* TO 'erp_user'@'localhost';
+FLUSH PRIVILEGES;</code></pre></div>
+        <div class="code-shell"><div class="code-title"><span>Laravel</span><button class="copy-btn">Copy</button></div><pre><code>php artisan migrate --force
+php artisan db:seed --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache</code></pre></div>
+      </section>
+
+      <section class="section doc-section" id="admin-dashboard-guide">
+        <h2>Admin Dashboard Guide</h2>
+        <p>The dashboard gives leadership and operations teams a live view of sales, purchases, invoices, profits, payments, stock movements, and customer performance.</p>
+        <div class="row g-3">
+          <div class="col-md-6 col-xl-3"><div class="card module-card p-3"><div class="icon-box mb-3"><i class="bi bi-graph-up-arrow"></i></div><h3 class="mt-0">Live Metrics</h3><p>Track sales, purchases, invoices, payments received, outstanding dues, and POS activity.</p></div></div>
+          <div class="col-md-6 col-xl-3"><div class="card module-card p-3"><div class="icon-box mb-3"><i class="bi bi-bar-chart"></i></div><h3 class="mt-0">Sales vs Profit</h3><p>Compare revenue, cost, gross profit, discounts, returns, and net margin by date range.</p></div></div>
+          <div class="col-md-6 col-xl-3"><div class="card module-card p-3"><div class="icon-box mb-3"><i class="bi bi-pie-chart"></i></div><h3 class="mt-0">Pie Charts</h3><p>Analyze category sales, purchase distribution, payment modes, and tax split.</p></div></div>
+          <div class="col-md-6 col-xl-3"><div class="card module-card p-3"><div class="icon-box mb-3"><i class="bi bi-people"></i></div><h3 class="mt-0">Top Customers</h3><p>Identify high-value customers by sales volume, profit contribution, overdue amount, and repeat orders.</p></div></div>
+        </div>
+      </section>
+
+      <section class="section doc-section" id="module-wise-user-guide">
+        <h2>Module-wise User Guide</h2>
+        <p>Each module is designed around a business workflow and automatically posts financial, inventory, and reporting effects where applicable.</p>
+        <div class="row g-3">
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Inventory Management</h3><p>Maintain real-time stock, low-stock alerts, quantity history, product categories, and stock adjustments for damage, loss, or discovery.</p></div></div>
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Sales Management</h3><p>Create sales invoices, track payments, manage returns, restore stock on approved returns, and post receivable entries.</p></div></div>
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Purchase Management</h3><p>Create vendor bills, calculate tax, track purchase payments, handle returns, and update inventory and accounting ledgers.</p></div></div>
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Customer Management</h3><p>Store profiles, transaction history, credit limits, overdue tracking, and customer segmentation.</p></div></div>
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Supplier Management</h3><p>Maintain supplier profiles, supplier ledgers, supplier payment tracking, and payables aging.</p></div></div>
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Human Resources</h3><p>Manage employees, designations, users, role-based access control, and permission management.</p></div></div>
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Accounting</h3><p>Use general ledger, subsidiary ledger, trial balance, balance sheet, P&L, audit trails, and multi-currency support.</p></div></div>
+          <div class="col-md-6"><div class="card module-card p-3"><h3 class="mt-0">Document Management</h3><p>Design dynamic invoice templates, custom headers and footers, packing slips, CSV imports, and dataset exports.</p></div></div>
+        </div>
+      </section>
+
+      <section class="section doc-section" id="role-permission-guide">
+        <h2>Role & Permission Guide</h2>
+        <p>Role-based access protects sensitive actions such as deleting invoices, approving returns, viewing profit reports, editing ledgers, exporting data, and changing tax settings.</p>
+        <div class="table-responsive"><table class="table table-bordered"><thead><tr><th>Role</th><th>Typical Permissions</th><th>Recommended Users</th></tr></thead><tbody>
+          <tr><td>Super Admin</td><td>All modules, settings, backups, users, permissions, audit logs</td><td>System owner</td></tr>
+          <tr><td>Accountant</td><td>Ledger, trial balance, P&L, balance sheet, payments, GST reports</td><td>Finance team</td></tr>
+          <tr><td>Sales Manager</td><td>Invoices, customers, returns, receivables, sales reports</td><td>Sales supervisors</td></tr>
+          <tr><td>Purchase Manager</td><td>Vendor bills, suppliers, returns, payables, purchase reports</td><td>Procurement team</td></tr>
+          <tr><td>Inventory Manager</td><td>Products, categories, stock adjustments, low-stock alerts, quantity history</td><td>Warehouse team</td></tr>
+          <tr><td>POS Cashier</td><td>POS billing, receipt printing, barcode scanning, shift sales</td><td>Retail counter users</td></tr>
+        </tbody></table></div>
+        <div class="callout warning"><strong>Control point:</strong> approval permissions should be separated from entry permissions for returns, stock adjustments, and payment write-offs.</div>
+      </section>
+
+      <section class="section doc-section" id="accounting-workflow">
+        <h2>Accounting Workflow</h2>
+        <p>The accounting module centralizes postings from sales, purchases, payments, returns, stock adjustments, and journal entries. It supports general ledger, subsidiary ledgers, trial balance, balance sheet, profit and loss statement, audit trails, and multi-currency transactions.</p>
+        <ol class="step-list">
+          <li><strong>Configure chart of accounts.</strong> Map cash, bank, receivables, payables, sales, purchases, tax, inventory, discount, and expenses.</li>
+          <li><strong>Post source transactions.</strong> Sales create receivables and revenue; purchases create payables and inventory or expense entries.</li>
+          <li><strong>Track subsidiary ledgers.</strong> Customer and supplier ledgers reconcile against control accounts.</li>
+          <li><strong>Review statements.</strong> Generate trial balance first, then profit and loss, then balance sheet.</li>
+          <li><strong>Use audit trails.</strong> Review who created, edited, approved, deleted, or exported records.</li>
+        </ol>
+      </section>
+
+      <section class="section doc-section" id="gst-tax-workflow">
+        <h2>GST & Tax Workflow</h2>
+        <p>GST reports depend on company GSTIN, place of supply, customer and supplier tax registration, product HSN/SAC codes, and tax rates. The ERP calculates CGST, SGST, IGST, line tax, document tax totals, and rounding.</p>
+        <div class="row g-3">
+          <div class="col-md-4"><div class="card module-card p-3"><h3 class="mt-0">GSTR-1</h3><p>Summarizes outward supplies, invoice details, taxable value, tax amount, credit notes, and debit notes.</p></div></div>
+          <div class="col-md-4"><div class="card module-card p-3"><h3 class="mt-0">GSTR-3B</h3><p>Provides monthly summaries for outward tax, input tax credit, reverse charge, and payable tax.</p></div></div>
+          <div class="col-md-4"><div class="card module-card p-3"><h3 class="mt-0">Tax Calculations</h3><p>Supports inclusive or exclusive tax, line-level tax, document-level totals, and rounding adjustments.</p></div></div>
+        </div>
+        <div class="callout"><strong>Placeholder guidance:</strong> exact return formats may change. Validate exported data with your tax consultant or filing portal before submission.</div>
+      </section>
+
+      <section class="section doc-section" id="sales-workflow">
+        <h2>Sales Workflow</h2>
+        <p>Sales starts with customer selection and ends with invoice posting, stock deduction, payment tracking, and receivable reporting. Returns restore stock only after approval.</p>
+        <ol class="step-list">
+          <li>Select or create a customer profile with GSTIN, billing address, shipping address, credit limit, and terms.</li>
+          <li>Add invoice items, quantities, discounts, tax rates, batch/serial details, and shipping charges.</li>
+          <li>Save as draft or post as confirmed invoice to reduce stock and create accounting entries.</li>
+          <li>Record full or partial payment through cash, bank, UPI, card, cheque, or custom payment mode.</li>
+          <li>Create sales return for damaged, wrong, or rejected goods. Approved returns restore inventory and adjust receivables.</li>
+        </ol>
+      </section>
+
+      <section class="section doc-section" id="purchase-workflow">
+        <h2>Purchase Workflow</h2>
+        <p>Purchase management controls vendor bills, tax calculation, inventory receipts, purchase payments, and returns to suppliers. Approved bills increase stock and create payable entries.</p>
+        <ol class="step-list">
+          <li>Create supplier profile with tax registration, address, bank details, and payment terms.</li>
+          <li>Create vendor bill with products, quantity, rate, discount, tax, freight, and supplier invoice number.</li>
+          <li>Post the bill to update inventory and accounting ledgers.</li>
+          <li>Track payments against the bill and monitor payables aging.</li>
+          <li>Process purchase return to reduce inventory and adjust supplier balance.</li>
+        </ol>
+      </section>
+
+      <section class="section doc-section" id="inventory-workflow">
+        <h2>Inventory Workflow</h2>
+        <p>Inventory is updated from purchases, sales, returns, POS invoices, manual adjustments, and imports. Every movement should be visible in quantity history.</p>
+        <div class="table-responsive"><table class="table table-bordered"><thead><tr><th>Action</th><th>Stock Effect</th><th>Accounting Effect</th><th>Approval</th></tr></thead><tbody>
+          <tr><td>Purchase Bill</td><td>Increase</td><td>Inventory debit, payable credit</td><td>Optional</td></tr>
+          <tr><td>Sales Invoice</td><td>Decrease</td><td>COGS and revenue entries</td><td>No</td></tr>
+          <tr><td>Sales Return</td><td>Increase</td><td>Receivable and revenue adjustment</td><td>Yes</td></tr>
+          <tr><td>Purchase Return</td><td>Decrease</td><td>Payable and inventory adjustment</td><td>Yes</td></tr>
+          <tr><td>Damage/Loss</td><td>Decrease</td><td>Inventory write-off expense</td><td>Yes</td></tr>
+          <tr><td>Discovery</td><td>Increase</td><td>Inventory adjustment income or suspense</td><td>Yes</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section class="section doc-section" id="pos-workflow">
+        <h2>POS Workflow</h2>
+        <p>The POS module is optimized for touch screens, thermal printer support, receipt printing, barcode scanning, barcode generation, barcode printing, quick payments, and counter sales.</p>
+        <ol class="step-list">
+          <li>Open POS terminal and select warehouse, register, cashier, and price list.</li>
+          <li>Scan barcode or search by product name, SKU, category, or code.</li>
+          <li>Apply discount, tax, customer details, and payment mode.</li>
+          <li>Print thermal receipt and optionally send digital invoice by email or SMS gateway placeholder.</li>
+          <li>Close shift and reconcile cash, card, UPI, and return transactions.</li>
+        </ol>
+      </section>
+
+      <section class="section doc-section" id="reports-guide">
+        <h2>Reports Guide</h2>
+        <p>Reports convert ERP transactions into operational and financial insight. Filter by date range, branch, warehouse, customer, supplier, category, salesperson, payment status, and tax status.</p>
+        <div class="row g-3">
+          <div class="col-md-6 col-xl-4"><div class="card module-card p-3"><h3 class="mt-0">Sales Reports</h3><p>Invoice summary, product-wise sales, customer-wise sales, daily sales, returns, discounts, and profit.</p></div></div>
+          <div class="col-md-6 col-xl-4"><div class="card module-card p-3"><h3 class="mt-0">Purchase Reports</h3><p>Vendor bill summary, supplier-wise purchases, tax input, pending bills, and purchase returns.</p></div></div>
+          <div class="col-md-6 col-xl-4"><div class="card module-card p-3"><h3 class="mt-0">Aging Reports</h3><p>Receivables aging and payables aging grouped by 0-30, 31-60, 61-90, and 90+ days.</p></div></div>
+          <div class="col-md-6 col-xl-4"><div class="card module-card p-3"><h3 class="mt-0">Performance Reports</h3><p>Customer performance, supplier performance, sales team output, and product profitability.</p></div></div>
+          <div class="col-md-6 col-xl-4"><div class="card module-card p-3"><h3 class="mt-0">Exports</h3><p>Export report data to Excel, PDF, and CSV for external review and compliance.</p></div></div>
+          <div class="col-md-6 col-xl-4"><div class="card module-card p-3"><h3 class="mt-0">Scheduled Delivery</h3><p>Send daily, weekly, or monthly reports to selected users using queued background jobs.</p></div></div>
+        </div>
+      </section>
+
+      <section class="section doc-section" id="pwa-setup-guide">
+        <h2>PWA Setup Guide</h2>
+        <p>The Progressive Web App layer makes the ERP installable on Android, iOS, Windows, and macOS. Offline functionality can cache the application shell and queue supported actions until the internet returns.</p>
+        <div class="code-shell"><div class="code-title"><span>PWA checklist</span><button class="copy-btn">Copy</button></div><pre><code>1. Enable HTTPS on production.
+2. Create public/manifest.json with app name, icons, theme color, and start URL.
+3. Register service worker from the main layout.
+4. Cache static assets and critical routes.
+5. Store offline POS drafts or syncable records in IndexedDB.
+6. Retry sync when navigator.onLine returns true.
+7. Test install prompt on Android Chrome, desktop Chrome, and iOS Safari.</code></pre></div>
+        <div class="callout warning"><strong>Offline warning:</strong> accounting postings, invoice numbers, and stock-sensitive operations must sync carefully to avoid duplicate document numbers or incorrect stock.</div>
+      </section>
+
+      <section class="section doc-section" id="common-issues-fixes">
+        <h2>Common Issues & Fixes</h2>
+        <p>Use this table to diagnose frequent setup, runtime, printing, export, and permission issues.</p>
+        <div class="table-responsive"><table class="table table-bordered align-middle"><thead><tr><th>Issue</th><th>Likely Cause</th><th>Solution</th></tr></thead><tbody>
+          <tr><td>500 Server Error</td><td>Invalid <code>.env</code>, missing key, permissions, or cached config</td><td>Run <code>php artisan key:generate</code>, check logs, make <code>storage</code> writable, and clear cache.</td></tr>
+          <tr><td>SQLSTATE connection refused</td><td>Wrong DB host, port, username, password, or database</td><td>Verify <code>.env</code>, database service, credentials, and run <code>php artisan config:clear</code>.</td></tr>
+          <tr><td>Assets not loading</td><td>Frontend build missing or wrong <code>APP_URL</code></td><td>Run <code>npm install</code> and <code>npm run build</code>, then verify public asset paths.</td></tr>
+          <tr><td>PDF export fails</td><td>Memory limit or missing font/image dependency</td><td>Increase PHP memory, optimize images, and install required PDF dependencies.</td></tr>
+          <tr><td>Thermal receipt misaligned</td><td>Printer paper width or browser margins</td><td>Set 58mm/80mm print CSS, disable headers/footers, and test driver settings.</td></tr>
+          <tr><td>User cannot access module</td><td>Role missing permission</td><td>Assign permission and ask user to sign out and sign in again.</td></tr>
+          <tr><td>PWA not installable</td><td>Missing HTTPS, manifest, icons, or service worker</td><td>Validate manifest, service worker registration, icons, and secure origin.</td></tr>
+        </tbody></table></div>
+        <div class="code-shell"><div class="code-title"><span>Useful repair commands</span><button class="copy-btn">Copy</button></div><pre><code>php artisan optimize:clear
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+php artisan migrate:status
+php artisan queue:restart</code></pre></div>
+      </section>
+
+      <section class="section doc-section" id="api-documentation">
+        <h2>API Documentation</h2>
+        <p>The ERP can expose REST-style endpoints for mobile apps, integrations, barcode devices, reporting tools, and external accounting systems. These examples use <code>/api/v1</code> as a placeholder base path and bearer token authentication.</p>
+        <div class="code-shell"><div class="code-title"><span>Authentication example</span><button class="copy-btn">Copy</button></div><pre><code>curl -X POST https://erp.example.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"replace_with_password"}'</code></pre></div>
+        <div class="table-responsive"><table class="table table-bordered align-middle"><thead><tr><th>Module</th><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead><tbody>
+          <tr><td>Dashboard</td><td>GET</td><td>/api/v1/dashboard/metrics</td><td>Returns sales, purchase, invoice, profit, and customer metrics.</td></tr>
+          <tr><td>Inventory</td><td>GET</td><td>/api/v1/products</td><td>Lists products with stock, category, SKU, barcode, and status.</td></tr>
+          <tr><td>Inventory</td><td>POST</td><td>/api/v1/stock-adjustments</td><td>Creates damage, loss, discovery, or correction adjustment.</td></tr>
+          <tr><td>Sales</td><td>POST</td><td>/api/v1/sales/invoices</td><td>Creates a sales invoice and posts inventory/accounting effects.</td></tr>
+          <tr><td>Sales</td><td>POST</td><td>/api/v1/sales/returns</td><td>Creates sales return and restores stock after approval.</td></tr>
+          <tr><td>Purchase</td><td>POST</td><td>/api/v1/purchases/bills</td><td>Creates vendor bill with tax and payable entries.</td></tr>
+          <tr><td>Purchase</td><td>POST</td><td>/api/v1/purchases/returns</td><td>Creates purchase return and adjusts inventory/accounting.</td></tr>
+          <tr><td>Customers</td><td>GET</td><td>/api/v1/customers/{id}/ledger</td><td>Returns customer transaction history and outstanding balance.</td></tr>
+          <tr><td>Suppliers</td><td>GET</td><td>/api/v1/suppliers/{id}/ledger</td><td>Returns supplier transaction history and payable balance.</td></tr>
+          <tr><td>Reports</td><td>GET</td><td>/api/v1/reports/sales?from=YYYY-MM-DD&amp;to=YYYY-MM-DD</td><td>Exports filtered sales report data.</td></tr>
+          <tr><td>GST</td><td>GET</td><td>/api/v1/tax/gstr-1</td><td>Returns GSTR-1 summary for the selected period.</td></tr>
+          <tr><td>POS</td><td>POST</td><td>/api/v1/pos/orders</td><td>Creates POS sale with receipt and payment details.</td></tr>
+        </tbody></table></div>
+      </section>
+
+      <section class="section doc-section" id="deployment-guide">
+        <h2>Deployment Guide</h2>
+        <p>Deploy the ERP with SSL, queue workers, scheduled tasks, restricted file permissions, and optimized Laravel caches. The web server document root must point to the <code>public</code> directory.</p>
+        <div class="code-shell"><div class="code-title"><span>Production deployment commands</span><button class="copy-btn">Copy</button></div><pre><code>git pull origin main
+composer install --no-dev --optimize-autoloader
+npm ci
+npm run build
+
+php artisan down
+php artisan migrate --force
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan queue:restart
+php artisan up</code></pre></div>
+        <h3>Scheduler</h3>
+        <p>Add the Laravel scheduler to cron so scheduled reports, overdue alerts, backup jobs, and sync retries can run automatically.</p>
+        <div class="code-shell"><div class="code-title"><span>Crontab</span><button class="copy-btn">Copy</button></div><pre><code>* * * * * cd /var/www/erp-system && php artisan schedule:run >> /dev/null 2>&1</code></pre></div>
+      </section>
+
+      <section class="section doc-section" id="backup-maintenance">
+        <h2>Backup & Maintenance</h2>
+        <p>Backups should include database dumps, uploaded documents, invoice templates, generated reports when required, and environment configuration stored securely outside the web root.</p>
+        <div class="table-responsive"><table class="table table-bordered"><thead><tr><th>Task</th><th>Frequency</th><th>Owner</th><th>Validation</th></tr></thead><tbody>
+          <tr><td>Database backup</td><td>Daily</td><td>System admin</td><td>Restore to staging monthly.</td></tr>
+          <tr><td>Storage backup</td><td>Daily or weekly</td><td>System admin</td><td>Check invoice PDFs, imports, exports, and uploads.</td></tr>
+          <tr><td>Security updates</td><td>Monthly</td><td>Developer/admin</td><td>Run tests and deploy during maintenance window.</td></tr>
+          <tr><td>Queue monitoring</td><td>Daily</td><td>Admin</td><td>Verify failed jobs and retry safe jobs.</td></tr>
+          <tr><td>Audit review</td><td>Weekly</td><td>Finance/admin</td><td>Review deleted records, permission changes, and manual adjustments.</td></tr>
+        </tbody></table></div>
+        <div class="code-shell"><div class="code-title"><span>Manual backup example</span><button class="copy-btn">Copy</button></div><pre><code>mysqldump -u erp_user -p erp_database > backups/erp_database_YYYY_MM_DD.sql
+tar -czf backups/erp_storage_YYYY_MM_DD.tar.gz storage/app/public</code></pre></div>
+      </section>
+
+      <section class="section doc-section" id="faq">
+        <h2>FAQ</h2>
+        <h3>Can the ERP run on shared hosting?</h3>
+        <p>It can run on capable shared hosting if PHP version, extensions, database, cron, storage permissions, and public directory routing are supported. VPS hosting is recommended for queues, scheduled reports, backups, and larger exports.</p>
+        <h3>Does the system support multiple currencies?</h3>
+        <p>Yes. Configure default currency, exchange rates, currency rounding, and posting rules before entering multi-currency transactions.</p>
+        <h3>How are sales returns handled?</h3>
+        <p>A sales return creates a return document, adjusts the customer balance, restores stock after approval, and records accounting entries for revenue and tax reversal where applicable.</p>
+        <h3>Can reports be exported?</h3>
+        <p>Yes. Reports can be exported to Excel, PDF, and CSV. Scheduled delivery can send selected reports to configured recipients using queued jobs.</p>
+        <h3>Is offline POS supported?</h3>
+        <p>Offline POS can be supported with PWA caching and IndexedDB draft storage. Final posting should sync when connectivity returns to preserve invoice numbering, stock accuracy, and accounting integrity.</p>
+      </section>
+    </main>
+
+    <aside class="right-toc" aria-label="On this page">
+      <div class="panel">
+        <div class="small fw-bold text-uppercase text-secondary px-2 mb-2">On this page</div>
+        <nav id="tocLinks"></nav>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const html = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    const storedTheme = localStorage.getItem('erp-doc-theme');
+    if (storedTheme) {
+      html.setAttribute('data-bs-theme', storedTheme);
+      themeToggle.innerHTML = storedTheme === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+    }
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-bs-theme', nextTheme);
+      localStorage.setItem('erp-doc-theme', nextTheme);
+      themeToggle.innerHTML = nextTheme === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+    });
+
+    document.querySelectorAll('.copy-btn').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const code = button.closest('.code-shell').querySelector('code').innerText;
+        await navigator.clipboard.writeText(code);
+        const old = button.textContent;
+        button.textContent = 'Copied';
+        setTimeout(() => button.textContent = old, 1400);
+      });
+    });
+
+    document.getElementById('mobileSidebarBody').innerHTML = document.getElementById('desktopSidebar').innerHTML;
+    document.querySelectorAll('#mobileSidebarBody a').forEach((link) => {
+      link.addEventListener('click', () => {
+        const instance = bootstrap.Offcanvas.getInstance(document.getElementById('mobileSidebar'));
+        if (instance) instance.hide();
+      });
+    });
+
+    const sections = Array.from(document.querySelectorAll('.doc-section'));
+    const tocLinks = document.getElementById('tocLinks');
+    sections.forEach((section) => {
+      const heading = section.querySelector('h1, h2');
+      if (!heading) return;
+      const link = document.createElement('a');
+      link.className = 'toc-link';
+      link.href = '#' + section.id;
+      link.textContent = heading.textContent;
+      tocLinks.appendChild(link);
+    });
+
+    const navLinks = Array.from(document.querySelectorAll('.side-link, .toc-link'));
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      navLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === '#' + visible.target.id));
+    }, { rootMargin: '-20% 0px -68% 0px', threshold: [0.1, 0.25, 0.5] });
+    sections.forEach(section => observer.observe(section));
+
+    const searchInput = document.getElementById('docSearch');
+    const searchEmpty = document.getElementById('searchEmpty');
+    const sideLinks = Array.from(document.querySelectorAll('#desktopSidebar .side-link'));
+    searchInput.addEventListener('input', () => {
+      const query = searchInput.value.trim().toLowerCase();
+      let matches = 0;
+      sections.forEach(section => {
+        const isMatch = !query || section.innerText.toLowerCase().includes(query);
+        section.style.display = isMatch ? '' : 'none';
+      });
+      sideLinks.forEach(link => {
+        const target = document.querySelector(link.getAttribute('href'));
+        const isMatch = target && target.style.display !== 'none';
+        link.style.display = isMatch ? '' : 'none';
+        if (isMatch) matches++;
+      });
+      searchEmpty.style.display = query && matches === 0 ? 'block' : 'none';
+    });
+  </script>
+</body>
+</html>

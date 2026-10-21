@@ -1,0 +1,2701 @@
+@extends('layout.app')
+
+@section('title', 'Expense Report')
+
+@section('content')
+    @php
+        $showExpenseReportChart = \App\Services\StaffDepartmentScope::canShowReportChart(\App\Services\StaffDepartmentScope::REPORT_EXPENSE);
+    @endphp
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <style>
+        .dataTables_filter,
+        .dataTables_length,
+        .dataTables_info,
+        .dataTables_paginate {
+            display: none !important;
+        }
+
+        /* Custom Pagination Styling */
+        .pagination .page-item .page-link {
+            background-color: #5d6d7e;
+            color: #fff;
+            border: none;
+            margin: 0 3px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 576px) {
+            .pagination .page-item .page-link {
+                padding: 4px 10px;
+                margin: 0 2px;
+                font-size: 12px;
+            }
+        }
+
+        /* Previous and Next buttons */
+        .pagination .page-item:first-child .page-link,
+        .pagination .page-item:last-child .page-link {
+            background-color: #fff;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-item:first-child .page-link:hover,
+        .pagination .page-item:last-child .page-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #ff9f43 !important;
+            /* Orange for active page */
+            color: #fff;
+            border: none;
+        }
+
+        .pagination .page-item .page-link:hover {
+            background-color: #4a5766;
+            color: #fff;
+        }
+
+        .pagination .page-item.active .page-link:hover {
+            background-color: #e68a35 !important;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background-color: #fff !important;
+            color: #dee2e6 !important;
+            border: 1px solid #dee2e6 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+
+        /* Search input styling */
+        .search-input input {
+            padding-left: 35px !important;
+            border-radius: 5px;
+        }
+
+        .search-input {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-set {
+            margin-bottom: 5px;
+        }
+
+        .btn-searchset {
+            position: absolute;
+            left: 10px;
+            z-index: 10;
+            padding: 0;
+            top: 4px !important;
+        }
+
+        .dataTables_info {
+            float: left;
+            padding-right: 15px;
+            font-size: 12px;
+            color: #5e5873;
+            font-weight: 600;
+        }
+
+        .table-scroll-top {
+            display: none;
+        }
+
+        .table-scroll-top {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .table-scroll-top div {
+            height: 1px;
+        }
+
+        #expenseChart {
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 320px;
+        }
+
+        .total_expense {
+            font-weight: 600;
+            color: #1b2850;
+            border: 1px solid #1b2850;
+        }
+
+        .mobile-toggle-btn-table {
+            background: #ff9f43;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            padding: 0;
+            margin: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-toggle-btn-table:hover {
+            background: #ff8c2e;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .mobile-toggle-btn-table.minus {
+            background: #dc3545;
+        }
+
+        .mobile-toggle-btn-table.minus:hover {
+            background: #c82333;
+        }
+
+        /* Force hide toggle-details by default */
+        .toggle-details {
+            display: none !important;
+        }
+
+        /* Word wrapping for Expense Name and Expense For columns */
+        .datanew td:nth-child(2),
+        .datanew td:nth-child(5) {
+            white-space: normal !important;
+            word-wrap: break-word;
+            /* word-break: break-word; */
+            max-width: 100px;
+            /* adjust as needed */
+        }
+
+        .datanew th:nth-child(2),
+        .datanew th:nth-child(5) {
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        /* Desktop: show all columns normally, HIDE details column */
+        @media (min-width: 768px) {
+
+            table.datanew thead th,
+            table.datanew tbody td {
+                display: table-cell !important;
+            }
+
+            /* Hide the Details toggle column on desktop */
+            table.datanew thead th.details-column,
+            table.datanew tbody td.details-column {
+                display: none !important;
+            }
+
+            /* Ensure checkbox column is visible */
+            table.datanew thead th:first-child,
+            table.datanew tbody td:first-child {
+                display: table-cell !important;
+            }
+        }
+
+        /* Mobile: hide non-essential columns, show Details toggle */
+        @media (max-width: 767px) {
+
+            /* Override DataTables responsive classes */
+            table.datanew th.dt-control,
+            table.datanew td.dt-control {
+                display: none !important;
+            }
+
+            /* Hide columns 3, 4, 5 on mobile (Amount, Date, Expense For) */
+            table.datanew thead th:nth-child(3),
+            table.datanew tbody td:nth-child(3),
+            table.datanew thead th:nth-child(4),
+            table.datanew tbody td:nth-child(4),
+            table.datanew thead th:nth-child(5),
+            table.datanew tbody td:nth-child(5) {
+                display: none !important;
+            }
+
+            /* Show checkbox column on mobile */
+            table.datanew thead th:first-child,
+            table.datanew tbody td:first-child {
+                display: table-cell !important;
+                width: 40px;
+                min-width: 40px;
+                max-width: 40px;
+            }
+
+            /* Show Expense Name column on mobile */
+            table.datanew thead th:nth-child(2),
+            table.datanew tbody td:nth-child(2) {
+                display: table-cell !important;
+                min-width: calc(80vw - 175px) !important;
+                max-width: calc(80vw - 150px) !important;
+                margin-top: 11px;
+
+            }
+
+            /* Show details column on mobile */
+            table.datanew thead th.details-column,
+            table.datanew tbody td.details-column {
+                display: table-cell !important;
+                text-align: center;
+                vertical-align: top !important;
+                width: 56px !important;
+                min-width: 56px !important;
+                max-width: 56px !important;
+                padding: 12px 6px !important;
+            }
+
+            /* Show toggle-details only on mobile */
+            .toggle-details {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                margin-left: auto;
+            }
+
+            .toggle-details i,
+            .toggle-details .mobile-toggle-btn-table {
+                pointer-events: none;
+            }
+
+            /* Style for expense name wrapping */
+            table.datanew tbody td:nth-child(2) {
+                display: table-cell !important;
+                width: calc(100% - 96px) !important;
+                max-width: calc(100vw - 136px) !important;
+                vertical-align: top !important;
+            }
+
+            table.datanew tbody td:nth-child(2) > .expense-item-wrapper {
+                width: 100%;
+            }
+
+            table.datanew tbody td:nth-child(2) a {
+                display: flex !important;
+                align-items: center !important;
+                text-align: left !important;
+                word-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+                line-height: 1.3 !important;
+                text-decoration: none !important;
+                color: #212529 !important;
+                font-weight: 500;
+                width: 100%;
+            }
+
+            .expense-name {
+                display: inline-block !important;
+                font-size: 14px !important;
+                word-break: break-word !important;
+                hyphens: auto !important;
+                -webkit-hyphens: auto !important;
+                -ms-hyphens: auto !important;
+                width: 100%;
+            }
+
+            /* Limit to 2 lines with ellipsis */
+            .expense-name.truncated {
+                display: -webkit-box !important;
+                -webkit-line-clamp: 2 !important;
+                -webkit-box-orient: vertical !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+
+            /* Make sure checkbox is visible and properly aligned */
+            table.datanew tbody td:first-child .checkboxs {
+                display: block;
+                margin: 0 auto;
+                text-align: center;
+            }
+
+            table.datanew tbody td:first-child {
+                padding: 8px 5px !important;
+            }
+        }
+
+        @media screen and (max-width: 767.98px) {
+            .table-scroll-top {
+                display: block;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .search-set {
+                margin-right: 1rem !important;
+            }
+
+            /* Adjust filter layout for mobile */
+            .table-top .search-set {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-start !important;
+                width: 100%;
+            }
+
+            .search-set .form-select-sm {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .wordset {
+                width: 100%;
+                margin-top: 10px !important;
+            }
+
+            .wordset ul {
+                width: 100%;
+            }
+
+            .wordset ul li {
+                width: 100%;
+            }
+
+            .wordset ul li a button {
+                width: 100%;
+            }
+
+            #expenseType-filter {
+                min-width: 150px !important;
+            }
+        }
+
+        /* Tablet specific fixes */
+        @media screen and (width: 767px) {
+            .table-responsive {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            table.datanew thead th.details-column,
+            table.datanew tbody td.details-column {
+                display: table-cell !important;
+                width: 56px !important;
+                min-width: 56px !important;
+                max-width: 56px !important;
+                vertical-align: top !important;
+            }
+
+            .toggle-details {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                z-index: 10 !important;
+            }
+        }
+
+        /* Fade out animation for error messages */
+        .fade-out {
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .fade-out.hidden {
+            opacity: 0;
+        }
+
+        /* Collapsible details styling */
+        /* .collapse-details {
+            margin-top: 10px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #ff9f43;
+        } */
+
+        .detail-item {
+            display: flex;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            min-width: 100px;
+            color: #495057;
+        }
+
+        .detail-value {
+            color: #212529;
+            flex: 1;
+        }
+
+        .expense-details-row {
+            display: none;
+        }
+
+        .expense-details-row.show {
+            display: table-row;
+        }
+
+        .expense-details-row td {
+            padding-top: 0 !important;
+            border-top: 0 !important;
+        }
+
+        @media screen and (max-width: 575.98px) {
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                /* 🔥 main fix */
+                align-items: center;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                gap: 10px;
+            }
+
+            .page-title h4 {
+                margin: 0;
+                /* font-size: 18px; */
+                white-space: nowrap;
+            }
+
+            .total-expense-summary {
+                width: auto;
+                /* ❌ remove 100% */
+                margin-top: 0;
+                /* ❌ remove spacing */
+            }
+
+            .total-expense-summary h5 {
+                margin: 0 !important;
+                width: auto;
+                /* ❌ remove 70% */
+                text-align: right;
+                /* align amount right */
+                white-space: nowrap;
+            }
+
+            /* Chart body - adjust height */
+            .card-body[style*="height: 360px"] {
+                height: 280px !important;
+            }
+
+            #productChart {
+                max-height: 250px !important;
+            }
+
+            /* Filters section - stack vertically */
+            .table-top .search-set {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-start !important;
+                width: 100%;
+            }
+
+            .search-set .form-select-sm {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            /* Action buttons - stack */
+            .wordset {
+                width: 100%;
+            }
+
+            .wordset ul {
+                flex-direction: column !important;
+                gap: 10px !important;
+                width: 100%;
+            }
+
+            .wordset ul li {
+                width: 100%;
+                margin: 0 !important;
+            }
+
+            .wordset ul li .btn,
+            .wordset ul li .dropdown {
+                width: 100%;
+            }
+
+            .wordset ul li .btn {
+                width: 100% !important;
+            }
+
+            .wordset ul li a {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                padding: 10px;
+            }
+
+            /* GST Reports dropdown - mobile responsive */
+            .wordset ul li .dropdown {
+                width: 100%;
+            }
+
+            .wordset ul li .dropdown .btn {
+                width: 100% !important;
+                text-align: center;
+            }
+
+            .wordset ul li .dropdown-menu {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .wordset ul li .dropdown-menu li {
+                width: 100%;
+            }
+
+            .wordset ul li .dropdown-menu .dropdown-item {
+                padding: 12px 15px;
+                text-align: center;
+                font-size: 14px;
+            }
+
+            /* Ensure dropdown opens on mobile */
+            @media screen and (max-width: 767.98px) {
+                .wordset ul li .dropdown-menu {
+                    left: 0 !important;
+                    right: 0 !important;
+                    transform: translate3d(0, 0, 0) !important;
+                    position: absolute !important;
+                    margin-top: 5px;
+                }
+            }
+
+            /* Table responsive styles */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .datanew1 {
+                font-size: 11px;
+            }
+
+            .datanew1 th,
+            .datanew1 td {
+                padding: 6px 3px;
+            }
+
+            /* Show only Checkbox, Product Name and Details */
+            .datanew1 thead th:nth-child(3),
+            .datanew1 tbody td:nth-child(3),
+            .datanew1 thead th:nth-child(4),
+            .datanew1 tbody td:nth-child(4),
+            .datanew1 thead th:nth-child(5),
+            .datanew1 tbody td:nth-child(5) {
+                display: none;
+            }
+
+            /* Center Details column */
+            .datanew1 thead th:nth-child(6),
+            .datanew1 tbody td:nth-child(6) {
+                text-align: center;
+                width: 60px;
+                min-width: 60px;
+            }
+
+            .purchase-toggle-btn-table {
+                margin: 0 auto;
+                display: block;
+            }
+        }
+
+        /* Mobile view for total expense */
+        @media (max-width: 767.98px) {
+            .page-header {
+                flex-wrap: wrap;
+            }
+
+
+            #total-expense-amount {
+                display: inline-block;
+                margin-left: 0 !important;
+            }
+        }
+
+        /* Expense specific styling */
+        .expense-amount-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 13px;
+            margin-left: 8px;
+        }
+
+        .expense-mobile-header,
+        .expense-mobile-search,
+        .expense-filter-backdrop,
+        .expense-filter-sheet,
+        .expense-mobile-cards {
+            display: none;
+        }
+
+        @media screen and (max-width: 1024.98px),
+                screen and (width: 1032px) and (height: 1376px),
+                screen and (width: 1280px) and (height: 800px) {
+            .content.expense-report-page {
+                padding: 6px 6px 90px !important;
+            }
+
+            .expense-report-page > .page-header {
+                display: none !important;
+            }
+
+            .expense-mobile-header {
+                display: block;
+                margin-bottom: 8px;
+                padding: 12px 10px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+
+            .expense-mobile-heading {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+
+            .expense-mobile-title {
+                color: #1b2850;
+                font-size: 15px;
+                font-weight: 600;
+            }
+
+            .expense-mobile-total {
+                color: #ff9f43;
+                font-size: 13px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            .expense-mobile-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .expense-mobile-action,
+            .expense-mobile-select-all {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 7px;
+                height: 38px;
+                margin: 0;
+                border: 0;
+                border-radius: 8px;
+                background: #fff3e6;
+                color: #b85e06;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .expense-mobile-select-all {
+                background: #f1f2f6;
+                color: #1b2850;
+            }
+
+            .expense-mobile-select-all input,
+            .expense-card-checkbox {
+                width: 18px;
+                height: 18px;
+                margin: 0;
+                accent-color: #ff9f43;
+            }
+
+            .expense-mobile-search {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 0 8px;
+                padding: 8px 10px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+            .expense-mobile-search #expense-mobile-search-slot {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            .expense-mobile-search .search-input {
+                flex: 1 1 auto;
+                min-width: 0;
+                 width: 100%;
+                margin: 0;
+            }
+
+            .expense-mobile-search .search-input input {
+                width: 100%;
+                height: 40px !important;
+                border-radius: 10px;
+                font-size: 13px;
+            }
+
+            .expense-mobile-search .btn-searchset {
+                top: 50% !important;
+                transform: translateY(-50%);
+            }
+
+            .expense-filter-toggle {
+                position: relative;
+                flex: 0 0 40px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+                padding: 0;
+                border: 0;
+                border-radius: 50%;
+                background: #ff9f43;
+                color: #fff;
+                font-size: 15px;
+                box-shadow: 0 2px 6px rgba(255, 159, 67, .32);
+            }
+
+            .expense-filter-toggle.has-active {
+                background: #e8892c;
+            }
+
+            .expense-filter-count {
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                min-width: 18px;
+                height: 18px;
+                padding: 0 5px;
+                border-radius: 999px;
+                background: #1b2850;
+                color: #fff;
+                font-size: 11px;
+                line-height: 18px;
+                text-align: center;
+            }
+
+            .expense-filter-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 1040;
+                display: block;
+                background: rgba(16, 24, 40, .45);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity .2s ease;
+            }
+
+            .expense-filter-sheet {
+                position: fixed;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                z-index: 1045;
+                display: flex;
+                flex-direction: column;
+                max-height: 85vh;
+                background: #fff;
+                border-radius: 16px 16px 0 0;
+                box-shadow: 0 -8px 24px rgba(16, 24, 40, .18);
+                transform: translateY(105%);
+                transition: transform .25s ease;
+            }
+
+            body.expense-filter-open {
+                overflow: hidden;
+            }
+
+            body.expense-filter-open .expense-filter-backdrop {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            body.expense-filter-open .expense-filter-sheet {
+                transform: translateY(0);
+            }
+
+            body.expense-filter-open .mobile-bottom-nav,
+            body.expense-filter-open .floating-calculator-wrapper {
+                display: none !important;
+            }
+
+            .expense-filter-sheet-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 18px;
+                border-bottom: 1px solid #eef0f4;
+                color: #1b2850;
+                font-size: 18px;
+                font-weight: 600;
+            }
+
+            .expense-filter-sheet-close {
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: #1b2850;
+                font-size: 20px;
+            }
+
+            .expense-filter-sheet-body {
+                flex: 1 1 auto;
+                overflow-y: auto;
+                padding: 4px 18px;
+            }
+
+            .expense-filter-field {
+                display: block;
+                width: 100%;
+                margin: 0;
+                padding: 12px 0;
+                border-bottom: 1px solid #eef0f4;
+            }
+
+            .expense-filter-field > label {
+                display: block;
+                margin: 0 0 6px;
+                color: #344054;
+                font-size: 14px;
+            }
+
+            .expense-filter-field select,
+            .expense-filter-field input {
+                width: 100% !important;
+                min-width: 0 !important;
+                height: 40px !important;
+                margin: 0 !important;
+                border-radius: 8px !important;
+                font-size: 14px;
+            }
+
+            .expense-filter-field > div {
+                width: 100%;
+                margin: 0 !important;
+            }
+
+            .expense-filter-sheet-foot {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+                border-top: 1px solid #eef0f4;
+            }
+
+            .expense-filter-clear,
+            .expense-filter-apply {
+                height: 46px;
+                border: 0;
+                border-radius: 24px;
+                font-size: 15px;
+                font-weight: 600;
+            }
+
+            .expense-filter-clear {
+                background: #eef0f4;
+                color: #475467;
+            }
+
+            .expense-filter-apply {
+                background: #ff9f43;
+                color: #fff;
+            }
+
+            .expense-report-page > .card:not(.expense-report-chart) {
+                margin: 0 !important;
+                border: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+            .expense-report-page > .card:not(.expense-report-chart) > .card-body {
+                overflow: visible !important;
+                padding: 0 !important;
+            }
+
+            .expense-report-page .table-top .wordset,
+            .expense-report-page .expense-table-wrapper {
+                display: none !important;
+            }
+
+            .expense-mobile-cards {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .expense-mobile-card {
+                padding: 12px;
+                border: 1px solid #edf0f4;
+                border-left: 3px solid #ff9f43;
+                border-radius: 12px;
+                background: #fff;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+
+            .expense-mobile-card-top {
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .expense-card-checkbox-wrap {
+                display: inline-flex;
+                flex: 0 0 auto;
+                align-items: center;
+                margin: 1px 0 0;
+            }
+
+            .expense-card-main {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            .expense-card-title {
+                display: block;
+                color: #1b2850 !important;
+                font-size: 14px;
+                font-weight: 600;
+                line-height: 1.35;
+                overflow-wrap: anywhere;
+                text-decoration: none !important;
+            }
+
+            .expense-card-date {
+                margin-top: 3px;
+                color: #8b93a7;
+                font-size: 11px;
+            }
+
+            .expense-card-amount {
+                flex: 0 0 auto;
+                color: #2e7d32;
+                font-size: 14px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            .expense-card-meta {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin: 9px 0 0 26px;
+            }
+
+            .expense-card-type {
+                max-width: 100%;
+                overflow: hidden;
+                padding: 3px 9px;
+                border-radius: 12px;
+                background: #fff3e6;
+                color: #b85e06;
+                font-size: 10px;
+                font-weight: 700;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .expense-card-description {
+                margin: 9px 0 0 26px;
+                padding-top: 8px;
+                border-top: 1px dashed #eceef3;
+                color: #475467;
+                font-size: 12px;
+                line-height: 1.45;
+                overflow-wrap: anywhere;
+            }
+
+            .expense-card-description-label {
+                margin-right: 5px;
+                color: #8b93a7;
+                font-size: 11px;
+                font-weight: 600;
+            }
+
+            .expense-card-action {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                margin: 8px 0 0 26px;
+                color: #d97706 !important;
+                font-size: 12px;
+                font-weight: 600;
+                text-decoration: none !important;
+            }
+
+            .expense-mobile-empty {
+                padding: 30px 12px;
+                border-radius: 12px;
+                background: #fff;
+                color: #667085;
+                font-size: 13px;
+                text-align: center;
+            }
+
+            .expense-report-page .pagination-controls {
+                gap: 12px;
+                margin-top: 10px !important;
+                padding: 10px;
+                border-radius: 12px;
+                background: #fff;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+
+            .expense-report-page .pagination-controls > div {
+                flex-wrap: wrap;
+                justify-content: center;
+                row-gap: 8px;
+                margin: 0 !important;
+            }
+
+            .expense-report-page .pagination-controls .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .expense-report-chart {
+                margin-bottom: 10px !important;
+                border-radius: 12px;
+                overflow: hidden;
+            }
+
+            .expense-report-chart .card-header {
+                padding: 12px 14px;
+            }
+
+            .expense-report-chart .card-body {
+                height: 260px !important;
+                padding: 12px !important;
+            }
+
+            .expense-report-chart #expenseChart {
+                max-height: 236px !important;
+            }
+
+            :root[data-theme="dark"] .expense-mobile-header,
+            :root[data-theme="dark"] .expense-mobile-search,
+            :root[data-theme="dark"] .expense-filter-sheet,
+            :root[data-theme="dark"] .expense-mobile-card,
+            :root[data-theme="dark"] .expense-mobile-empty,
+            :root[data-theme="dark"] .expense-report-page .pagination-controls {
+                background: #1e293b;
+            }
+
+            :root[data-theme="dark"] .expense-mobile-title,
+            :root[data-theme="dark"] .expense-card-title,
+            :root[data-theme="dark"] .expense-filter-sheet-head {
+                color: #f8fafc !important;
+            }
+        }
+
+        @media screen and (min-width: 768px) and (max-width: 1024.98px),
+                screen and (width: 1032px) and (height: 1376px),
+                screen and (width: 1280px) and (height: 800px) {
+            .expense-mobile-cards {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                align-items: start;
+                gap: 10px;
+            }
+
+            .expense-mobile-empty {
+                grid-column: 1 / -1;
+            }
+
+            .expense-report-chart .card-body {
+                height: 300px !important;
+            }
+
+            .expense-report-chart #expenseChart {
+                max-height: 276px !important;
+            }
+        }
+        .expense-mobile-actions-box {
+    display: none;
+}
+
+        @media screen and (max-width: 1024.98px),
+                screen and (width: 1032px) and (height: 1376px),
+                screen and (width: 1280px) and (height: 800px) {
+            .expense-mobile-actions-box {
+                display: block;
+                margin: 0 0 8px;
+                padding: 8px 10px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            }
+
+            .expense-mobile-actions-box .expense-mobile-actions {
+                margin: 0;
+            }
+
+            /* header ma have buttons nathi, etle niche nu gap kadhi nakho */
+            .expense-mobile-heading {
+                margin-bottom: 0;
+            }
+
+            :root[data-theme="dark"] .expense-mobile-actions-box {
+                background: #1e293b;
+            }
+        }
+    </style>
+
+    @if (session('error'))
+        <div class="alert alert-danger" id="error-message">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    <div class="content expense-report-page">
+        <div class="expense-mobile-header">
+            <div class="expense-mobile-heading">
+                <div class="expense-mobile-title">Expense Report</div>
+                <div class="expense-mobile-total" id="expense-mobile-total">Total:</div>
+            </div>
+        </div>
+
+        <div class="expense-filter-backdrop" id="expense-filter-backdrop"></div>
+        <section class="expense-filter-sheet" id="expense-filter-sheet" role="dialog" aria-modal="true"
+            aria-labelledby="expense-filter-sheet-title">
+            <div class="expense-filter-sheet-head">
+                <span id="expense-filter-sheet-title">Filter Expenses</span>
+                <button type="button" class="expense-filter-sheet-close" data-expense-filter-close
+                    aria-label="Close filters">&times;</button>
+            </div>
+            <div class="expense-filter-sheet-body" id="expense-filter-sheet-body"></div>
+            <div class="expense-filter-sheet-foot">
+                <button type="button" class="expense-filter-clear" id="expense-filter-clear">Clear</button>
+                <button type="button" class="expense-filter-apply" id="expense-filter-apply">Apply</button>
+            </div>
+        </section>
+
+        <div class="page-header">
+            <div class="page-title">
+                <h4>Expense Report</h4>
+            </div>
+            <div class="total-expense-summary">
+                <h5 id="total-expense-amount" class="mb-0 px-3 py-1 mx-3 rounded bg-light total_expense">
+                    <!-- Gets updated by JS -->Total:
+                </h5>
+            </div>
+        </div>
+
+        @if ($showExpenseReportChart)
+        <div class="card mb-4 shadow-sm border-0 expense-report-chart">
+            <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between flex-wrap">
+                <h6 class="fw-bold mb-0 text-secondary d-flex align-items-center">
+                    <i class="fa-solid fa-chart-column me-2 text-primary"></i>
+                    Expense Summary
+                </h6>
+
+                <div id="expense-filter-summary"
+                    style="
+                        display:none;
+                        background:#f9fafb;
+                        border:1px solid #e5e7eb;
+                        border-radius:6px;
+                        padding:6px 10px;
+                        font-size:14px;
+                        font-weight:500;
+                        color:#374151;
+                        align-items:center;
+                        justify-content:center;
+                        gap:6px;
+                        white-space:nowrap;
+                        transition:all 0.3s ease;
+                    ">
+                </div>
+            </div>
+
+            <div class="card-body d-flex align-items-center justify-content-center" style="height: 350px;">
+                <canvas id="expenseChart" style="max-height: 320px; width: 100%;"></canvas>
+            </div>
+        </div>
+        @endif
+         {{-- ▼▼▼ Search + Filter ▼▼▼ --}}
+        <div class="expense-mobile-search">
+            <div id="expense-mobile-search-slot"></div>
+            <button type="button" class="expense-filter-toggle" id="expense-filter-toggle"
+                aria-label="Open expense filters" aria-expanded="false">
+                <i class="fa-solid fa-filter" aria-hidden="true"></i>
+                <span class="expense-filter-count" id="expense-filter-count">0</span>
+            </button>
+        </div>
+
+        {{-- ▼▼▼ Select all + View PDF ▼▼▼ --}}
+        <div class="expense-mobile-actions-box">
+            <div class="expense-mobile-actions">
+                <label class="expense-mobile-select-all">
+                    <input type="checkbox" class="expense-mobile-select-all-input">
+                    <span>Select all</span>
+                </label>
+                <button type="button" class="expense-mobile-action" data-expense-mobile-export>
+                    <i class="fa-regular fa-file-pdf" aria-hidden="true"></i>
+                    <span>View PDF</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-top">
+                    <div class="search-set">
+                        <select id="date-filter" class="form-select form-select-sm">
+                            <option value="">All Time</option>
+                            <option value="this_week">This Week</option>
+                            <option value="this_month">This Month</option>
+                            <option value="last_6_months">Last 6 Months</option>
+                            <option value="this_year">This Year</option>
+                            <option value="previous_year">Previous Year</option>
+                        </select>
+                        <select id="month-filter" class="form-select form-select-sm"
+                            style="margin-right:8px; margin-left: 8px;">
+                            <option value="">All Months</option>
+                            @for ($m = 1; $m <= 12; $m++)
+                                <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
+                            @endfor
+                        </select>
+
+                        <select id="year-filter" class="form-select form-select-sm" style="margin-right:8px;">
+                            <option value="">All Years</option>
+                            @for ($y = date('Y'); $y >= date('Y') - 10; $y--)
+                                <option value="{{ $y }}">{{ $y }}</option>
+                            @endfor
+                        </select>
+
+                        <div style="position: relative; margin-right:8px; display: flex; align-items: center;">
+                            <i class="fa-regular fa-calendar" style="position: absolute; left: 10px; color: #6c757d; z-index: 10;"></i>
+                            <input type="text" id="date-range-filter" class="form-control form-control-sm" placeholder="Date Range" style="padding-left: 30px; min-width: 190px;" autocomplete="off">
+                        </div>
+
+                        <select id="expenseType-filter" class="form-select form-select-sm"
+                            style="margin-right:8px; min-width: 180px;">
+                            <option value="">All Expense Type</option>
+                            @isset($expenseTypes)
+                                @foreach ($expenseTypes as $expenseType)
+                                    <option value="{{ $expenseType->id }}">{{ $expenseType->type }}</option>
+                                @endforeach
+                            @endisset
+                        </select>
+                    </div>
+                    <div class="wordset">
+                        <ul>
+                            <li>
+                                <a id="generate-pdf" href="javascript:void(0);" data-bs-toggle="tooltip"
+                                    data-bs-placement="top" title="Download PDF">
+                                    <button class="btn btn-primary btn-sm">View PDF</button>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                {{-- <div class="table-scroll-top">
+                    <div></div>
+                </div> --}}
+                <div class="search-set">
+                    <!-- Your existing filters -->
+                    <div class="search-input">
+                        <a class="btn btn-searchset">
+                            <img src="{{ env('ImagePath') . 'admin/assets/img/icons/search-white.svg' }}" alt="img">
+                        </a>
+                        <input type="text" id="search-input" class="form-control" placeholder="Search..."
+                            style="height: 30px;">
+                    </div>
+                </div>
+                {{-- <div class="table-container"> --}}
+                    <div class="table-responsive expense-table-wrapper">
+                    <table class="table datanew">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <label class="checkboxs">
+                                        <input type="checkbox" id="select-all">
+                                        <span class="checkmarks"></span>
+                                    </label>
+                                </th>
+                                <th>Expense Name</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Expense For</th>
+                                <th class="details-column">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="expense-mobile-cards" id="expense-mobile-cards" aria-live="polite"></div>
+
+                <!-- Pagination Controls -->
+                <div
+                    class="pagination-controls d-flex flex-column flex-md-row justify-content-between align-items-center mt-3">
+                    <div class="d-flex align-items-center mb-3 mb-md-0">
+                        <span class="me-2" style="font-size: 14px; color: #555;">Show per page :</span>
+                        <select id="per-page-select" class="form-select form-select-sm"
+                            style="width: auto; border: 1px solid #ddd;">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="ms-3" style="font-size: 14px; color: #555;">
+                            <span id="pagination-from">0</span> - <span id="pagination-to">0</span> of <span
+                                id="pagination-total">0</span> items
+                        </span>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0" id="pagination-numbers">
+                            <!-- Page numbers will be populated by JS -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+{{-- @push('js')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function() {
+
+
+
+            function formatINR(amount, symbol = '₹', position = 'left') {
+                let number = parseFloat(amount || 0);
+
+                let formatted = number.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+                return position === 'left' ?
+                    `${symbol}${formatted}` :
+                    `${formatted}${symbol}`;
+            }
+
+            var authToken = localStorage.getItem("authToken");
+            const selectedSubAdminId = localStorage.getItem("selectedSubAdminId");
+
+            var table = $('.datanew').DataTable({
+                destroy: true,
+                paging: true,
+                searching: true,
+                ordering: true,
+                responsive: true,
+                language: {
+                    emptyTable: "No expenses found.",
+                    zeroRecords: "No expense record found.",
+                    search: "Search:",
+                    searchPlaceholder: ""
+                }
+            });
+
+            // Initial load
+            fetchExpenses();
+            loadExpenseChart();
+
+            // Handle filter changes
+            $('#date-filter, #month-filter, #year-filter, #expenseType-filter').on('change', function() {
+                const filter = $('#date-filter').val();
+                const month = $('#month-filter').val();
+                const year = $('#year-filter').val();
+                const expenseTypeId = $('#expenseType-filter').val();
+
+                fetchExpenses(filter, month, year, expenseTypeId);
+                loadExpenseChart(filter, month, year, expenseTypeId);
+            });
+
+            /** ------------------------------------------
+             * 📋 Fetch Expense Table Data + Total
+             * ------------------------------------------ */
+            function fetchExpenses(filter = '', month = '', year = '', expenseTypeId = '') {
+                $.ajax({
+                    url: '/api/expenses/report',
+                    method: 'GET',
+                    data: {
+                        filter: filter,
+                        month: month,
+                        year: year,
+                        expense_type_id: expenseTypeId,
+                        selectedSubAdminId: selectedSubAdminId,
+                    },
+                    headers: {
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    success: function(response) {
+                        table.clear().draw();
+                        let totalAmount = 0;
+
+                        // Get currency settings
+                        const currencySymbol = response.currency_symbol || '₹';
+                        const currencyPosition = response.currency_position || 'left';
+
+                        // ✅ Build rows & sum total
+                        $.each(response.data, function(index, expense) {
+                            totalAmount += parseFloat(expense.amount || 0);
+
+                            // Details toggle for mobile
+                            let detailsToggle = `
+                                <a href="#expense-details-${expense.id}" class="toggle-details" data-bs-toggle="collapse">
+                                    <span class="mobile-toggle-btn-table">+</span>
+                                </a>
+                            `;
+
+                            // Format amount with currency
+                            // const amountValue = parseFloat(expense.amount || 0).toFixed(2);
+                            // const formattedAmount = currencyPosition === 'left' ?
+                            //     `${currencySymbol}${amountValue}` :
+                            //     `${amountValue}${currencySymbol}`;
+                            const formattedAmount = formatINR(
+                                expense.amount,
+                                currencySymbol,
+                                currencyPosition
+                            );
+
+                            table.row.add([
+                                // Column 1: Checkbox
+                                `<label class="checkboxs">
+                                    <input type="checkbox" class="expense-check" name="item_ids[]" value="${expense.id}">
+                                    <span class="checkmarks"></span>
+                                </label>`,
+
+                                // Column 2: Expense Name with collapsible details
+                                `<div>
+                                    <div style="display: flex; align-items: center;">
+                                        <a href="{{ route('expense.list') }}" class="d-flex align-items-center" style="text-decoration: none; color: inherit;">
+                                            <span class="expense-name truncated">${expense.expense_name ?? 'N/A'}</span>
+                                        </a>
+                                    </div>
+
+                                    <!-- Collapsible Details (visible only on mobile) -->
+                                    <div class="collapse mt-2 d-lg-none" id="expense-details-${expense.id}">
+                                        <div class="collapse-details">
+                                            <div class="detail-item">
+                                                <span class="detail-label">Amount:</span>
+                                                <span class="detail-value">${formattedAmount}</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">Date:</span>
+                                                <span class="detail-value">${formatDate(expense.expense_date)}</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">Expense For:</span>
+                                                <span class="detail-value">${expense.description ?? 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>`,
+
+                                // Column 3: Amount
+                                `<span class="fw-semibold" style="color: #2e7d32;">${formattedAmount}</span>`,
+
+                                // Column 4: Date
+                                formatDate(expense.expense_date),
+
+                                // Column 5: Description
+                                `<div style="white-space: normal; word-break: break-word; max-width: 400px;">${expense.description ?? 'N/A'}</div>`,
+
+                                // Column 6: Details Toggle (only for mobile)
+                                detailsToggle
+                            ]).draw(false);
+                        });
+
+                        // ✅ Update total expense
+                        // const formattedTotal = totalAmount.toFixed(2);
+                        // const totalText = currencyPosition === 'left' ?
+                        //     `${currencySymbol}${formattedTotal}` : `${formattedTotal}${currencySymbol}`;
+                        const totalText = formatINR(
+                            totalAmount,
+                            currencySymbol,
+                            currencyPosition
+                        );
+                        // $('#total-expense-amount').text(`Total: ${totalText}`);
+                        $('#total-expense-amount').html(
+                            `Total: <span style="color:#ff9f43;">${totalText}</span>`
+                        );
+
+                        // ✅ Show filter summary
+                        showExpenseFilterSummary(filter, month, year, expenseTypeId);
+
+                        // ✅ Fix top scroll sync
+                        const topScroll = document.querySelector('.table-scroll-top');
+                        const tableResponsive = document.querySelector('.table-responsive');
+                        const tableElement = document.querySelector('.datanew');
+
+                        if (topScroll && tableResponsive && tableElement) {
+                            const topInnerDiv = topScroll.querySelector('div');
+                            topInnerDiv.style.width = tableElement.scrollWidth + 'px';
+
+                            topScroll.onscroll = () => {
+                                tableResponsive.scrollLeft = topScroll.scrollLeft;
+                            };
+                            tableResponsive.onscroll = () => {
+                                topScroll.scrollLeft = tableResponsive.scrollLeft;
+                            };
+                        }
+                    },
+                    error: function() {
+                        alert('Failed to fetch expenses.');
+                    }
+                });
+            }
+
+            // 🟢 Global array to track selected expense IDs across all pages
+            let allSelectedIds = [];
+
+            /** -------------------------------------------------------
+             * ✅ Handle "Select All" checkbox across all DataTable pages
+             * ------------------------------------------------------- */
+            $(document).on('change', '#select-all', function() {
+                const isChecked = $(this).is(':checked');
+
+                // ✅ Check or uncheck all checkboxes across all pages
+                table.$('input[name="item_ids[]"]').prop('checked', isChecked);
+
+                if (isChecked) {
+                    // Add all expense IDs from all pages
+                    allSelectedIds = table.$('input[name="item_ids[]"]').map(function() {
+                        return $(this).val();
+                    }).get();
+                } else {
+                    // Clear all selections
+                    allSelectedIds = [];
+                }
+
+                // console.log("✅ All Selected IDs (All Pages):", allSelectedIds);
+            });
+
+            /** -------------------------------------------------------
+             * 🟢 Handle individual checkbox selection (per row)
+             * ------------------------------------------------------- */
+            $(document).on('change', 'input[name="item_ids[]"]', function() {
+                const id = $(this).val();
+
+                if ($(this).is(':checked')) {
+                    if (!allSelectedIds.includes(id)) allSelectedIds.push(id);
+                } else {
+                    allSelectedIds = allSelectedIds.filter(x => x !== id);
+                }
+
+                // ✅ Update Select-All checkbox state based on all pages
+                const totalCheckboxes = table.$('input[name="item_ids[]"]').length;
+                const checkedCheckboxes = table.$('input[name="item_ids[]"]:checked').length;
+                $('#select-all').prop('checked', totalCheckboxes === checkedCheckboxes);
+
+                // console.log("🟢 Currently Selected IDs (All Pages):", allSelectedIds);
+            });
+
+            // Toggle details icon
+            $(document).on('click', '.toggle-details', function() {
+                let button = $(this).find('.mobile-toggle-btn-table');
+                if (button.hasClass('minus')) {
+                    button.removeClass('minus').text('+');
+                } else {
+                    button.addClass('minus').text('-');
+                }
+            });
+
+            function showExpenseFilterSummary(filter, month, year, expenseTypeId) {
+                let message = "All Expenses";
+
+                if (filter) {
+                    const filterLabels = {
+                        'this_week': 'This Week',
+                        'this_month': 'This Month',
+                        'last_6_months': 'Last 6 Months',
+                        'this_year': 'This Year',
+                        'previous_year': 'Previous Year'
+                    };
+                    message = `Expenses - ${filterLabels[filter] || 'Custom'}`;
+                }
+
+                // ✅ Handle month/year logic cleanly
+                if (month && year) {
+                    const monthName = new Date(year, month - 1).toLocaleString('default', {
+                        month: 'long'
+                    });
+                    message = `Expenses for ${monthName} ${year}`;
+                } else if (month && !year) {
+                    const monthName = new Date(2025, month - 1).toLocaleString('default', {
+                        month: 'long'
+                    }); // fallback year
+                    message = `Expenses for ${monthName}`;
+                } else if (year && !month) {
+                    message = `Expenses for ${year}`;
+                }
+
+                if (expenseTypeId) {
+                    const selectedText = $('#expenseType-filter option:selected').text();
+                    message += ` — ${selectedText}`;
+                }
+
+                const $summary = $('#expense-filter-summary');
+                $summary
+                    .css('display', 'flex') // ✅ ensures flexbox layout
+                    .hide()
+                    .text(message)
+                    .fadeIn(200);
+            }
+
+            function formatDate(dateStr) {
+                const date = new Date(dateStr);
+                const options = {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                };
+                return date.toLocaleDateString('en-GB', options);
+            }
+
+            /** --------------------------------------
+             * 📊 Expense Chart Function
+             * -------------------------------------- */
+            let expenseChart;
+
+            function loadExpenseChart(filter = '', month = '', year = '', expenseTypeId = '') {
+                if (!$('#expenseChart').length) {
+                    return;
+                }
+                $.ajax({
+                    url: '/api/expenses/report',
+                    method: 'GET',
+                    data: {
+                        filter,
+                        month,
+                        year,
+                        expense_type_id: expenseTypeId,
+                        selectedSubAdminId,
+                    },
+                    headers: {
+                        "Authorization": "Bearer " + authToken
+                    },
+                    success: function(response) {
+                        const chartContainer = $("#expenseChart").parent();
+                        $("#noExpenseMessage").remove();
+
+                        // Destroy previous chart if exists
+                        if (expenseChart) {
+                            expenseChart.destroy();
+                            expenseChart = null;
+                        }
+
+                        if (!response.data || response.data.length === 0) {
+                            // ✅ Show no-data message
+                            chartContainer.append(`
+                                <div id="noExpenseMessage"
+                                    style="
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        height: 100%;
+                                        width: 100%;
+                                        color: #6b7280;
+                                        font-size: 16px;
+                                        text-align: center;
+                                    ">
+                                    No expense data found.
+                                </div>
+                            `);
+                            return;
+                        }
+
+                        // ✅ Aggregate expenses by name
+                        const totals = {};
+                        response.data.forEach(item => {
+                            const name = item.expense_name || 'Unknown';
+                            const amount = parseFloat(item.amount) || 0;
+                            totals[name] = (totals[name] || 0) + amount;
+                        });
+
+                        // ✅ Sort and take top 10
+                        const sorted = Object.entries(totals)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 15);
+
+                        const labels = sorted.map(item => item[0]);
+                        const values = sorted.map(item => item[1]);
+
+                        const ctx = document.getElementById('expenseChart').getContext('2d');
+                        expenseChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels,
+                                datasets: [{
+                                    label: 'Total Expense',
+                                    data: values,
+                                    backgroundColor: [
+                                        '#4e73df', '#1cc88a', '#36b9cc',
+                                        '#f6c23e', '#e74a3b', '#858796',
+                                        '#5a5c69', '#20c997', '#6610f2', '#fd7e14'
+                                    ],
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    barThickness: 20
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            // label: context => `₹${context.formattedValue}`
+                                            label: context => formatINR(context.raw)
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        ticks: {
+                                            autoSkip: false,
+                                            callback: function(value) {
+                                                const label = this.getLabelForValue(value);
+                                                return label.length > 15 ? label.substring(
+                                                    0, 15) + "..." : label;
+                                            }
+                                        },
+                                        grid: {
+                                            display: false
+                                        }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            color: "#e5e7eb"
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    },
+                    error: function(xhr) {
+                        console.error("Expense chart load failed", xhr);
+                    }
+                });
+            }
+
+            document.getElementById('generate-pdf').addEventListener('click', function() {
+                if (allSelectedIds.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Selection',
+                        text: 'Please select at least one expense to generate the PDF.',
+                        confirmButtonColor: '#ff9f43',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
+
+                const url = `/expense/report/${allSelectedIds.join(',')}`;
+                window.open(url, '_blank');
+            });
+
+            // Auto-hide error message after 4 seconds
+            setTimeout(function() {
+                let alert = document.getElementById('error-message');
+                if (alert) {
+                    alert.classList.add('hidden');
+                    setTimeout(function() {
+                        alert.style.display = 'none';
+                    }, 500);
+                }
+            }, 4000);
+        });
+    </script>
+@endpush --}}
+@push('js')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Global variables
+            let currentPage = 1;
+            let lastPage = 1;
+            let perPage = 10;
+            let searchQuery = '';
+            window.expenseReportDataMap = {};
+            let currentFilter = '';
+            let currentMonth = '';
+            let currentYear = '';
+            let currentDateRange = '';
+            let currentExpenseTypeId = '';
+            let allSelectedIds = [];
+            let expenseChart;
+
+            var authToken = localStorage.getItem("authToken");
+            const selectedSubAdminId = localStorage.getItem("selectedSubAdminId");
+
+            // Initialize DataTable without pagination (we'll handle it manually)
+            var table = $('.datanew').DataTable({
+                destroy: true,
+                paging: false,
+                searching: false,
+                ordering: true,
+                responsive: true,
+                info: false,
+                columnDefs: [{
+                    targets: 5,
+                    className: 'details-column',
+                    orderable: false
+                }],
+                language: {
+                    emptyTable: "No expenses found.",
+                    zeroRecords: "No expense record found."
+                }
+            });
+
+            table.on('draw', function() {
+                if (typeof window.addExpenseReportExpandableRows === 'function') {
+                    window.addExpenseReportExpandableRows();
+                }
+            });
+
+            // Format currency function
+            function formatINR(amount, symbol = '₹', position = 'left') {
+                let number = parseFloat(amount || 0);
+                let formatted = number.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                return position === 'left' ? `${symbol}${formatted}` : `${formatted}${symbol}`;
+            }
+
+            // Format date function
+            function formatDate(dateStr) {
+                if (!dateStr) return 'N/A';
+                const date = new Date(dateStr);
+                const options = {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                };
+                return date.toLocaleDateString('en-GB', options);
+            }
+
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function isExpenseReportMobileView() {
+                return window.matchMedia('(max-width: 767px)').matches;
+            }
+
+            function isExpenseReportCompactView() {
+                return window.matchMedia(
+                    '(max-width: 1024.98px), (width: 1032px) and (height: 1376px), (width: 1280px) and (height: 800px)'
+                ).matches;
+            }
+
+            const expenseFilterFields = [];
+            let expenseSearchPlaceholder = null;
+            let expenseSearchElement = null;
+            let compactControlsActive = false;
+
+            function setupResponsiveExpenseControls() {
+                const useCompactControls = isExpenseReportCompactView();
+                if (useCompactControls === compactControlsActive) return;
+                compactControlsActive = useCompactControls;
+
+                const $filterSet = $('.table-top > .search-set').first();
+                const $search = $('.expense-report-page > .card .search-input').first();
+
+                if (useCompactControls) {
+                    const filterLabels = {
+                        'date-filter': 'Period',
+                        'month-filter': 'Month',
+                        'year-filter': 'Year',
+                        'date-range-filter': 'Date range',
+                        'expenseType-filter': 'Expense type'
+                    };
+
+                    Object.keys(filterLabels).forEach(function(id) {
+                        const control = document.getElementById(id);
+                        if (!control) return;
+
+                        const fieldNode = id === 'date-range-filter' ? control.parentElement : control;
+                        if (!fieldNode || fieldNode.parentElement !== $filterSet[0]) return;
+
+                        const placeholder = document.createComment(`expense-filter-${id}`);
+                        fieldNode.parentNode.insertBefore(placeholder, fieldNode);
+
+                        const field = document.createElement('div');
+                        field.className = 'expense-filter-field';
+                        const label = document.createElement('label');
+                        label.htmlFor = id;
+                        label.textContent = filterLabels[id];
+                        field.appendChild(label);
+                        field.appendChild(fieldNode);
+                        document.getElementById('expense-filter-sheet-body').appendChild(field);
+                        expenseFilterFields.push({ placeholder: placeholder, node: fieldNode });
+                    });
+
+                    if ($search.length && !expenseSearchPlaceholder) {
+                        expenseSearchElement = $search[0];
+                        expenseSearchPlaceholder = document.createComment('expense-search-field');
+                        expenseSearchElement.parentNode.insertBefore(expenseSearchPlaceholder, expenseSearchElement);
+                        document.getElementById('expense-mobile-search-slot').appendChild(expenseSearchElement);
+                    }
+                } else {
+                    expenseFilterFields.forEach(function(entry) {
+                        if (entry.placeholder.parentNode) {
+                            entry.placeholder.parentNode.insertBefore(entry.node, entry.placeholder);
+                            entry.placeholder.remove();
+                        }
+                    });
+                    expenseFilterFields.length = 0;
+
+                    if (expenseSearchPlaceholder && expenseSearchPlaceholder.parentNode && expenseSearchElement) {
+                        expenseSearchPlaceholder.parentNode.insertBefore(expenseSearchElement, expenseSearchPlaceholder);
+                        expenseSearchPlaceholder.remove();
+                    }
+                    expenseSearchPlaceholder = null;
+                    expenseSearchElement = null;
+                }
+
+                updateExpenseMobileFilterCount();
+            }
+
+            function updateExpenseMobileFilterCount() {
+                const values = [
+                    $('#date-filter').val(),
+                    $('#month-filter').val(),
+                    $('#year-filter').val(),
+                    $('#date-range-filter').val(),
+                    $('#expenseType-filter').val()
+                ];
+                const activeCount = values.filter(function(value) {
+                    return value !== null && value !== '';
+                }).length;
+
+                $('#expense-filter-count').text(activeCount);
+                $('#expense-filter-toggle').toggleClass('has-active', activeCount > 0);
+            }
+
+            function closeExpenseFilterSheet() {
+                $('body').removeClass('expense-filter-open');
+                $('#expense-filter-toggle').attr('aria-expanded', 'false');
+            }
+
+            function syncExpenseFilterState() {
+                currentFilter = $('#date-filter').val() || '';
+                currentMonth = $('#month-filter').val() || '';
+                currentYear = $('#year-filter').val() || '';
+                currentExpenseTypeId = $('#expenseType-filter').val() || '';
+                currentDateRange = $('#date-range-filter').val() || '';
+                updateExpenseMobileFilterCount();
+            }
+
+            function renderExpenseCards(expenses, currencySymbol, currencyPosition) {
+                const $cards = $('#expense-mobile-cards');
+                if (!isExpenseReportCompactView()) {
+                    $cards.empty();
+                    return;
+                }
+
+                if (!expenses || expenses.length === 0) {
+                    $cards.html('<div class="expense-mobile-empty">No expenses found for these filters.</div>');
+                    return;
+                }
+
+                const cardHtml = expenses.map(function(expense) {
+                    const expenseId = String(expense.id);
+                    const name = escapeHtml(expense.expense_name || 'N/A');
+                    const amount = escapeHtml(formatINR(expense.amount, currencySymbol, currencyPosition));
+                    const date = escapeHtml(formatDate(expense.expense_date));
+                    const description = escapeHtml(expense.description || 'N/A');
+                    const expenseType = expense.expenseType && expense.expenseType.type
+                        ? expense.expenseType.type
+                        : (expense.expense_type && expense.expense_type.type
+                            ? expense.expense_type.type
+                            : (expense.expense_type_name || expense.type || ''));
+                    const typeId = expense.expense_type_id || '';
+                    const typeFromFilter = typeId
+                        ? $('#expenseType-filter option').filter(function() {
+                            return String(this.value) === String(typeId);
+                        }).text()
+                        : '';
+                    const typeLabel = escapeHtml(expenseType || (typeFromFilter && typeFromFilter !== 'All Expense Type'
+                        ? typeFromFilter
+                        : 'N/A'));
+                    const checked = allSelectedIds.includes(expenseId) ? ' checked' : '';
+                    // <div class="expense-card-meta">
+                    //             <span class="expense-card-type">${typeLabel}</span>
+                    //         </div>  <-- expense type label removed from card for now, can be added back if needed -->
+
+                    return `
+                        <article class="expense-mobile-card">
+                            <div class="expense-mobile-card-top">
+                                <label class="expense-card-checkbox-wrap" aria-label="Select ${name}">
+                                    <input type="checkbox" class="expense-card-checkbox" name="item_ids[]" value="${escapeHtml(expenseId)}"${checked}>
+                                </label>
+                                <div class="expense-card-main">
+                                    <a class="expense-card-title" href="{{ route('expense.list') }}">${name}</a>
+                                    <div class="expense-card-date">${date}</div>
+                                </div>
+                                <div class="expense-card-amount">${amount}</div>
+                            </div>
+                            
+                            <div class="expense-card-description">
+                                <span class="expense-card-description-label">Expense for</span>${description}
+                            </div>
+                            <a class="expense-card-action" href="{{ route('expense.list') }}">
+                                <span>View expense</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        </article>`;
+                }).join('');
+
+                $cards.html(cardHtml);
+            }
+
+            setupResponsiveExpenseControls();
+            $(window).on('resize.expenseResponsiveControls', setupResponsiveExpenseControls);
+            $('#expense-filter-toggle').on('click', function() {
+                $('body').addClass('expense-filter-open');
+                $(this).attr('aria-expanded', 'true');
+            });
+            $('#expense-filter-backdrop, [data-expense-filter-close]').on('click', closeExpenseFilterSheet);
+            $('[data-expense-mobile-export]').on('click', function() {
+                $('#generate-pdf').trigger('click');
+            });
+            $('#expense-filter-apply').on('click', function() {
+                syncExpenseFilterState();
+                currentPage = 1;
+                fetchExpenses();
+                loadExpenseChart();
+                closeExpenseFilterSheet();
+            });
+            $('#expense-filter-clear').on('click', function() {
+                $('#date-filter, #month-filter, #year-filter, #expenseType-filter, #date-range-filter').val('');
+                syncExpenseFilterState();
+                currentPage = 1;
+                fetchExpenses();
+                loadExpenseChart();
+                closeExpenseFilterSheet();
+            });
+
+            // Initial load
+            fetchExpenses();
+            loadExpenseChart();
+
+            // Handle filter changes
+            $('#date-filter, #month-filter, #year-filter, #expenseType-filter').on('change', function() {
+                syncExpenseFilterState();
+                if (isExpenseReportCompactView() && $('body').hasClass('expense-filter-open')) return;
+                currentPage = 1;
+                fetchExpenses();
+                loadExpenseChart();
+            });
+
+            if ($('#date-range-filter').length) {
+                $('#date-range-filter').daterangepicker({
+                    autoUpdateInput: false,
+                    locale: {
+                        cancelLabel: 'Clear',
+                        format: 'DD-MM-YYYY'
+                    }
+                });
+
+                $('#date-range-filter').on('apply.daterangepicker', function(ev, picker) {
+                    $(this).val(picker.startDate.format('DD-MM-YYYY') + ' - ' + picker.endDate.format('DD-MM-YYYY'));
+                    currentDateRange = $(this).val();
+                    updateExpenseMobileFilterCount();
+                    if (isExpenseReportCompactView() && $('body').hasClass('expense-filter-open')) return;
+                    currentPage = 1;
+                    fetchExpenses();
+                    loadExpenseChart();
+                });
+
+                $('#date-range-filter').on('cancel.daterangepicker', function(ev, picker) {
+                    $(this).val('');
+                    currentDateRange = '';
+                    updateExpenseMobileFilterCount();
+                    if (isExpenseReportCompactView() && $('body').hasClass('expense-filter-open')) return;
+                    currentPage = 1;
+                    fetchExpenses();
+                    loadExpenseChart();
+                });
+            }
+
+            // Handle search input
+            let searchDebounce;
+            $('#search-input').on('keyup', function() {
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => {
+                    searchQuery = $(this).val();
+                    currentPage = 1;
+                    fetchExpenses();
+                }, 500);
+            });
+
+            // Handle per page change
+            $('#per-page-select').on('change', function() {
+                perPage = $(this).val();
+                currentPage = 1;
+                fetchExpenses();
+            });
+
+            /** ------------------------------------------
+             * 📋 Fetch Expense Table Data with Pagination
+             * ------------------------------------------ */
+            function fetchExpenses() {
+                $.ajax({
+                    url: '/api/expenses/report',
+                    method: 'GET',
+                    data: {
+                        filter: currentFilter,
+                        month: currentMonth,
+                        year: currentYear,
+                        date_range: currentDateRange,
+                        expense_type_id: currentExpenseTypeId,
+                        selectedSubAdminId: selectedSubAdminId,
+                        page: currentPage,
+                        per_page: perPage,
+                        search: searchQuery
+                    },
+                    headers: {
+                        "Authorization": "Bearer " + authToken,
+                    },
+                    success: function(response) {
+                        table.clear().draw();
+                        window.expenseReportDataMap = {};
+                        let totalAmount = 0;
+
+                        const currencySymbol = response.currency_symbol || '₹';
+                        const currencyPosition = response.currency_position || 'left';
+                        const pagination = response.pagination;
+
+                        if (pagination) {
+                            currentPage = pagination.current_page;
+                            lastPage = pagination.last_page;
+                            updatePaginationUI(pagination);
+                        }
+
+                        if (response.summary && response.summary.total_amount) {
+                            totalAmount = response.summary.total_amount;
+                        }
+
+                        if (response.data && response.data.length > 0) {
+                            $.each(response.data, function(index, expense) {
+                                totalAmount += parseFloat(expense.amount || 0);
+
+                                const formattedAmount = formatINR(expense.amount, currencySymbol, currencyPosition);
+                                const expenseId = String(expense.id);
+                                window.expenseReportDataMap[expenseId] = {
+                                    id: expenseId,
+                                    amount: formattedAmount,
+                                    expense_date: formatDate(expense.expense_date),
+                                    description: escapeHtml(expense.description ?? 'N/A')
+                                };
+
+                                table.row.add([
+                                    `<label class="checkboxs">
+                                        <input type="checkbox" class="expense-check" name="item_ids[]" value="${expense.id}">
+                                        <span class="checkmarks"></span>
+                                    </label>`,
+
+                                    `<div class="expense-item-wrapper" data-expense-id="${expense.id}">
+                                        <div class="expense-name-wrapper" style="display: flex; align-items: center; width: 100%;">
+                                            <span class="expense-name" style="flex: 1; word-break: break-word;">
+                                                ${escapeHtml(expense.expense_name ?? 'N/A')}
+                                            </span>
+                                        </div>
+                                    </div>`,
+
+                                    `<span class="fw-semibold" style="color: #2e7d32;">${formattedAmount}</span>`,
+                                    formatDate(expense.expense_date),
+                                    `<div style="white-space: normal; word-break: break-word; max-width: 200px;">${escapeHtml(expense.description ?? 'N/A')}</div>`,
+                                    `<button type="button" class="mobile-toggle-btn-table expense-report-toggle-btn" data-expense-id="${expenseId}">+</button>`
+                                ]).draw(false);
+                            });
+                        }
+
+                        const totalText = formatINR(totalAmount, currencySymbol, currencyPosition);
+                        $('#total-expense-amount').html(`Total: <span style="color:#ff9f43;">${totalText}</span>`);
+                        const mobileTotal = response.summary
+                            && response.summary.total_amount !== undefined
+                            && response.summary.total_amount !== null
+                            ? response.summary.total_amount
+                            : (response.data || []).reduce(function(sum, expense) {
+                                return sum + parseFloat(expense.amount || 0);
+                            }, 0);
+                        $('#expense-mobile-total').html(
+                            `Total: <strong>${escapeHtml(formatINR(mobileTotal, currencySymbol, currencyPosition))}</strong>`
+                        );
+
+                        showExpenseFilterSummary(currentFilter, currentMonth, currentYear, currentExpenseTypeId);
+                        $('#select-all').prop('checked', false);
+                        $('.expense-mobile-select-all-input').prop('checked', false);
+                        allSelectedIds = [];
+                        renderExpenseCards(response.data || [], currencySymbol, currencyPosition);
+                        updateExpenseMobileFilterCount();
+                        fixTopScrollSync();
+
+                    },
+                    error: function(xhr) {
+                        console.error('Error fetching expenses:', xhr);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to fetch expenses. Please try again.'
+                        });
+                    }
+                });
+            }
+
+            function buildExpenseReportExpandableRowContent(item) {
+                return `
+                    <div class="collapse-details ">
+                        <div class="detail-item mb-2">
+                            <strong class="detail-label" style="min-width: 100px; display: inline-block;">Amount:</strong>
+                            <span class="detail-value">${item.amount}</span>
+                        </div>
+                        <div class="detail-item mb-2">
+                            <strong class="detail-label" style="min-width: 100px; display: inline-block;">Date:</strong>
+                            <span class="detail-value">${item.expense_date}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong class="detail-label" style="min-width: 100px; display: inline-block;">Expense For:</strong>
+                            <span class="detail-value" style="word-break: break-word;">${item.description}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.toggleExpenseReportRowDetails = function(expenseId) {
+                if (!isExpenseReportMobileView()) {
+                    return;
+                }
+
+                const row = $(`.expense-item-wrapper[data-expense-id="${expenseId}"]`).closest('tr');
+                if (row.length === 0) return;
+
+                const detailsRow = row.next(`tr.expense-details-row[data-expense-details-id="${expenseId}"]`);
+                const toggleBtn = row.find('.mobile-toggle-btn-table');
+                const openRows = $('.expense-details-row.show').not(`[data-expense-details-id="${expenseId}"]`);
+
+                openRows.removeClass('show');
+                $('.expense-report-toggle-btn').not(`[data-expense-id="${expenseId}"]`).removeClass('minus').html('+');
+
+                if (detailsRow.length === 0) {
+                    const item = window.expenseReportDataMap[String(expenseId)];
+                    if (!item) return;
+
+                    const expandableContent = buildExpenseReportExpandableRowContent(item);
+                    const newRow = $(`
+                        <tr class="expense-details-row show" data-expense-details-id="${expenseId}">
+                            <td colspan="6">${expandableContent}</td>
+                        </tr>
+                    `);
+                    row.after(newRow);
+                    toggleBtn.addClass('minus').html('-');
+                } else if (detailsRow.hasClass('show')) {
+                    detailsRow.removeClass('show');
+                    toggleBtn.removeClass('minus').html('+');
+                } else {
+                    detailsRow.addClass('show');
+                    toggleBtn.addClass('minus').html('-');
+                }
+            };
+
+            window.addExpenseReportExpandableRows = function() {
+                if (!isExpenseReportMobileView()) {
+                    $('.expense-details-row').remove();
+                }
+                $('.mobile-toggle-btn-table').removeClass('minus').html('+');
+            };
+
+            $(document).off('click.expenseReportToggle').on('click.expenseReportToggle', '.expense-report-toggle-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.toggleExpenseReportRowDetails($(this).data('expense-id'));
+            });
+
+            // Update pagination UI
+            function updatePaginationUI(pagination) {
+                let from = (pagination.current_page - 1) * pagination.per_page + 1;
+                let to = pagination.current_page * pagination.per_page;
+                if (to > pagination.total) to = pagination.total;
+                if (pagination.total === 0) from = 0;
+
+                $('#pagination-from').text(from);
+                $('#pagination-to').text(to);
+                $('#pagination-total').text(pagination.total);
+
+                let paginationHtml = '';
+
+                // Previous Button
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === 1 ? 'disabled' : ''}">
+                        <a class="page-link expense-page-link" href="javascript:void(0);" data-page="${pagination.current_page - 1}">Previous</a>
+                    </li>
+                `;
+
+                const visiblePageCount = 2;
+                let startPage = Math.floor((pagination.current_page - 1) / visiblePageCount) * visiblePageCount + 1;
+                let endPage = Math.min(pagination.last_page, startPage + visiblePageCount - 1);
+
+                if (startPage > 1) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link expense-page-link" href="javascript:void(0);" data-page="${startPage - 1}" data-action="prev-group">..</a>
+                        </li>
+                    `;
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += `
+                        <li class="page-item ${i === pagination.current_page ? 'active' : ''}">
+                            <a class="page-link expense-page-link" href="javascript:void(0);" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                }
+
+                if (endPage < pagination.last_page) {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link expense-page-link" href="javascript:void(0);" data-page="${endPage + 1}" data-action="next-group">..</a>
+                        </li>
+                    `;
+                }
+
+                // Next Button
+                paginationHtml += `
+                    <li class="page-item ${pagination.current_page === pagination.last_page || pagination.last_page === 0 ? 'disabled' : ''}">
+                        <a class="page-link expense-page-link" href="javascript:void(0);" data-page="${pagination.current_page + 1}">Next</a>
+                    </li>
+                `;
+
+                $('#pagination-numbers').html(paginationHtml);
+                $('.pagination-controls').toggle(pagination.total > 0);
+            }
+
+            $(document).on('click', '.expense-page-link', function(e) {
+                e.preventDefault();
+
+                let page = $(this).data('page');
+                let action = $(this).data('action');
+
+                if (action === 'next-group') {
+                    if (page && page <= lastPage) {
+                        currentPage = page;
+                        fetchExpenses();
+                    }
+                    return;
+                }
+
+                if (action === 'prev-group') {
+                    let prevStartPage = Math.max(1, page - 2);
+                    if (prevStartPage >= 1 && prevStartPage <= lastPage) {
+                        currentPage = prevStartPage;
+                        fetchExpenses();
+                    }
+                    return;
+                }
+
+                if (page && page !== currentPage && page >= 1 && page <= lastPage) {
+                    currentPage = page;
+                    fetchExpenses();
+                }
+            });
+
+            // Fix top scroll sync
+            function fixTopScrollSync() {
+                setTimeout(() => {
+                    const topScroll = document.querySelector('.table-scroll-top');
+                    const tableResponsive = document.querySelector('.table-responsive');
+                    const tableElement = document.querySelector('.datanew');
+
+                    if (topScroll && tableResponsive && tableElement) {
+                        const topInnerDiv = topScroll.querySelector('div');
+                        if (topInnerDiv) {
+                            topInnerDiv.style.width = tableElement.scrollWidth + 'px';
+                        }
+
+                        topScroll.onscroll = () => {
+                            tableResponsive.scrollLeft = topScroll.scrollLeft;
+                        };
+                        tableResponsive.onscroll = () => {
+                            topScroll.scrollLeft = tableResponsive.scrollLeft;
+                        };
+                    }
+                }, 100);
+            }
+
+            // Show filter summary
+            function showExpenseFilterSummary(filter, month, year, expenseTypeId) {
+                let message = "All Expenses";
+
+                if (filter) {
+                    const filterLabels = {
+                        'this_week': 'This Week',
+                        'this_month': 'This Month',
+                        'last_6_months': 'Last 6 Months',
+                        'this_year': 'This Year',
+                        'previous_year': 'Previous Year'
+                    };
+                    message = `Expenses - ${filterLabels[filter] || 'Custom'}`;
+                }
+
+                if (month && year) {
+                    const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+                    message = `Expenses for ${monthName} ${year}`;
+                } else if (month && !year) {
+                    const monthName = new Date(2025, month - 1).toLocaleString('default', { month: 'long' });
+                    message = `Expenses for ${monthName}`;
+                } else if (year && !month) {
+                    message = `Expenses for ${year}`;
+                }
+
+                if (expenseTypeId) {
+                    const selectedText = $('#expenseType-filter option:selected').text();
+                    message += ` — ${selectedText}`;
+                }
+
+                const $summary = $('#expense-filter-summary');
+                if ($summary.length) {
+                    $summary.css('display', 'flex').hide().text(message).fadeIn(200);
+                }
+            }
+
+            // Keep table and mobile card selection connected to the same export IDs.
+            $(document).on('change', '#select-all, .expense-mobile-select-all-input', function() {
+                const isChecked = $(this).is(':checked');
+                const tableCheckboxes = table.$('input[name="item_ids[]"]');
+                tableCheckboxes.prop('checked', isChecked);
+                $('.expense-card-checkbox').prop('checked', isChecked);
+
+                if (isChecked) {
+                    allSelectedIds = Array.from(new Set(tableCheckboxes.map(function() {
+                        return String($(this).val());
+                    }).get()));
+                } else {
+                    allSelectedIds = [];
+                }
+                $('#select-all, .expense-mobile-select-all-input').prop('checked', isChecked);
+            });
+
+            // Handle individual checkbox selection
+            $(document).on('change', 'input[name="item_ids[]"]', function() {
+                const id = String($(this).val());
+
+                if ($(this).is(':checked')) {
+                    if (!allSelectedIds.includes(id)) allSelectedIds.push(id);
+                } else {
+                    allSelectedIds = allSelectedIds.filter(x => x !== id);
+                }
+
+                table.$('input[name="item_ids[]"]').each(function() {
+                    if (String(this.value) === id) $(this).prop('checked', allSelectedIds.includes(id));
+                });
+                $('.expense-card-checkbox').each(function() {
+                    if (String(this.value) === id) $(this).prop('checked', allSelectedIds.includes(id));
+                });
+
+                const visibleIds = table.$('input[name="item_ids[]"]').map(function() {
+                    return String($(this).val());
+                }).get();
+                const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(function(visibleId) {
+                    return allSelectedIds.includes(visibleId);
+                });
+                $('#select-all, .expense-mobile-select-all-input').prop('checked', allVisibleSelected);
+            });
+
+            // Load Expense Chart
+            function loadExpenseChart() {
+                $.ajax({
+                    url: '/api/expenses/report',
+                    method: 'GET',
+                    data: {
+                        filter: currentFilter,
+                        month: currentMonth,
+                        year: currentYear,
+                        date_range: currentDateRange,
+                        expense_type_id: currentExpenseTypeId,
+                        selectedSubAdminId: selectedSubAdminId,
+                        per_page: 1000
+                    },
+                    headers: {
+                        "Authorization": "Bearer " + authToken
+                    },
+                    success: function(response) {
+                        const chartContainer = $("#expenseChart").parent();
+                        $("#noExpenseMessage").remove();
+
+                        if (expenseChart) {
+                            expenseChart.destroy();
+                            expenseChart = null;
+                        }
+
+                        // if (!response.data || response.data.length === 0) {
+                        //     chartContainer.append(`
+                        //         <div id="noExpenseMessage" style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%; color: #6b7280; font-size: 16px; text-align: center;">
+                        //             No expense data found.
+                        //         </div>
+                        //     `);
+                        //     return;
+                        // }
+                        if (!response.data || response.data.length === 0) {
+
+    // ✅ 1. Hide chart canvas
+    $('#expenseChart').hide();
+
+    // ✅ 2. Replace entire container content (NOT append)
+    chartContainer.html(`
+        <div id="noExpenseMessage"
+            style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                width: 100%;
+                color: #6b7280;
+                font-size: 16px;
+                text-align: center;
+            ">
+            No expense data found.
+        </div>
+    `);
+
+    return;
+}
+
+                        const totals = {};
+                        response.data.forEach(item => {
+                            const name = item.expense_name || 'Unknown';
+                            const amount = parseFloat(item.amount) || 0;
+                            totals[name] = (totals[name] || 0) + amount;
+                        });
+
+                        const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 15);
+                        const labels = sorted.map(item => item[0]);
+                        const values = sorted.map(item => item[1]);
+
+                        const ctx = document.getElementById('expenseChart').getContext('2d');
+                        $('#expenseChart').show(); // ✅ show chart again
+$("#noExpenseMessage").remove(); // optional cleanup
+                        expenseChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels,
+                                datasets: [{
+                                    label: 'Total Expense',
+                                    data: values,
+                                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc',
+                                        '#f6c23e', '#e74a3b', '#858796', '#5a5c69',
+                                        '#20c997', '#6610f2', '#fd7e14'
+                                    ],
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    barThickness: 20
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: context => formatINR(context.raw)
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        ticks: {
+                                            autoSkip: false,
+                                            callback: function(value) {
+                                                const label = this.getLabelForValue(value);
+                                                return label.length > 15 ? label.substring(0, 15) + "..." : label;
+                                            }
+                                        },
+                                        grid: { display: false }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: "#e5e7eb" }
+                                    }
+                                }
+                            }
+                        });
+                    },
+                    error: function(xhr) {
+                        console.error("Expense chart load failed", xhr);
+                    }
+                });
+            }
+
+            // Generate PDF
+            $('#generate-pdf').on('click', function() {
+                if (allSelectedIds.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Selection',
+                        text: 'Please select at least one expense to generate the PDF.',
+                        confirmButtonColor: '#ff9f43',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
+                const url = `/expense/report/${allSelectedIds.join(',')}`;
+                window.open(url, '_blank');
+            });
+
+            // Auto-hide error message
+            setTimeout(function() {
+                let alert = document.getElementById('error-message');
+                if (alert) {
+                    alert.classList.add('hidden');
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 500);
+                }
+            }, 4000);
+
+            // ✅ Handle window resize to fix table layout
+            $(window).on('resize', function() {
+                fixTopScrollSync();
+                if ($.fn.DataTable.isDataTable('.datanew')) {
+                    window.addExpenseReportExpandableRows($('.datanew').DataTable());
+                }
+            });
+        });
+    </script>
+@endpush
