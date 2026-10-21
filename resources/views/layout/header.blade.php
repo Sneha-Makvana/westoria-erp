@@ -529,7 +529,7 @@
     }
 
     .header .header-left .logo img {
-        width: 120px !important;
+        width: 99px !important;
     }
 
     .header .main-drop > .dropdown-toggle.userset {
