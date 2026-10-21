@@ -121,7 +121,7 @@
                             <div class="text-danger error-joining_date"></div>
                         </div>
                     </div>
-                    <div class="col-lg-3 col-sm-6 col-6">
+                    <!-- <div class="col-lg-3 col-sm-6 col-6">
                         <div class="form-group">
                             <label>Department</label>
                             <select name="department_id" id="department_id" class="form-control">
@@ -138,7 +138,7 @@
                             </select>
                             <div class="text-danger error-designation_id"></div>
                         </div>
-                    </div>
+                    </div> -->
                     <div class="col-lg-3 col-sm-6 col-6">
                         <div class="form-group">
                             <label>Country</label>
