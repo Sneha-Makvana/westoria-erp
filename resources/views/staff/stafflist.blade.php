@@ -670,8 +670,8 @@
                                 <th>Email</th>
                                 {{-- <th>Staff Role</th> --}}
                                 <th>Phone</th>
-                                <th>Department</th>
-                                <th>Designation</th>
+                                <!-- <th>Department</th> -->
+                                <!-- <th>Designation</th> -->
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -1101,8 +1101,8 @@ let actionButtons = `
             <div class="st-card-text">
                 <div class="st-card-line1">
                     <span class="st-card-name">${staffName}</span>
-                    <span class="st-card-sub">${designationName}</span>
-                    <span class="st-card-badge">${departmentName}</span>
+                    
+                    
                 </div>
                 <div class="st-card-line2">
                     <span><i class="fas fa-phone"></i> ${staff.phone || 'N/A'}</span>
@@ -1115,8 +1115,7 @@ let actionButtons = `
                                     firstColumn,
                                     staff.email || 'N/A',
                                     staff.phone || 'N/A',
-                                    departmentName,
-                                    designationName,
+                                    
                                     actionButtons
                                 ]);
                             });
