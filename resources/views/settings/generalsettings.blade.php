@@ -267,12 +267,12 @@
                             🏪 Shop Settings
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
+                    {{-- <li class="nav-item" role="presentation">
                         <button class="nav-link" id="rules-tab" data-bs-toggle="tab" data-bs-target="#company-rules"
                             type="button" role="tab" aria-controls="company-rules" aria-selected="false">
                             🏢 Company Rules
                         </button>
-                    </li>
+                    </li> --}}
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="terms-tab" data-bs-toggle="tab" data-bs-target="#delivery-terms"
                             type="button" role="tab" aria-controls="delivery-terms" aria-selected="false">
@@ -486,7 +486,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-sm-6 col-6">
+                            {{-- <div class="col-lg-3 col-sm-6 col-6">
                                 <div class="form-group">
                                     <label>Office Latitude</label>
                                     <input type="text" id="office_latitude" class="form-control"
@@ -508,7 +508,7 @@
                                     <small class="text-muted">Staff must be within this distance from office GPS to clock
                                         in.</small>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-lg-3 col-sm-6 col-6">
                                 <div class="form-group">
                                     <label>Meeting / Follow-up reminder (hours before)</label>
@@ -772,7 +772,7 @@
                                         dashboard.</small>
                                 </div>
                             </div>
-                            <div class="col-lg-4 col-sm-6">
+                            {{-- <div class="col-lg-4 col-sm-6">
                                 <div class="form-group">
                                     <label>HR Portal Section On Dashboard</label>
                                     <select id="show_hr_dashboard" name="show_hr_dashboard" class="form-select">
@@ -782,7 +782,7 @@
                                     <small class="text-muted">When disabled, only the staff, attendance, and salary section
                                         is hidden.</small>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-lg-4 col-sm-6">
                                 <div class="form-group">
                                     <label>ERP Section On Dashboard</label>
@@ -799,8 +799,8 @@
                                 aria-label="Dashboard subsections">
                                 <button type="button" class="dashboard-mobile-subsection-tab active"
                                     data-dashboard-subsection="crm">CRM</button>
-                                <button type="button" class="dashboard-mobile-subsection-tab"
-                                    data-dashboard-subsection="hr">HR</button>
+                                {{-- <button type="button" class="dashboard-mobile-subsection-tab"
+                                    data-dashboard-subsection="hr">HR</button> --}}
                                 <button type="button" class="dashboard-mobile-subsection-tab"
                                     data-dashboard-subsection="erp">ERP</button>
                             </div>
@@ -902,14 +902,14 @@
                                 </div>
                             </div>
 
-                            <div class="col-lg-12 mt-4 mb-3">
+                            {{-- <div class="col-lg-12 mt-4 mb-3">
                                 <h5 class="mb-3">HR Dashboard Subsections</h5>
                                 <p class="text-muted small mb-3">Control visibility of individual HR dashboard components:
                                 </p>
-                            </div>
+                            </div> --}}
 
                             <!-- HR Metric Boxes -->
-                            <div class="col-lg-2 col-sm-6 col-6">
+                            {{-- <div class="col-lg-2 col-sm-6 col-6">
                                 <div class="form-group">
                                     <label>Staff Strength Box</label>
                                     <select id="show_hr_staff_strength" name="show_hr_staff_strength"
@@ -999,7 +999,7 @@
                                         <option value="0">Disable</option>
                                     </select>
                                 </div>
-                            </div>
+                            </div> --}}
 
                             <div class="col-lg-12 mt-4 mb-3">
                                 <h5 class="mb-3">ERP Dashboard Subsections</h5>
@@ -1536,10 +1536,10 @@
                         key: "crm",
                         heading: findHeadingPanel("CRM Dashboard Subsections")
                     },
-                    {
-                        key: "hr",
-                        heading: findHeadingPanel("HR Dashboard Subsections")
-                    },
+                    // {
+                    //     key: "hr",
+                    //     heading: findHeadingPanel("HR Dashboard Subsections")
+                    // },
                     {
                         key: "erp",
                         heading: findHeadingPanel("ERP Dashboard Subsections")
@@ -1821,9 +1821,9 @@
                         $("#phone").val(settings.phone);
                         $("#state_code").val(settings.state_code);
                         $addressField.val(settings.address);
-                        $officeLatitudeField.val(settings.office_latitude ?? '');
-                        $officeLongitudeField.val(settings.office_longitude ?? '');
-                        $("#office_radius").val(settings.office_radius ?? 200);
+                        // $officeLatitudeField.val(settings.office_latitude ?? '');
+                        // $officeLongitudeField.val(settings.office_longitude ?? '');
+                        // $("#office_radius").val(settings.office_radius ?? 200);
                         lastGeocodedAddress = (settings.address || '').trim();
                         $("#bank_name").val(settings.bank_name);
                         $("#branch").val(settings.branch);
@@ -1857,12 +1857,12 @@
                             '1' :
                             String(Number(settings.show_crm_dashboard))
                         );
-                        $("#show_hr_dashboard").val(
-                            settings.show_hr_dashboard === null || settings.show_hr_dashboard ===
-                            undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_dashboard))
-                        );
+                        // $("#show_hr_dashboard").val(
+                        //     settings.show_hr_dashboard === null || settings.show_hr_dashboard ===
+                        //     undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_dashboard))
+                        // );
                         $("#show_erp_dashboard").val(
                             settings.show_erp_dashboard === null || settings.show_erp_dashboard ===
                             undefined ?
@@ -1954,61 +1954,61 @@
                             String(Number(settings.show_crm_next_7_days))
                         );
 
-                        // HR Subsection Settings
-                        $("#show_hr_staff_strength").val(
-                            settings.show_hr_staff_strength === null || settings
-                            .show_hr_staff_strength === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_staff_strength))
-                        );
-                        $("#show_hr_active_staff").val(
-                            settings.show_hr_active_staff === null || settings
-                            .show_hr_active_staff === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_active_staff))
-                        );
-                        $("#show_hr_monthly_attendance").val(
-                            settings.show_hr_monthly_attendance === null || settings
-                            .show_hr_monthly_attendance === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_monthly_attendance))
-                        );
-                        $("#show_hr_personal_progress").val(
-                            settings.show_hr_personal_progress === null || settings
-                            .show_hr_personal_progress === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_personal_progress))
-                        );
-                        $("#show_hr_attendance_pattern").val(
-                            settings.show_hr_attendance_pattern === null || settings
-                            .show_hr_attendance_pattern === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_attendance_pattern))
-                        );
-                        $("#show_hr_salary_payroll_trend").val(
-                            settings.show_hr_salary_payroll_trend === null || settings
-                            .show_hr_salary_payroll_trend === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_salary_payroll_trend))
-                        );
-                        $("#show_hr_payroll_snapshot").val(
-                            settings.show_hr_payroll_snapshot === null || settings
-                            .show_hr_payroll_snapshot === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_payroll_snapshot))
-                        );
-                        $("#show_hr_attendance_watch").val(
-                            settings.show_hr_attendance_watch === null || settings
-                            .show_hr_attendance_watch === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_attendance_watch))
-                        );
-                        $("#show_hr_payroll_status").val(
-                            settings.show_hr_payroll_status === null || settings
-                            .show_hr_payroll_status === undefined ?
-                            '1' :
-                            String(Number(settings.show_hr_payroll_status))
-                        );
+                        // HR Subsection Settings (commented out)
+                        // $("#show_hr_staff_strength").val(
+                        //     settings.show_hr_staff_strength === null || settings
+                        //     .show_hr_staff_strength === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_staff_strength))
+                        // );
+                        // $("#show_hr_active_staff").val(
+                        //     settings.show_hr_active_staff === null || settings
+                        //     .show_hr_active_staff === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_active_staff))
+                        // );
+                        // $("#show_hr_monthly_attendance").val(
+                        //     settings.show_hr_monthly_attendance === null || settings
+                        //     .show_hr_monthly_attendance === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_monthly_attendance))
+                        // );
+                        // $("#show_hr_personal_progress").val(
+                        //     settings.show_hr_personal_progress === null || settings
+                        //     .show_hr_personal_progress === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_personal_progress))
+                        // );
+                        // $("#show_hr_attendance_pattern").val(
+                        //     settings.show_hr_attendance_pattern === null || settings
+                        //     .show_hr_attendance_pattern === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_attendance_pattern))
+                        // );
+                        // $("#show_hr_salary_payroll_trend").val(
+                        //     settings.show_hr_salary_payroll_trend === null || settings
+                        //     .show_hr_salary_payroll_trend === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_salary_payroll_trend))
+                        // );
+                        // $("#show_hr_payroll_snapshot").val(
+                        //     settings.show_hr_payroll_snapshot === null || settings
+                        //     .show_hr_payroll_snapshot === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_payroll_snapshot))
+                        // );
+                        // $("#show_hr_attendance_watch").val(
+                        //     settings.show_hr_attendance_watch === null || settings
+                        //     .show_hr_attendance_watch === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_attendance_watch))
+                        // );
+                        // $("#show_hr_payroll_status").val(
+                        //     settings.show_hr_payroll_status === null || settings
+                        //     .show_hr_payroll_status === undefined ?
+                        //     '1' :
+                        //     String(Number(settings.show_hr_payroll_status))
+                        // );
 
                         // ERP Subsection Settings
                         $("#show_erp_total_sales").val(
@@ -2217,12 +2217,12 @@
 
             const dashboardMainSectionMap = {
                 crm: "#show_crm_dashboard",
-                hr: "#show_hr_dashboard",
+                // hr: "#show_hr_dashboard",
                 erp: "#show_erp_dashboard"
             };
             const dashboardSubsectionMap = {
                 crm: "#show_crm_lead_pipeline, #show_crm_conversion, #show_crm_followup_load, #show_crm_meeting_momentum, #show_crm_lead_status_mix, #show_crm_activity_trend, #show_crm_pipeline_quality, #show_crm_recent_leads, #show_crm_next_7_days",
-                hr: "#show_hr_staff_strength, #show_hr_active_staff, #show_hr_monthly_attendance, #show_hr_personal_progress, #show_hr_attendance_pattern, #show_hr_salary_payroll_trend, #show_hr_payroll_snapshot, #show_hr_attendance_watch, #show_hr_payroll_status",
+                // hr: "#show_hr_staff_strength, #show_hr_active_staff, #show_hr_monthly_attendance, #show_hr_personal_progress, #show_hr_attendance_pattern, #show_hr_salary_payroll_trend, #show_hr_payroll_snapshot, #show_hr_attendance_watch, #show_hr_payroll_status",
                 erp: "#show_erp_total_sales, #show_erp_total_purchase, #show_erp_total_expense, #show_erp_sales_invoice_count, #show_erp_purchase_invoice_count, #show_erp_customers_count, #show_erp_vendors_count, #show_erp_sales_chart, #show_erp_purchase_chart, #show_erp_recent_sales, #show_erp_recent_purchases, #show_erp_recent_products, #show_erp_products_delivery, #show_erp_recent_rentals"
             };
 
@@ -2245,10 +2245,9 @@
                 syncDashboardSectionState();
             }
 
-            $("#show_crm_dashboard, #show_hr_dashboard, #show_erp_dashboard").on("change", function() {
+            $("#show_crm_dashboard, #show_erp_dashboard").on("change", function() {
                 const id = $(this).attr("id");
-                const sectionKey = id === "show_crm_dashboard" ? "crm" : (id === "show_hr_dashboard" ?
-                    "hr" : "erp");
+                const sectionKey = id === "show_crm_dashboard" ? "crm" : "erp";
                 applyMainSectionState(sectionKey);
             });
 
@@ -2628,9 +2627,9 @@
                 formData.append("phone", $("#phone").val());
                 formData.append("state_code", $("#state_code").val());
                 formData.append("address", $addressField.val());
-                formData.append("office_latitude", $officeLatitudeField.val());
-                formData.append("office_longitude", $officeLongitudeField.val());
-                formData.append("office_radius", $("#office_radius").val() || 200);
+                // formData.append("office_latitude", $officeLatitudeField.val());
+                // formData.append("office_longitude", $officeLongitudeField.val());
+                // formData.append("office_radius", $("#office_radius").val() || 200);
                 formData.append("bank_name", $("#bank_name").val());
                 formData.append("branch", $("#branch").val());
                 formData.append("ac_no", $("#ac_no").val());
@@ -2649,7 +2648,7 @@
                 formData.append("financial_year", $("#financial_year").val());
                 formData.append("tds_apply", $("#tds_apply").val());
                 formData.append("show_crm_dashboard", $("#show_crm_dashboard").val());
-                formData.append("show_hr_dashboard", $("#show_hr_dashboard").val());
+                // formData.append("show_hr_dashboard", $("#show_hr_dashboard").val());
                 formData.append("show_erp_dashboard", $("#show_erp_dashboard").val());
                 formData.append("customer_whatsapp_message", $("#customer_whatsapp_message").val());
                 formData.append("admin_whatsapp_message", $("#admin_whatsapp_message").val());
@@ -2855,7 +2854,7 @@
 
                 let formData = new FormData();
                 formData.append("show_crm_dashboard", $("#show_crm_dashboard").val());
-                formData.append("show_hr_dashboard", $("#show_hr_dashboard").val());
+                // formData.append("show_hr_dashboard", $("#show_hr_dashboard").val());
                 formData.append("show_erp_dashboard", $("#show_erp_dashboard").val());
 
                 // CRM Subsection Settings
@@ -2869,16 +2868,16 @@
                 formData.append("show_crm_recent_leads", $("#show_crm_recent_leads").val());
                 formData.append("show_crm_next_7_days", $("#show_crm_next_7_days").val());
 
-                // HR Dashboard Subsections
-                formData.append("show_hr_staff_strength", $("#show_hr_staff_strength").val());
-                formData.append("show_hr_active_staff", $("#show_hr_active_staff").val());
-                formData.append("show_hr_monthly_attendance", $("#show_hr_monthly_attendance").val());
-                formData.append("show_hr_personal_progress", $("#show_hr_personal_progress").val());
-                formData.append("show_hr_attendance_pattern", $("#show_hr_attendance_pattern").val());
-                formData.append("show_hr_salary_payroll_trend", $("#show_hr_salary_payroll_trend").val());
-                formData.append("show_hr_payroll_snapshot", $("#show_hr_payroll_snapshot").val());
-                formData.append("show_hr_attendance_watch", $("#show_hr_attendance_watch").val());
-                formData.append("show_hr_payroll_status", $("#show_hr_payroll_status").val());
+                // HR Dashboard Subsections (commented out)
+                // formData.append("show_hr_staff_strength", $("#show_hr_staff_strength").val());
+                // formData.append("show_hr_active_staff", $("#show_hr_active_staff").val());
+                // formData.append("show_hr_monthly_attendance", $("#show_hr_monthly_attendance").val());
+                // formData.append("show_hr_personal_progress", $("#show_hr_personal_progress").val());
+                // formData.append("show_hr_attendance_pattern", $("#show_hr_attendance_pattern").val());
+                // formData.append("show_hr_salary_payroll_trend", $("#show_hr_salary_payroll_trend").val());
+                // formData.append("show_hr_payroll_snapshot", $("#show_hr_payroll_snapshot").val());
+                // formData.append("show_hr_attendance_watch", $("#show_hr_attendance_watch").val());
+                // formData.append("show_hr_payroll_status", $("#show_hr_payroll_status").val());
 
                 // ERP Dashboard Subsections
                 formData.append("show_erp_total_sales", $("#show_erp_total_sales").val());

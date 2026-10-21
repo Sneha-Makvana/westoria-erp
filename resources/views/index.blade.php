@@ -1823,7 +1823,7 @@
                 </div>
             @endif
 
-            @if (
+            {{-- @if (
                 $showHrDashboardSection &&
                     in_array($role, ['inventory-manager', 'admin', 'sub-admin']) &&
                     ($showHrStaffStrength ||
@@ -1839,7 +1839,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
                         <div>
                             <h4 class="mb-1">HR Workforce Overview</h4>
-                            {{-- <p class="text-muted mb-0">Staff strength, attendance performance, payroll progress, and advance exposure.</p> --}}
+                            <p class="text-muted mb-0">Staff strength, attendance performance, payroll progress, and advance exposure.</p>
                         </div>
                         <a href="{{ route('staff.list') }}" class="btn btn-sm btn-primary">View Staff</a>
                     </div>
@@ -2271,7 +2271,7 @@
                         </div>
                     </div>
                 @endif
-            @endif
+            @endif --}}
 
             @if (
                 $showErpDashboard &&

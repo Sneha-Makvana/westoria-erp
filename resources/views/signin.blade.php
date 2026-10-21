@@ -625,7 +625,7 @@
                             <div id="loginMessage" class="text-danger"></div>
 
                             {{-- ── Face Login ─────────────────────────────────────── --}}
-                            <div class="form-login mt-2">
+                            {{-- <div class="form-login mt-2">
                                 <div class="login-divider">
                                     <span>or continue with</span>
                                 </div>
@@ -637,7 +637,7 @@
                                     <i class="fas fa-camera" style="font-size:15px;"></i> Login with Face
                                 </button>
                                 <div id="faceLoginMessage" class="text-danger mt-2" style="font-size:13px;"></div>
-                            </div>
+                            </div> --}}
                         </form>
 
                     </div>
