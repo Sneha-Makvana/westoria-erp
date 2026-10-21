@@ -1651,7 +1651,7 @@
 
 
             {{-- HR Dropdown --}}
-            @if (in_array(auth()->user()->role, ['admin', 'sub-admin', 'hr']))
+            {{-- @if (in_array(auth()->user()->role, ['admin', 'sub-admin', 'hr']))
             <div class="dropdown me-2 align-items-center hide-on-ipad-pro header-hr-dropdown">
                 <button class="btn btn-sm dropdown-toggle text-white" style="background-color: #ff9f43; border-radius: 6px; height: 38px;" data-bs-toggle="dropdown">
                     <i class="fa fa-id-badge"></i> HR<i class="fa fa-chevron-down ms-1"></i>
@@ -1663,7 +1663,7 @@
                     <li><a class="dropdown-item" href="{{ route('leave.request') }}">Leaves</a></li>
                 </ul>
             </div>
-            @endif
+            @endif --}}
 
             @stack('header-actions')
 

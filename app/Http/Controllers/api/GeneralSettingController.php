@@ -67,6 +67,16 @@ class GeneralSettingController extends Controller
         } else {
             $selectedSubAdminId = $userBranchId;
         }
+
+        // Sanitize string 'undefined' or 'null' values sent from JS formData
+        $inputs = $request->all();
+        foreach ($inputs as $key => $value) {
+            if ($value === 'undefined' || $value === 'null') {
+                $inputs[$key] = null;
+            }
+        }
+        $request->merge($inputs);
+
         $request->validate([
             'shop_name'         => 'required|string',
             'gst_num'           => 'nullable',
@@ -324,6 +334,15 @@ class GeneralSettingController extends Controller
         } else {
             $selectedSubAdminId = $userBranchId;
         }
+
+        // Sanitize string 'undefined' or 'null' values sent from JS formData
+        $inputs = $request->all();
+        foreach ($inputs as $key => $value) {
+            if ($value === 'undefined' || $value === 'null') {
+                $inputs[$key] = null;
+            }
+        }
+        $request->merge($inputs);
 
         $validator = Validator::make($request->all(), [
             'show_crm_dashboard'         => 'nullable|boolean',

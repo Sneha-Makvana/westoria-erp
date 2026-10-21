@@ -345,6 +345,19 @@
                         </li>
                     @endif
 
+                    {{-- Staff --}}
+                @if (app('hasPermission')(8, 'view'))
+                    <li class="submenu sidebar-module">
+                        <a href="javascript:void(0);">
+                            <img src="{{ image_path('admin/assets/img/icons/users1.svg') }}" alt="img">
+                            <span>Staff</span> <span class="menu-arrow"></span>
+                        </a>
+                        <ul>
+                            <li><a href="{{ route('staff.list') }}">All Staff</a></li>
+                            <li><a href="{{ route('staff.add') }}">New Staff</a></li>
+                        </ul>
+                    </li>
+                @endif
                     {{-- Vendors --}}
                     @if (app('hasPermission')(10, 'view') || app('hasPermission')(10, 'add'))
                         <li class="submenu sidebar-module">
@@ -777,8 +790,8 @@
                 </li>
                 @endif
 
-                @if (in_array(auth()->user()->role, ['admin', 'hr', 'sub-admin']))
-                {{-- ====== HR MODULE SECTION ====== --}}
+                {{-- @if (in_array(auth()->user()->role, ['admin', 'hr', 'sub-admin']))
+                ====== HR MODULE SECTION ======
                 <li class="submenu sidebar-category sidebar-category-hr">
                     <a href="javascript:void(0);">
                         <i class="fas fa-id-badge"></i>
@@ -786,21 +799,9 @@
                         <span class="menu-arrow"></span>
                     </a>
                     <ul>
-                {{-- Staff --}}
-                @if (app('hasPermission')(8, 'view'))
-                    <li class="submenu sidebar-module">
-                        <a href="javascript:void(0);">
-                            <img src="{{ image_path('admin/assets/img/icons/users1.svg') }}" alt="img">
-                            <span>Staff</span> <span class="menu-arrow"></span>
-                        </a>
-                        <ul>
-                            <li><a href="{{ route('staff.list') }}">All Staff</a></li>
-                            <li><a href="{{ route('staff.add') }}">New Staff</a></li>
-                        </ul>
-                    </li>
-                @endif
+                
 
-                {{-- Attendance --}}
+                Attendance
                 @if (app('hasPermission')(26, 'view') || app('hasPermission')(26, 'add'))
                     <li class="submenu sidebar-module">
                         <a href="javascript:void(0);">
@@ -816,7 +817,7 @@
                     </li>
                 @endif
 
-                {{-- Leaves --}}
+                Leaves
                 @if (app('hasPermission')(28, 'view') || app('hasPermission')(28, 'add'))
                     <li class="submenu sidebar-module">
                         <a href="javascript:void(0);">
@@ -839,7 +840,7 @@
                     </li>
                 @endif
 
-                {{-- Payroll --}}
+                Payroll
                 @if (app('hasPermission')(29, 'view') || app('hasPermission')(29, 'add'))
                     <li class="submenu sidebar-module">
                         <a href="javascript:void(0);">
@@ -868,7 +869,7 @@
                     </li>
                 @endif
 
-                {{-- Advance Pay --}}
+                Advance Pay
                 @if (auth()->user()->role === 'admin')
                     <li class="submenu sidebar-module">
                         <a href="javascript:void(0);">
@@ -887,7 +888,7 @@
                     </li>
                 @endif
 
-                {{-- My Branch — only visible when plan allows multiple branches --}}
+                My Branch — only visible when plan allows multiple branches
                 @if (auth()->user()->role === 'admin' && canUseBranches())
                     <li class="submenu sidebar-module">
                         <a href="javascript:void(0);">
@@ -903,7 +904,7 @@
                 @endif
                     </ul>
                 </li>
-                @endif
+                @endif --}}
 
                 {{-- Settings --}}
                 @if (app('hasPermission')(14, 'view') || app('hasPermission')(15, 'view'))
@@ -938,13 +939,13 @@
                             {{-- @if (app('hasPermission')(14, 'view'))
                                 <li><a href="{{ route('setting.connecteddevices') }}">Connected Devices</a></li>
                             @endif --}}
-                            @if (app('hasPermission')(14, 'view'))
+                            {{-- @if (app('hasPermission')(14, 'view'))
                                 <li><a href="{{ route('department.view') }}">Departments</a></li>
                                 <li><a href="{{ route('designation.view') }}">Designations</a></li>
                                 <li><a href="{{ route('leave-type.view') }}">Leave Types</a></li>
                                 <li><a href="{{ route('holidays.index') }}">Manage Holidays</a></li>
                                 <li><a href="{{ route('holidays.calendar') }}">Holiday Calendar</a></li>
-                            @endif
+                            @endif --}}
                             @if (app('hasPermission')(14, 'view'))
                                 <li><a href="{{ route('table-truncate.index') }}">Table Truncate</a></li>
                             @endif
