@@ -546,9 +546,24 @@ class TicketController extends Controller
             return response()->json(['status' => false, 'data' => []]);
         }
 
-        $order = Order::with('orderItems.product')->find($orderId);
+        $order = Order::with(['orderItems.product', 'orderItems.variant'])->find($orderId);
         if (!$order) {
             return response()->json(['status' => false, 'data' => []]);
+        }
+
+        $productIds = $order->orderItems->pluck('product_id')->filter()->unique()->toArray();
+        $fallbackPurchases = [];
+        if (!empty($productIds)) {
+            $fallbackPurchases = \Illuminate\Support\Facades\DB::table('purchases')
+                ->whereIn('item', $productIds)
+                ->where(function ($q) {
+                    $q->whereNull('isDeleted')->orWhere('isDeleted', 0);
+                })
+                ->whereNotNull('price')
+                ->where('price', '>', 0)
+                ->orderBy('id', 'desc')
+                ->pluck('price', 'item')
+                ->toArray();
         }
 
         $products = [];
@@ -557,11 +572,33 @@ class TicketController extends Controller
                 $images = is_string($item->product->images) ? json_decode($item->product->images, true) : $item->product->images;
                 $firstImage = (is_array($images) && count($images) > 0) ? $images[0] : null;
 
+                $unitPurchase = null;
+                if ($item->variant && $item->variant->purchase_price !== null && (float) $item->variant->purchase_price > 0) {
+                    $unitPurchase = (float) $item->variant->purchase_price;
+                } elseif ($item->product && $item->product->purchase_price !== null && (float) $item->product->purchase_price > 0) {
+                    $unitPurchase = (float) $item->product->purchase_price;
+                } elseif ($item->product && $item->product->cost_price !== null && (float) $item->product->cost_price > 0) {
+                    $unitPurchase = (float) $item->product->cost_price;
+                } elseif (isset($fallbackPurchases[$item->product_id]) && (float) $fallbackPurchases[$item->product_id] > 0) {
+                    $unitPurchase = (float) $fallbackPurchases[$item->product_id];
+                } else {
+                    $unitPurchase = 0.0;
+                }
+
+                $sellingPrice = (float) ($item->price ?? 0);
+                $qty = (float) ($item->quantity ?? 1);
+                $lineTotal = (float) ($item->total_amount ?? ($sellingPrice * $qty));
+                $costTotal = $unitPurchase * $qty;
+                $profitTotal = $lineTotal - $costTotal;
+
                 $products[] = [
                     'id' => $item->product->id,
                     'name' => $item->product->name ?? $item->product->product_name ?? 'Product #' . $item->product_id,
-                    'qty' => $item->quantity,
-                    'price' => $item->price,
+                    'qty' => $qty,
+                    'price' => number_format($sellingPrice, 2),
+                    'purchase_price' => number_format($unitPurchase, 2),
+                    'profit' => number_format($profitTotal, 2),
+                    'profit_raw' => round($profitTotal, 2),
                     'image' => $firstImage ? asset('public/storage/' . $firstImage) : asset('public/admin/assets/img/product/product1.jpg')
                 ];
             }

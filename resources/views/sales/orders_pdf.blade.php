@@ -214,27 +214,38 @@
                         <th>Date</th>
                         <th>Customer Name</th>
                         <th>Total Amount</th>
+                        <th>Profit on Sale</th>
                         <th>Remaining Amount</th>
                         <th>Payment Status</th>
                         <th>Payment Method</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @php $grandTotal = 0; @endphp
+                    @php 
+                        $grandTotal = 0; 
+                        $grandProfit = 0;
+                    @endphp
                     @forelse ($orders as $order)
-                        @php $grandTotal += $order->total_amount; @endphp
+                        @php 
+                            $grandTotal += $order->total_amount; 
+                            $profitVal = (float) ($order->profit ?? 0);
+                            $grandProfit += $profitVal;
+                        @endphp
                         <tr>
                             <td>{{ $order->order_number ?? 'N/A' }}</td>
                             <td>{{ $order->created_at->format('d M Y') }}</td>
                             <td>{{ $order->user->name ?? 'N/A' }}</td>
                             <td>{{ number_format($order->total_amount, 2) }}</td>
+                            <td style="color: {{ $profitVal > 0 ? '#28c76f' : ($profitVal < 0 ? '#ea5455' : '#333') }}; font-weight: bold;">
+                                {{ $profitVal >= 0 ? '+' : '' }}{{ number_format($profitVal, 2) }}
+                            </td>
                             <td>{{ number_format($order->remaining_amount, 2) }}</td>
                             <td>{{ ucfirst($order->payment_status) ?? 'N/A' }}</td>
                             <td>{{ $order->payment_method ?? 'N/A' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align:center;">No sales orders found.</td>
+                            <td colspan="8" style="text-align:center;">No sales orders found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -245,7 +256,11 @@
                 <table>
                     <tr>
                         <td class="total-label">Grand Total</td>
-                        <td class="total-amount">{{ number_format($grandTotal, 2) }}</td> {{-- ✅ No currency --}}
+                        <td class="total-amount">{{ number_format($grandTotal, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="total-label">Total Profit on Sale</td>
+                        <td class="total-amount" style="color: {{ $grandProfit >= 0 ? '#28c76f' : '#ea5455' }};">{{ ($grandProfit >= 0 ? '+' : '') . number_format($grandProfit, 2) }}</td>
                     </tr>
                 </table>
             </div>
