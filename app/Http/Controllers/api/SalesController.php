@@ -3192,6 +3192,87 @@ class SalesController extends Controller
 
 
 
+    /**
+     * Compute purchase cost and profit on sale for each order in the collection.
+     */
+    private function attachProfitDetailsToOrders($ordersCollection): void
+    {
+        if (empty($ordersCollection) || (is_object($ordersCollection) && method_exists($ordersCollection, 'isEmpty') && $ordersCollection->isEmpty())) {
+            return;
+        }
+
+        // Gather all product IDs where fallback purchase price might be needed
+        $productIds = [];
+        foreach ($ordersCollection as $order) {
+            if (!empty($order->orderItems)) {
+                foreach ($order->orderItems as $item) {
+                    if (!empty($item->product_id)) {
+                        $productIds[] = (int) $item->product_id;
+                    }
+                }
+            }
+        }
+        $productIds = array_values(array_unique(array_filter($productIds)));
+
+        // Fetch latest purchase price from purchases table for any products as fallback
+        $fallbackPurchases = [];
+        if (!empty($productIds)) {
+            $fallbackPurchases = DB::table('purchases')
+                ->whereIn('item', $productIds)
+                ->where(function ($q) {
+                    $q->whereNull('isDeleted')->orWhere('isDeleted', 0);
+                })
+                ->whereNotNull('price')
+                ->where('price', '>', 0)
+                ->orderBy('id', 'desc')
+                ->pluck('price', 'item')
+                ->toArray();
+        }
+
+        foreach ($ordersCollection as $order) {
+            $orderTotal = (float) ($order->total_amount ?? 0);
+            $totalReturn = (float) ($order->total_return ?? 0);
+            $actualTotal = max(0, $orderTotal - $totalReturn);
+
+            $totalPurchaseCost = 0.0;
+            $hasCost = false;
+
+            if (!empty($order->orderItems)) {
+                foreach ($order->orderItems as $item) {
+                    if (!empty($item->isDeleted)) {
+                        continue;
+                    }
+                    $qty = (float) ($item->quantity ?? 1);
+                    if ($qty <= 0) {
+                        $qty = 1;
+                    }
+
+                    $unitPurchase = null;
+                    if ($item->variant && $item->variant->purchase_price !== null && (float) $item->variant->purchase_price > 0) {
+                        $unitPurchase = (float) $item->variant->purchase_price;
+                    } elseif ($item->product && $item->product->purchase_price !== null && (float) $item->product->purchase_price > 0) {
+                        $unitPurchase = (float) $item->product->purchase_price;
+                    } elseif ($item->product && $item->product->cost_price !== null && (float) $item->product->cost_price > 0) {
+                        $unitPurchase = (float) $item->product->cost_price;
+                    } elseif (isset($fallbackPurchases[$item->product_id]) && (float) $fallbackPurchases[$item->product_id] > 0) {
+                        $unitPurchase = (float) $fallbackPurchases[$item->product_id];
+                    }
+
+                    if ($unitPurchase !== null) {
+                        $totalPurchaseCost += ($unitPurchase * $qty);
+                        $hasCost = true;
+                    }
+                }
+            }
+
+            $profit = $actualTotal - $totalPurchaseCost;
+
+            $order->total_cost = round($totalPurchaseCost, 2);
+            $order->profit = round($profit, 2);
+            $order->has_cost_data = $hasCost;
+        }
+    }
+
     public function get_orders(Request $request)
     {
         $user = Auth::guard('api')->user();
@@ -3213,7 +3294,14 @@ class SalesController extends Controller
         $query = Order::select('orders.*') // 👈 ensure created_by is included
             ->with([
                 'user:id,name,phone',
-                'orderItems:id,order_id',
+                'orderItems' => function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('isDeleted')->orWhere('isDeleted', 0);
+                    })->with([
+                        'product:id,name,purchase_price,cost_price,price',
+                        'variant:id,product_id,purchase_price,price',
+                    ]);
+                },
                 'creator:id,name,role',
                 'staff:id,name',
             ])
@@ -3330,10 +3418,14 @@ class SalesController extends Controller
             $totalPaidAmount += $effectivePaid;
         }
 
+        $this->attachProfitDetailsToOrders($summaryOrders);
+        $totalProfitAmount = (float) $summaryOrders->sum('profit');
+
         $perPage = (int) $request->input('per_page', 10);
         $perPage = $perPage > 0 ? min($perPage, 100) : 10;
         $get_orders = $query->paginate($perPage);
         $ordersCollection = collect($get_orders->items());
+        $this->attachProfitDetailsToOrders($ordersCollection);
 
         $orderIds = $ordersCollection->pluck('id')->filter()->values();
         $emiPaidCounts = $orderIds->isEmpty()
@@ -3416,6 +3508,7 @@ class SalesController extends Controller
             'total_amount' => $totalAmount,
             'total_pending_amount' => round($totalPendingAmount, 2),
             'total_paid_amount' => round($totalPaidAmount, 2),
+            'total_profit_amount' => round($totalProfitAmount, 2),
             'data' => $ordersCollection,
             'pagination' => [
                 'current_page' => $get_orders->currentPage(),
@@ -5185,7 +5278,14 @@ public function update_sale(Request $request)
         $query = Order::select('orders.*') // 👈 ensure created_by is included
             ->with([
                 'user:id,name,phone',
-                'orderItems:id,order_id',
+                'orderItems' => function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('isDeleted')->orWhere('isDeleted', 0);
+                    })->with([
+                        'product:id,name,purchase_price,cost_price,price',
+                        'variant:id,product_id,purchase_price,price',
+                    ]);
+                },
                 'creator:id,name,role',
                 'staff:id,name',
             ])
@@ -5252,6 +5352,7 @@ public function update_sale(Request $request)
             }
 
             $orders = $query->get();
+            $this->attachProfitDetailsToOrders($orders);
 
             // ✅ Transform data to calculate remaining/extra paid and format dates
             $orders->transform(function ($order) {
@@ -5377,8 +5478,17 @@ public function update_sale(Request $request)
         $currencyPosition = $settings->currency_position ?? 'left';
 
         try {
-            $query = Order::with(['user:id,name,phone'])
-                ->where('isDeleted', 0);
+            $query = Order::with([
+                'user:id,name,phone',
+                'orderItems' => function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('isDeleted')->orWhere('isDeleted', 0);
+                    })->with([
+                        'product:id,name,purchase_price,cost_price,price',
+                        'variant:id,product_id,purchase_price,price',
+                    ]);
+                },
+            ])->where('isDeleted', 0);
             // ->where('type', 'Sales');
 
             // 🔹 Year filter
@@ -5421,6 +5531,7 @@ public function update_sale(Request $request)
             StaffDepartmentScope::applyOrderScope($query, $user, $selectedSubAdminId);
 
             $orders = $query->orderBy('created_at', 'desc')->get();
+            $this->attachProfitDetailsToOrders($orders);
 
             $formatIndian = function ($num) {
                 $num = (float)$num;
@@ -5445,38 +5556,41 @@ public function update_sale(Request $request)
             $sheet->setCellValue('B1', 'Date');
             $sheet->setCellValue('C1', 'Customer Name');
             $sheet->setCellValue('D1', 'Total Amount');
-            $sheet->setCellValue('E1', 'Remaining Amount');
-            $sheet->setCellValue('F1', 'Payment Status');
-            $sheet->setCellValue('G1', 'Payment Method');
-            $sheet->getStyle('A1:G1')->getFont()->setBold(true);
+            $sheet->setCellValue('E1', 'Profit on Sale');
+            $sheet->setCellValue('F1', 'Remaining Amount');
+            $sheet->setCellValue('G1', 'Payment Status');
+            $sheet->setCellValue('H1', 'Payment Method');
+            $sheet->getStyle('A1:H1')->getFont()->setBold(true);
 
             $row = 2;
             foreach ($orders as $order) {
                 $sheet->setCellValue('A' . $row, $order->order_number ?? 'N/A');
                 $sheet->setCellValue('B' . $row, $order->created_at->format('d-m-Y'));
                 $sheet->setCellValue('C' . $row, $order->user->name ?? 'N/A');
-                // $sheet->setCellValue('D' . $row, $order->total_amount ?? 0);
-                // $sheet->setCellValue('E' . $row, $order->remaining_amount ?? 0);
                 if ($formatCurrency === 'indian') {
                     $sheet->setCellValue('D' . $row, $formatIndian($order->total_amount ?? 0));
-                    $sheet->setCellValue('E' . $row, $formatIndian($order->remaining_amount ?? 0));
+                    $sheet->setCellValue('E' . $row, $formatIndian($order->profit ?? 0));
+                    $sheet->setCellValue('F' . $row, $formatIndian($order->remaining_amount ?? 0));
 
                     // Set these columns as text to preserve the formatting
                     $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
                     $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+                    $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
                 } else {
                     $sheet->setCellValue('D' . $row, $order->total_amount ?? 0);
-                    $sheet->setCellValue('E' . $row, $order->remaining_amount ?? 0);
+                    $sheet->setCellValue('E' . $row, $order->profit ?? 0);
+                    $sheet->setCellValue('F' . $row, $order->remaining_amount ?? 0);
 
                     // Set as number format
                     $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
                     $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                    $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
                 }
-                $sheet->setCellValue('F' . $row, $order->payment_status ?? 'N/A');
-                $sheet->setCellValue('G' . $row, $order->payment_method ?? 'N/A');
+                $sheet->setCellValue('G' . $row, $order->payment_status ?? 'N/A');
+                $sheet->setCellValue('H' . $row, $order->payment_method ?? 'N/A');
                 $row++;
             }
-            foreach (range('A', 'G') as $col) {
+            foreach (range('A', 'H') as $col) {
                 $sheet->getColumnDimension($col)->setAutoSize(true);
             }
 
@@ -5717,8 +5831,17 @@ if ($setting && $setting->invoice_size === 'small') {
         $setting = Setting::where('branch_id', $branchIdToUse)->first();
 
         try {
-            $query = Order::with(['user:id,name,phone'])
-                ->where('isDeleted', 0);
+            $query = Order::with([
+                'user:id,name,phone',
+                'orderItems' => function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('isDeleted')->orWhere('isDeleted', 0);
+                    })->with([
+                        'product:id,name,purchase_price,cost_price,price',
+                        'variant:id,product_id,purchase_price,price',
+                    ]);
+                },
+            ])->where('isDeleted', 0);
 
             // 🔹 Apply filters
             if ($request->filled('year')) {
@@ -5760,6 +5883,8 @@ if ($setting && $setting->invoice_size === 'small') {
                     'message' => 'No orders found for the given filters.',
                 ], 404);
             }
+
+            $this->attachProfitDetailsToOrders($orders);
 
             // 🔹 Generate PDF
             $pdf = Pdf::loadView('sales.orders_pdf', [

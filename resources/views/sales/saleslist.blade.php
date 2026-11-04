@@ -123,8 +123,16 @@
         }
 
         /* For Biller column */
-        .datanew td:nth-child(10) {
+        .datanew td:nth-child(10),
+        .datanew td:nth-child(11) {
             max-width: 260px;
+        }
+
+        .profit-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
         }
 
         .biller-wrap {
@@ -1907,10 +1915,13 @@
                             <span>Total Paid:</span>
                             <span id="filtered-paid-total">₹0.00</span>
                         </div>
-                        <!-- <div class="summary-badge-box" style="color: #1b2850; border-color: #c5cde0; background: #f4f6fb;"> -->
-                            <div class="summary-badge-box total">
+                        <div class="summary-badge-box total">
                             <span>Total:</span>
                             <span id="filtered-total" style="color: #ff9f43; font-weight: 700; margin-left: 4px;">₹0.00</span>
+                        </div>
+                        <div class="summary-badge-box profit" style="color: #28c76f; border-color: #28c76f; background: rgba(40, 199, 111, 0.08);">
+                            <span>Total Profit:</span>
+                            <span id="filtered-profit-total" style="color: #28c76f; font-weight: 700; margin-left: 4px;">₹0.00</span>
                         </div>
                         <div class="summary-export-group">
                             <button id="exportAllChallan" class="btn btn-sm btn-success">
@@ -1983,6 +1994,7 @@
                                 <th>Payment Status</th>
                                 {{-- <th>Return Status</th> --}}
                                 <th>Total</th>
+                                <th>Profit on Sale</th>
                                 @if(!isset($setting) || ($setting->show_assign_staff ?? true))
                                 <th>Assigned Staff</th>
                                 @endif
@@ -2720,7 +2732,9 @@
                                 <tr>
                                     <th>Product Name</th>
                                     <th>Quantity</th>
-                                    <th>Price</th>
+                                    <th>Purchase Price</th>
+                                    <th>Selling Price</th>
+                                    <th>Profit</th>
                                 </tr>
                             </thead>
                             <tbody id="orderProductsList">
@@ -3208,7 +3222,7 @@
 
             .summary-badges-row {
                 display: grid !important;
-                grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
                 align-items: stretch;
                 gap: 6px !important;
                 margin: 0 0 10px !important;
@@ -4824,6 +4838,52 @@
                 }
             }
         }
+        function buildProfitCell(order, currencySymbol, currencyPosition) {
+            const profit = parseFloat(order.profit !== undefined ? order.profit : 0);
+            const totalCost = parseFloat(order.total_cost !== undefined ? order.total_cost : 0);
+
+            const formattedProfit = Math.abs(profit).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            const formattedCost = totalCost.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            const displayProfit = currencyPosition === 'right' ?
+                formattedProfit + currencySymbol :
+                currencySymbol + formattedProfit;
+            const displayCost = currencyPosition === 'right' ?
+                formattedCost + currencySymbol :
+                currencySymbol + formattedCost;
+
+            let textClass = 'text-success';
+            let icon = '<i class="fas fa-arrow-up me-1" style="font-size: 10px;"></i>';
+            let prefix = '+';
+
+            if (profit < 0) {
+                textClass = 'text-danger';
+                icon = '<i class="fas fa-arrow-down me-1" style="font-size: 10px;"></i>';
+                prefix = '-';
+            } else if (profit === 0) {
+                textClass = 'text-muted';
+                icon = '';
+                prefix = '';
+            }
+
+            return `
+                <div class="profit-cell" style="white-space: nowrap;">
+                    <span class="fw-bold ${textClass}" style="font-size: 13px;">
+                        ${icon}${prefix}${displayProfit}
+                    </span>
+                    <div class="small text-muted" style="font-size: 11px;" title="Total Product Cost: ${displayCost}">
+                        Cost: ${displayCost}
+                    </div>
+                </div>
+            `;
+        }
+
         // Function to render mobile order cards
         function renderMobileOrders(orders, currencySymbol, currencyPosition) {
             const container = $('#mobile-order-container');
@@ -5028,6 +5088,10 @@
                                 <span class="mobile-detail-label">Total:</span>
                                 <span class="mobile-detail-value" style="font-weight: bold; color: #ff9f43;">${displayAmount}</span>
                             </div>
+                            <div class="mobile-detail-row">
+                                <span class="mobile-detail-label">Profit on Sale:</span>
+                                <span class="mobile-detail-value">${buildProfitCell(order, currencySymbol, currencyPosition)}</span>
+                            </div>
                             ${showAssignStaff ? `<div class="mobile-detail-row">
                                 <span class="mobile-detail-label">Assigned Staff:</span>
                                 <span class="mobile-detail-value">${buildStaffCell(order.id, order.staff_id, order.staff_name)}</span>
@@ -5181,7 +5245,7 @@
             }
 
             return `
-        <td colspan="10" class="order-details-content">
+        <td colspan="11" class="order-details-content">
             <div class="order-details-list">
                 <div class="order-detail-row-simple">
                     <span class="order-detail-label-simple">Order Number:</span>
@@ -5242,6 +5306,10 @@
                 <div class="order-detail-row-simple">
                     <span class="order-detail-label-simple">Total:</span>
                     <span class="order-detail-value-simple" style="font-weight: bold; color: #ff9f43;">${displayAmount}</span>
+                </div>
+                <div class="order-detail-row-simple">
+                    <span class="order-detail-label-simple">Profit on Sale:</span>
+                    <span class="order-detail-value-simple">${buildProfitCell(order, currencySymbol, currencyPosition)}</span>
                 </div>
                 ${showAssignStaff ? `<div class="order-detail-row-simple">
                     <span class="order-detail-label-simple">Assigned Staff:</span>
@@ -5322,7 +5390,8 @@
                     window.salesSummaryTotals.total_pending_amount || 0,
                     window.salesSummaryTotals.total_paid_amount || 0,
                     window.salesSummaryTotals.currency_symbol || '₹',
-                    window.salesSummaryTotals.currency_position || 'left'
+                    window.salesSummaryTotals.currency_position || 'left',
+                    window.salesSummaryTotals.total_profit_amount || 0
                 );
                 return;
             }
@@ -5399,12 +5468,17 @@
         }
 
         function updateSalesSummaryTotals(totalAmount, totalPendingAmount, totalPaidAmount, currencySymbol,
-            currencyPosition) {
+            currencyPosition, totalProfitAmount) {
             $('#filtered-total').text(formatSummaryAmount(totalAmount, currencySymbol, currencyPosition));
             $('#filtered-pending-total').text(formatSummaryAmount(totalPendingAmount, currencySymbol,
                 currencyPosition));
             $('#filtered-paid-total').text(formatSummaryAmount(totalPaidAmount, currencySymbol,
                 currencyPosition));
+            if ($('#filtered-profit-total').length) {
+                const profitNum = parseFloat(totalProfitAmount !== undefined ? totalProfitAmount : 0);
+                const prefix = profitNum > 0 ? '+' : '';
+                $('#filtered-profit-total').text(prefix + formatSummaryAmount(profitNum, currencySymbol, currencyPosition));
+            }
         }
 
         const salesCalendarYears = @json($years ?? []);
@@ -6501,12 +6575,14 @@ $('#paymentHistoryList').html(historyHtml);
                                 response.total_pending_amount || 0,
                                 response.total_paid_amount || 0,
                                 currencySymbol,
-                                currencyPosition
+                                currencyPosition,
+                                response.total_profit_amount || 0
                             );
                             window.salesSummaryTotals = {
                                 total_amount: response.total_amount || 0,
                                 total_pending_amount: response.total_pending_amount || 0,
                                 total_paid_amount: response.total_paid_amount || 0,
+                                total_profit_amount: response.total_profit_amount || 0,
                                 currency_symbol: currencySymbol,
                                 currency_position: currencyPosition
                             };
@@ -6649,6 +6725,7 @@ $('#paymentHistoryList').html(historyHtml);
                                         order
                                         .extra_paid || 0),
                                     displayAmount || '0.00',
+                                    buildProfitCell(order, currencySymbol, currencyPosition),
                                     ...(showAssignStaff ? [buildStaffCell(order.id, order.staff_id, order.staff_name)] : []),
                                     ...(showOrderType ? [buildOrderTypeCell(order.id, order.order_type)] : []),
                                     `<span class="biller-wrap">${order.biller || 'Admin'}</span>`                                ];
@@ -7230,6 +7307,7 @@ $('#paymentHistoryList').html(historyHtml);
                     getStatusBadge(order.quotation_status || 'sales', 'quotation'),
                     getStatusBadge(order.payment_status, 'payment', order.extra_paid || 0),
                     displayAmount || '0.00',
+                    buildProfitCell(order, currencySymbol, currencyPosition),
                     ...(showAssignStaff ? [buildStaffCell(order.id, order.staff_id, order.staff_name)] : []),
                     ...(showOrderType ? [buildOrderTypeCell(order.id, order.order_type)] : []),
                     `<span class="biller-wrap">${order.biller || 'Admin'}</span>`,
@@ -7444,6 +7522,7 @@ $('#paymentHistoryList').html(historyHtml);
                     getStatusBadge(order.quotation_status || 'sales', 'quotation'),
                     getStatusBadge(order.payment_status, 'payment', order.extra_paid || 0),
                     displayAmount || '0.00',
+                    buildProfitCell(order, currencySymbol, currencyPosition),
                     buildStaffCell(order.id, order.staff_id, order.staff_name),
                     `<span class="biller-wrap">${order.biller || 'Admin'}</span>`,
                     actionBtns
@@ -8201,7 +8280,7 @@ $('#paymentHistoryList').html(historyHtml);
             e.preventDefault();
             const orderId = $(this).data('order-id');
             
-            $('#orderProductsList').html('<tr><td colspan="3" class="text-center">Loading...</td></tr>');
+            $('#orderProductsList').html('<tr><td colspan="5" class="text-center">Loading...</td></tr>');
             $('#orderProductsModal').modal('show');
             
             $.ajax({
@@ -8212,21 +8291,26 @@ $('#paymentHistoryList').html(historyHtml);
                     let html = '';
                     if (response.status && response.data && response.data.length > 0) {
                         response.data.forEach(function(item) {
+                            const profitRaw = parseFloat(item.profit_raw !== undefined ? item.profit_raw : 0);
+                            const profitClass = profitRaw > 0 ? 'text-success fw-bold' : (profitRaw < 0 ? 'text-danger fw-bold' : 'text-muted');
+                            const prefix = profitRaw > 0 ? '+' : '';
                             html += `
                                 <tr>
                                     <td>${item.name}</td>
                                     <td>${item.qty}</td>
-                                    <td>${item.price}</td>
+                                    <td>₹${item.purchase_price || '0.00'}</td>
+                                    <td>₹${item.price || '0.00'}</td>
+                                    <td class="${profitClass}">${prefix}₹${item.profit || '0.00'}</td>
                                 </tr>
                             `;
                         });
                     } else {
-                        html = '<tr><td colspan="3" class="text-center">No products found.</td></tr>';
+                        html = '<tr><td colspan="5" class="text-center">No products found.</td></tr>';
                     }
                     $('#orderProductsList').html(html);
                 },
                 error: function() {
-                    $('#orderProductsList').html('<tr><td colspan="3" class="text-center text-danger">Failed to load products.</td></tr>');
+                    $('#orderProductsList').html('<tr><td colspan="5" class="text-center text-danger">Failed to load products.</td></tr>');
                 }
             });
         });
