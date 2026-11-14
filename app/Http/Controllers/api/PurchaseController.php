@@ -239,6 +239,9 @@ class PurchaseController extends Controller
                         'status'        => 'active',
                         'SKU'           => $sku,
                         'branch_id'     => $userBranchId ?? $userId,
+                        'hsn_code'      => $product['hsn_code'] ?? null,
+                        'barcode'       => ! empty($product['barcode']) ? $product['barcode'] : null,
+                        'mrp'           => isset($product['mrp']) && $product['mrp'] !== '' ? $product['mrp'] : null,
                     ]);
                     $product_id = $newProduct->id;
 

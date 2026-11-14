@@ -41,6 +41,7 @@ use App\Http\Controllers\admin\PlanController;
 use App\Http\Controllers\admin\ProductController;
 use App\Http\Controllers\api\ProductController as ApiProductController;
 use App\Http\Controllers\admin\PurchaseController;
+use App\Http\Controllers\admin\PurchaseAiBillController;
 use App\Http\Controllers\admin\PurchaseReturnController;
 use App\Http\Controllers\admin\QuotationController;
 use App\Http\Controllers\admin\SalaryController;
@@ -510,6 +511,9 @@ Route::middleware(['auth:web', 'auto.permission'])->group(function () {
     // Route::post('/import-sales-list', [ApiSalesController::class, 'importSalesList'])->name('sales.import-list');
     Route::get('/purchase-list', [PurchaseController::class, 'purchase_list'])->name('purchase.lists');
     Route::get('/row-material-purchase-list', [PurchaseController::class, 'row_material_purchase_list'])->name('purchase.row_material.lists');
+    Route::get('/ai-purchase-bill', [PurchaseAiBillController::class, 'index'])->name('purchase.ai-bill');
+    Route::post('/ai-purchase-bill/parse', [PurchaseAiBillController::class, 'parse'])->name('purchase.ai-bill.parse');
+    Route::post('/ai-purchase-bill/merge', [PurchaseAiBillController::class, 'mergePages'])->name('purchase.ai-bill.merge');
     Route::get('/add-purchase', [PurchaseController::class, 'add_purchase'])->name('purchase.add');
     Route::get('/add-row-material-purchase', [PurchaseController::class, 'add_row_material_purchase'])->name('purchase.row_material.add');
     Route::get('/view-row-material-purchase/{id}', [PurchaseController::class, 'view_row_material_purchase'])->name('purchase.row_material.view');

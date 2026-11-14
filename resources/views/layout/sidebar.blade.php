@@ -339,6 +339,7 @@
                                 @endif
                                 @if (app('hasPermission')(3, 'add'))
                                     <li><a href="{{ route('purchase.add') }}">New Purchase</a></li>
+                                    <li><a href="{{ route('purchase.ai-bill') }}">AI Bill Upload</a></li>
                                     <li><a href="{{ route('purchase.row_material.lists') }}">Row Material Purchases</a></li>
                                 @endif
                             </ul>

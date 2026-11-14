@@ -55,4 +55,18 @@ return [
         'appyflow_key' => env('GST_APPYFLOW_KEY_SECRET', ''),
     ],
 
+    /*
+    | AI Purchase Bill Upload (Gemini preferred, OpenAI fallback).
+    | Same keys as hazel-healthcare-pharma-retail / pharmacy demo.
+    */
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_VISION_MODEL', 'gpt-4o-mini'),
+    ],
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_VISION_MODEL', 'gemini-2.5-flash-lite'),
+    ],
+
 ];

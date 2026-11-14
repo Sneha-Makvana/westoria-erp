@@ -1970,6 +1970,7 @@
                     <div class="pu-m-count" id="puCount"></div>
                 </div>
                 @if (app('hasPermission')(3, 'add'))
+                    <a href="{{ route('purchase.ai-bill') }}" class="pu-m-new" style="background:#ff9f43;margin-right:6px;"><i class="fas fa-magic"></i> AI Bill</a>
                     <a href="{{ route('purchase.add') }}" class="pu-m-new"><i class="fas fa-plus"></i> New Purchase</a>
                 @endif
             </div>
@@ -2008,6 +2009,9 @@
 
             <div class="header-actions d-flex align-items-center gap-2">
                 @if (app('hasPermission')(3, 'add'))
+                    <a href="{{ route('purchase.ai-bill') }}" class="btn btn-sm" style="background:#ff9f43;color:#fff;border:none;">
+                        <i class="fas fa-magic"></i> AI Bill Upload
+                    </a>
                     <a href="{{ route('purchase.add') }}" class="btn btn-sm btn-added">
                         <img src="{{ env('ImagePath') . 'admin/assets/img/icons/plus.svg' }}" alt="img">
                         New Purchases
