@@ -111,13 +111,19 @@ class ProductImportRowMapper
             || str_contains($cellVal, 'item/model')
             || str_contains($cellVal, 'item model')
             || $cellVal === 'items'
+            || $cellVal === 'name'
+            || $cellVal === 'barcode'
+            || $cellVal === 'size'
+            || str_contains($cellVal, 'color variant')
             || str_contains($cellVal, 'sale price')
             || str_contains($cellVal, 'selling price')
+            || str_contains($cellVal, 'net sale')
             || str_contains($cellVal, 'default mrp')
             || str_contains($cellVal, 'opening stock')
             || str_contains($compact, 'itemcode')
             || str_contains($compact, 'itemname')
             || str_contains($compact, 'saleprice')
+            || str_contains($compact, 'colorvariant')
             || str_contains($cellVal, 'product*')
             || str_contains($cellVal, 's.no');
     }
@@ -127,7 +133,7 @@ class ProductImportRowMapper
         $header = strtolower(trim((string) $header));
         $header = str_replace(["\r\n", "\n", "\r", "\t", '_', "\u{00A0}"], ' ', $header);
         $header = preg_replace('/[\x00-\x1F\x7F]/', '', $header) ?? $header;
-        $header = str_replace(['*', ':', '(', ')', '.'], ' ', $header);
+        $header = str_replace(['*', ':', '(', ')', '.', '/'], ' ', $header);
         $header = preg_replace('/\s+/', ' ', $header) ?? $header;
 
         return trim($header);

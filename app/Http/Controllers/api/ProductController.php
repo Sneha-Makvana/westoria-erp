@@ -101,6 +101,21 @@ class ProductController extends Controller
                 }
             }, 'id');
 
+        if (\Illuminate\Support\Facades\Schema::hasTable('product_variants')) {
+            ProductVariant::query()
+                ->select(['id', 'product_id', 'barcode'])
+                ->whereNotNull('barcode')
+                ->where('barcode', '!=', '')
+                ->chunkById(2000, function ($variants) use (&$byCode) {
+                    foreach ($variants as $variant) {
+                        $code = strtoupper($this->sanitizeImportBarcode((string) $variant->barcode));
+                        if ($code !== '') {
+                            $byCode[$code] = (int) $variant->product_id;
+                        }
+                    }
+                }, 'id');
+        }
+
         return [
             'by_code' => $byCode,
             'by_name' => $byName,
@@ -3224,7 +3239,7 @@ class ProductController extends Controller
         // Excel wraps long titles onto new lines inside one cell ("Sale\nprice", "Default\nMRP")
         $header = str_replace(["\r\n", "\n", "\r", "\t", '_', "\u{00A0}"], ' ', $header);
         $header = preg_replace('/[\x00-\x1F\x7F]/', '', $header) ?? $header;
-        $header = str_replace(['*', ':', '(', ')', '.'], ' ', $header);
+        $header = str_replace(['*', ':', '(', ')', '.', '/'], ' ', $header);
         $header = preg_replace('/\s+/', ' ', $header) ?? $header;
 
         return trim($header);
@@ -3603,13 +3618,21 @@ class ProductController extends Controller
             $categoryName = trim((string) $col(['product', 'product*'], '', false));
         }
 
+        $variantColor = trim((string) $col([
+            'color variant', 'color/variant', 'color / variant', 'colour variant', 'color', 'colour', 'variant', 'variant color',
+        ], '', false));
+        $variantSize = trim((string) $col(['size', 'sizes', 'variant size'], '', false));
+
         return [
             'name' => $name,
             'category_name' => $categoryName,
             'brand_name' => $col(['company', 'company name', 'brand', 'brand name', 'brand*'], null, false),
             'item_code' => $itemCode,
             'description' => $col(['description'], null),
-            'price' => $col(['sale price', 'selling price', 'selling price*', 'price', 'product price', 'sales price'], null),
+            'price' => $col([
+                'sale price', 'selling price', 'selling price*', 'price', 'product price', 'sales price',
+                'net sale', 'net sales', 'net rate',
+            ], null),
             'purchase_price' => $col(['purchase price', 'purchase rate', 'wholesale purchase rate', 'purchase p', 'purchase', 'cost price', 'cost price*', 'cost_price'], null),
             'wholesale_price' => $col(['wholesale price', 'wholesale rate', 'wholesale'], null, false),
             'landing_cost' => $col(['landing cost', 'landing cost*', 'landing_cost'], null),
@@ -3627,22 +3650,275 @@ class ProductController extends Controller
             'item_type' => $col(['item/type', 'item type', 'item_type'], null, false),
             'discount_print' => $col(['discount print status', 'discount_print_status'], null),
             'item_created_on' => $col(['item created on', 'item_created_on'], null),
-            'tax_rate' => $col(['tax rate', 'tax rate (%)', 'tax %', 'gst rate', 'gst %', 'tax_rate'], null),
+            'tax_rate' => $col(['tax rate', 'tax rate (%)', 'tax %', 'gst rate', 'gst %', 'tax_rate', 'tax'], null),
             'item_location' => $col(['item location', 'item locat', 'location', 'item_location'], null),
-            'min_stock_qty' => $col(['minimum stock quantity', 'minimum stock qty', 'min stock quantity', 'min stock qty', 'min stock', 'minimum', 'minimum_stock_qty'], null),
+            'min_stock_qty' => $col([
+                'minimum stock quantity', 'minimum stock qty', 'min stock quantity', 'min stock qty', 'min stock',
+                'minimum', 'minimum_stock_qty', 'reorder qty',
+            ], null),
             'discount_type' => $col(['discount type', 'discount t', 'discount_type'], null),
-            'sale_discount' => $col(['sale discount', 'sale_discount'], null),
+            'sale_discount' => $col(['sale discount', 'sale_discount', 'sale disc', 'sale disc%'], null),
             'inclusive_of_tax' => $col(['inclusive of tax', 'inclusive c', 'inclusive', 'inclusive_of_tax'], null),
             'secondary_unit_name' => $col(['secondary unit (y)', 'secondary unit', 'secondary', 'secondary_unit'], null),
             'conversion_rate' => $col(['conversion rate (n) (x = ny)', 'conversion rate (n)', 'conversion rate', 'conversion_rate'], null),
             'maintain_imei' => strtolower(trim((string) $col(['maintain imei no:(y/n)', 'maintain imei no', 'maintain imei', 'maintain_imei'], ''))),
             'auto_imei' => trim((string) $col(['auto imei no:(y/n)', 'auto imei no', 'auto imei', 'imei', 'imei no', 'imei_no', 'serial no', 'serial_no'], '')),
             'availability' => strtolower((string) $col(['availability', 'product availability'], '')),
+            'variant_color' => $variantColor,
+            'variant_size' => $variantSize,
         ];
+    }
+
+    private function rowHasVariantAttributes(array $row): bool
+    {
+        return trim((string) ($row['variant_color'] ?? '')) !== ''
+            || trim((string) ($row['variant_size'] ?? '')) !== '';
+    }
+
+    private function buildImportVariantLabel(?string $color, ?string $size): string
+    {
+        $parts = array_values(array_filter([
+            trim((string) $color),
+            trim((string) $size),
+        ], fn ($part) => $part !== ''));
+
+        return implode(' / ', $parts);
+    }
+
+    private function findImportVariantByBarcode(string $barcode): ?ProductVariant
+    {
+        $barcode = $this->sanitizeImportBarcode($barcode);
+        if ($barcode === '') {
+            return null;
+        }
+
+        return ProductVariant::where(function ($query) use ($barcode) {
+            $query->where('barcode', $barcode)
+                ->orWhereRaw('UPPER(barcode) = ?', [strtoupper($barcode)]);
+        })->first();
+    }
+
+    private function syncImportedProductQuantityFromVariants(Product $product): void
+    {
+        $totalQty = (float) $product->variants()->sum('qty');
+        $product->quantity = $totalQty;
+        $product->availablility = $totalQty > 0 ? 'in_stock' : 'out_stock';
+        $product->item_type = 'variant';
+        $product->save();
+    }
+
+    private function upsertImportedVariantRow(array $row, $branchId, $userId): string
+    {
+        $name = trim((string) ($row['name'] ?? ''));
+        $categoryName = trim((string) ($row['category_name'] ?? ''));
+        $variantBarcode = $this->sanitizeImportBarcode((string) ($row['item_code'] ?? ''));
+        $color = trim((string) ($row['variant_color'] ?? ''));
+        $size = trim((string) ($row['variant_size'] ?? ''));
+
+        if ($name === '') {
+            return 'skipped';
+        }
+        if ($categoryName === '') {
+            $categoryName = 'General';
+        }
+        if ($color === '') {
+            $color = '-';
+        }
+        if ($size === '') {
+            $size = '-';
+        }
+
+        $price = $this->parseImportMoney($row['price'] ?? null) ?? 0;
+        $purchasePrice = $this->parseImportMoney($row['purchase_price'] ?? null);
+        $landingCost = $this->parseImportMoney($row['landing_cost'] ?? null);
+        $mrp = $this->parseImportMoney($row['mrp'] ?? null);
+        $onlinePrice = $this->parseImportMoney($row['online_price'] ?? null);
+        $qty = array_key_exists('qty', $row) && $row['qty'] !== null && $row['qty'] !== ''
+            ? (float) ($this->parseImportMoney($row['qty']) ?? 0)
+            : 0.0;
+        $taxRate = $this->parseImportMoney($row['tax_rate'] ?? null);
+        $minStockQty = $this->parseImportMoney($row['min_stock_qty'] ?? null);
+        $saleDiscount = $this->parseImportMoney($row['sale_discount'] ?? null);
+        $status = in_array(strtolower((string) ($row['status'] ?? 'active')), ['active', 'inactive'], true)
+            ? strtolower((string) $row['status'])
+            : 'active';
+        $parsedDiscountType = $this->parseImportDiscountType($row['discount_type'] ?? null);
+        $inclusiveRaw = $row['inclusive_of_tax'] ?? null;
+        $inclusiveOfTaxFlag = in_array(strtolower(trim((string) $inclusiveRaw)), ['yes', 'y', '1', 'true', 'inclusive'], true) ? 1 : 0;
+
+        $category = $this->findOrCreateImportCategory($categoryName, $branchId);
+        $brand = $this->findOrCreateImportBrand($row['brand_name'] ?? null, $branchId);
+        $unit = $this->findOrCreateImportUnit($row['unit_name'] ?? null, $branchId);
+
+        $existingVariant = $this->findImportVariantByBarcode($variantBarcode);
+        $product = null;
+        $action = 'created';
+
+        if ($existingVariant) {
+            $product = $this->findImportProductModelById((int) $existingVariant->product_id)
+                ?? Product::where('id', $existingVariant->product_id)->where('isDeleted', 0)->first();
+            $action = 'updated';
+        }
+
+        if (!$product) {
+            $product = $this->findExistingImportProductByName($name, $branchId);
+            if ($product) {
+                $action = 'updated';
+            }
+        }
+
+        $extraRates = [];
+        if ($onlinePrice !== null && abs($onlinePrice - $price) >= 0.0001) {
+            $extraRates[] = [
+                'name' => 'Online Store',
+                'price' => $onlinePrice,
+                'mrp' => $mrp,
+            ];
+        }
+
+        $descriptionParsed = $this->parseImportDescriptionWholesale($row['description'] ?? null);
+        $importDescription = $descriptionParsed['description'];
+        $wholesalePrice = $descriptionParsed['wholesale_price'];
+        $explicitWholesale = $this->parseImportMoney($row['wholesale_price'] ?? null);
+        if ($explicitWholesale !== null) {
+            $wholesalePrice = $explicitWholesale;
+        }
+        $sellingPrices = Product::buildSellingPrices($price, $extraRates, $mrp, $wholesalePrice);
+
+        if (!$product) {
+            $parentCode = $this->generateUniqueImportItemCode((int) $branchId);
+            $product = Product::create([
+                'name'                    => $name,
+                'category_id'             => $category->id,
+                'brand_id'                => $brand?->id,
+                'product_code'            => $parentCode,
+                'SKU'                     => Product::getNextAvailableSku((int) $branchId),
+                'barcode'                 => $variantBarcode !== '' ? $variantBarcode : $parentCode,
+                'quantity'                => 0,
+                'unit_id'                 => $unit?->id,
+                'price'                   => $price,
+                'mrp'                     => $mrp,
+                'purchase_price'          => $purchasePrice,
+                'cost_price'              => $purchasePrice,
+                'landing_cost'            => $landingCost,
+                'selling_prices'          => $sellingPrices,
+                'hsn_code'                => $row['hsn_code'] ?? null,
+                'status'                  => $status,
+                'availablility'           => $qty > 0 ? 'in_stock' : 'out_stock',
+                'description'             => $importDescription,
+                'branch_id'               => $branchId,
+                'isDeleted'               => 0,
+                'item_type'               => 'variant',
+                'tax_rate'                => $taxRate,
+                'item_location'           => $row['item_location'] ?? null,
+                'minimum_stock_qty'       => $minStockQty ?? 0,
+                'discount_type'           => $parsedDiscountType,
+                'sale_discount'           => $saleDiscount ?? 0,
+                'inclusive_of_tax'        => $inclusiveRaw !== null ? $inclusiveOfTaxFlag : 0,
+                'create_by'               => $userId,
+            ]);
+            $action = 'created';
+        } else {
+            $product->name = $name;
+            $product->category_id = $category->id;
+            if ($brand) {
+                $product->brand_id = $brand->id;
+            }
+            if ($unit) {
+                $product->unit_id = $unit->id;
+            }
+            $product->price = $price;
+            $product->mrp = $mrp ?? $product->mrp;
+            $product->purchase_price = $purchasePrice ?? $product->purchase_price;
+            $product->cost_price = $purchasePrice ?? $product->cost_price;
+            $product->landing_cost = $landingCost ?? $product->landing_cost;
+            $product->hsn_code = ($row['hsn_code'] ?? null) !== null ? $row['hsn_code'] : $product->hsn_code;
+            $product->status = $status;
+            $product->item_type = 'variant';
+            $product->selling_prices = $sellingPrices;
+            $product->tax_rate = $taxRate ?? $product->tax_rate;
+            $product->item_location = ($row['item_location'] ?? null) !== null ? $row['item_location'] : $product->item_location;
+            $product->minimum_stock_qty = $minStockQty ?? $product->minimum_stock_qty;
+            $product->discount_type = $parsedDiscountType ?? $product->discount_type;
+            $product->sale_discount = $saleDiscount ?? $product->sale_discount;
+            if (array_key_exists('description', $row)) {
+                $product->description = $importDescription;
+            }
+            if ($inclusiveRaw !== null) {
+                $product->inclusive_of_tax = $inclusiveOfTaxFlag;
+            }
+            $product->save();
+        }
+
+        $variant = $existingVariant;
+        if (!$variant) {
+            $variant = ProductVariant::where('product_id', $product->id)
+                ->whereRaw('LOWER(TRIM(size)) = ?', [strtolower($size)])
+                ->whereRaw('LOWER(TRIM(color)) = ?', [strtolower($color)])
+                ->first();
+        }
+
+        if ($variantBarcode === '') {
+            $variantBarcode = $this->sanitizeImportBarcode((string) ($variant->barcode ?? '')) ?: ($product->product_code . '-' . substr(uniqid(), -4));
+        }
+
+        if ($variant) {
+            $oldQty = (float) $variant->qty;
+            $variant->size = $size;
+            $variant->color = $color;
+            $variant->qty = $qty;
+            $variant->price = $price;
+            $variant->purchase_price = $purchasePrice;
+            $variant->barcode = $variantBarcode;
+            $variant->save();
+            $action = 'updated';
+
+            if ((float) $qty !== (float) $oldQty) {
+                ProductInventory::create([
+                    'product_id'         => $product->id,
+                    'product_variant_id' => $variant->id,
+                    'initial_stock'      => $oldQty,
+                    'current_stock'      => $qty,
+                    'branch_id'          => $branchId,
+                    'create_by'          => $userId,
+                    'type'               => 'Edit',
+                    'date'               => now(),
+                ]);
+            }
+        } else {
+            $variant = $product->variants()->create([
+                'size'           => $size,
+                'color'          => $color,
+                'qty'            => $qty,
+                'price'          => $price,
+                'purchase_price' => $purchasePrice,
+                'barcode'        => $variantBarcode,
+            ]);
+
+            ProductInventory::create([
+                'product_id'         => $product->id,
+                'product_variant_id' => $variant->id,
+                'initial_stock'      => $qty,
+                'current_stock'      => $qty,
+                'branch_id'          => $branchId,
+                'create_by'          => $userId,
+                'type'               => 'Create',
+                'date'               => now(),
+            ]);
+        }
+
+        $this->syncImportedProductQuantityFromVariants($product->fresh());
+        $this->rememberImportProductInCache((int) $branchId, $variantBarcode, $product);
+
+        return $action;
     }
 
     private function upsertImportedProduct(array $row, $branchId, $userId): string
     {
+        if ($this->rowHasVariantAttributes($row)) {
+            return $this->upsertImportedVariantRow($row, $branchId, $userId);
+        }
+
         $name = trim((string) ($row['name'] ?? ''));
         $categoryName = trim((string) ($row['category_name'] ?? ''));
         $itemCode = $this->sanitizeImportBarcode((string) ($row['item_code'] ?? ''));
@@ -4032,6 +4308,8 @@ class ProductController extends Controller
             (string) ($mapped['category_name'] ?? ''),
             (string) ($mapped['brand_name'] ?? ''),
             (string) ($mapped['description'] ?? ''),
+            (string) ($mapped['variant_color'] ?? ''),
+            (string) ($mapped['variant_size'] ?? ''),
         ], fn ($value) => trim($value) !== '')));
 
         return str_contains($haystack, $search);
@@ -4381,16 +4659,23 @@ class ProductController extends Controller
 
                 $foundHeader = false;
                 foreach ($cells as $cellVal) {
+                    $compact = preg_replace('/[^a-z0-9]/', '', (string) $cellVal) ?? '';
                     if (
                         str_contains($cellVal, 'item code') ||
                         str_contains($cellVal, 'item name') ||
                         str_contains($cellVal, 'item/model') ||
                         str_contains($cellVal, 'item model') ||
                         $cellVal === 'items' ||
+                        $cellVal === 'name' ||
+                        $cellVal === 'barcode' ||
+                        $cellVal === 'size' ||
+                        str_contains($cellVal, 'color variant') ||
                         str_contains($cellVal, 'sale price') ||
                         str_contains($cellVal, 'selling price') ||
+                        str_contains($cellVal, 'net sale') ||
                         str_contains($cellVal, 'default mrp') ||
                         str_contains($cellVal, 'opening stock') ||
+                        str_contains($compact, 'colorvariant') ||
                         str_contains($cellVal, 'product*') ||
                         str_contains($cellVal, 's.no')
                     ) {
@@ -4475,6 +4760,10 @@ class ProductController extends Controller
         $categoryName = trim((string) ($mapped['category_name'] ?? ''));
         $itemCode     = $this->sanitizeImportBarcode((string) ($mapped['item_code'] ?? ''));
         $valid        = $name !== '';
+        $variantColor = trim((string) ($mapped['variant_color'] ?? ''));
+        $variantSize  = trim((string) ($mapped['variant_size'] ?? ''));
+        $isVariant    = $this->rowHasVariantAttributes($mapped);
+        $variantLabel = $this->buildImportVariantLabel($variantColor, $variantSize);
 
         if ($categoryName === '') {
             $categoryName = 'General';
@@ -4493,10 +4782,16 @@ class ProductController extends Controller
             'brand_name'      => trim((string) ($mapped['brand_name'] ?? '')),
             'description'     => $descriptionParsed['description'],
             'description_raw' => trim((string) ($mapped['description'] ?? '')),
-            'wholesale_price' => $descriptionParsed['wholesale_price'],
+            'wholesale_price' => $descriptionParsed['wholesale_price']
+                ?? $this->parseImportMoney($mapped['wholesale_price'] ?? null),
             'price'           => $this->parseImportMoney($mapped['price'] ?? null),
             'mrp'             => $this->parseImportMoney($mapped['mrp'] ?? null),
             'purchase_price'  => $this->parseImportMoney($mapped['purchase_price'] ?? null),
+            'is_variant'      => $isVariant,
+            'variant_color'   => $variantColor,
+            'variant_size'    => $variantSize,
+            'variant_label'   => $variantLabel,
+            'qty'             => $this->parseImportMoney($mapped['qty'] ?? null),
         ];
     }
 

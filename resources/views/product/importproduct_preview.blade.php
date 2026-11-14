@@ -104,6 +104,34 @@
     .import-action-update { background: #fff4e5; color: #b26a00; }
     .import-action-skip { background: #fdecea; color: #c0392b; }
 
+    .import-variant-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3730a3;
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+
+    .import-variant-meta {
+        font-size: 12px;
+        color: #637381;
+        margin-top: 2px;
+    }
+
+    .import-preview-table tr.is-variant-row td {
+        background: #fcfcff;
+    }
+
+    .import-preview-table tr.is-variant-row td:first-child {
+        box-shadow: inset 3px 0 0 #6366f1;
+    }
+
     .import-preview-actions {
         display: flex;
         justify-content: space-between;
@@ -176,7 +204,7 @@
                 <div class="import-preview-toolbar-right">
                     <div class="import-preview-search-wrap d-none" id="importSearchWrap">
                         <input type="text" class="form-control" id="importSearchInput"
-                            placeholder="Search name, item code, category, brand, row #..." autocomplete="off">
+                            placeholder="Search name, barcode, color, size, category, brand, row #..." autocomplete="off">
                         <button type="button" class="btn btn-outline-secondary btn-sm btn-clear-search d-none" id="importClearSearchBtn">Clear</button>
                     </div>
                     <label class="mb-0 align-items-center gap-2 d-none" id="importSelectAllWrap">
@@ -208,13 +236,15 @@
                             </th>
                             <th class="col-row">Row</th>
                             <th>Item Name</th>
+                            <th>Type</th>
+                            <th>Color / Size</th>
                             <th>Item Code</th>
                             <th>Category</th>
                             <th>Brand</th>
                             <th>Sale Price</th>
                             <th>MRP</th>
                             <th>Wholesale</th>
-                            <th>Description</th>
+                            <th>Qty</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -400,36 +430,51 @@
         function renderRows(items) {
             var $body = $('#importPreviewBody');
             $body.empty();
+            var colCount = 13;
 
             if (!items.length) {
                 var emptyText = searchQuery
                     ? 'No rows match "' + escapeHtml(searchQuery) + '".'
                     : (activeTab === 'update' ? 'No existing products to update.' : 'No new products to insert.');
-                $body.append('<tr><td colspan="11" class="text-center py-4">' + emptyText + '</td></tr>');
+                $body.append('<tr><td colspan="' + colCount + '" class="text-center py-4">' + emptyText + '</td></tr>');
                 return;
             }
 
             items.forEach(function(item) {
                 var checked = isRowSelected(item);
-                var descriptionText = item.description || item.description_raw || '-';
                 var wholesaleText = item.wholesale_price !== null && item.wholesale_price !== undefined
                     ? formatMoney(item.wholesale_price) : '-';
+                var isVariant = !!item.is_variant;
+                var variantLabel = item.variant_label || [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+                var typeCell = isVariant
+                    ? '<span class="import-variant-badge">Variant</span>'
+                    : '<span class="text-muted">Normal</span>';
+                var variantCell = isVariant
+                    ? ('<div class="text-truncate-cell" title="' + escapeHtml(variantLabel) + '">' + escapeHtml(variantLabel || '-') + '</div>' +
+                        '<div class="import-variant-meta">Same name = one product</div>')
+                    : '-';
+                var nameCell = '<div class="text-truncate-cell" title="' + escapeHtml(item.name) + '">' + escapeHtml(item.name || '-') + '</div>';
+                if (isVariant) {
+                    nameCell += '<div class="import-variant-meta">Parent product + color/size options</div>';
+                }
 
                 $body.append(
-                    '<tr>' +
+                    '<tr class="' + (isVariant ? 'is-variant-row' : '') + '">' +
                         '<td class="col-check">' +
                             '<input type="checkbox" class="import-row-check" data-row="' + item.row_number + '" data-valid="' + (item.valid ? '1' : '0') + '" data-action="' + escapeHtml(item.import_action || '') + '"' +
                             (item.valid ? '' : ' disabled') + (checked ? ' checked' : '') + '>' +
                         '</td>' +
                         '<td class="col-row">' + item.row_number + '</td>' +
-                        '<td><div class="text-truncate-cell" title="' + escapeHtml(item.name) + '">' + escapeHtml(item.name || '-') + '</div></td>' +
+                        '<td>' + nameCell + '</td>' +
+                        '<td>' + typeCell + '</td>' +
+                        '<td>' + variantCell + '</td>' +
                         '<td><div class="text-truncate-cell" title="' + escapeHtml(item.item_code) + '">' + escapeHtml(item.item_code || '-') + '</div></td>' +
                         '<td><div class="text-truncate-cell" title="' + escapeHtml(item.category_name) + '">' + escapeHtml(item.category_name || '-') + '</div></td>' +
                         '<td><div class="text-truncate-cell" title="' + escapeHtml(item.brand_name) + '">' + escapeHtml(item.brand_name || '-') + '</div></td>' +
                         '<td>' + formatMoney(item.price) + '</td>' +
                         '<td>' + formatMoney(item.mrp) + '</td>' +
                         '<td>' + wholesaleText + '</td>' +
-                        '<td><div class="text-truncate-cell" title="' + escapeHtml(descriptionText) + '">' + escapeHtml(descriptionText) + '</div></td>' +
+                        '<td>' + (item.qty !== null && item.qty !== undefined && item.qty !== '' ? escapeHtml(String(item.qty)) : '-') + '</td>' +
                         '<td>' + actionBadge(item.import_action) + '</td>' +
                     '</tr>'
                 );
@@ -446,7 +491,7 @@
                 : 'Loading page ' + page + '...';
 
             $('#importPreviewBody').html(
-                '<tr class="import-preview-loading-row"><td colspan="11">' +
+                '<tr class="import-preview-loading-row"><td colspan="13">' +
                 '<div class="spinner-border spinner-border-sm text-warning me-2" role="status"></div>' + loadingText + '</td></tr>'
             );
             $('#importPrevPageBtn, #importNextPageBtn').prop('disabled', true);
@@ -463,7 +508,7 @@
                 success: function(response) {
                     pageLoading = false;
                     if (!response.status) {
-                        $('#importPreviewBody').html('<tr><td colspan="11" class="text-center text-danger py-4">' + escapeHtml(response.message || 'Unable to load preview rows.') + '</td></tr>');
+                        $('#importPreviewBody').html('<tr><td colspan="13" class="text-center text-danger py-4">' + escapeHtml(response.message || 'Unable to load preview rows.') + '</td></tr>');
                         return;
                     }
 
@@ -484,7 +529,7 @@
                 error: function(xhr) {
                     pageLoading = false;
                     var message = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Unable to load preview rows.';
-                    $('#importPreviewBody').html('<tr><td colspan="11" class="text-center text-danger py-4">' + escapeHtml(message) + '</td></tr>');
+                    $('#importPreviewBody').html('<tr><td colspan="13" class="text-center text-danger py-4">' + escapeHtml(message) + '</td></tr>');
                     $('#importPrevPageBtn, #importNextPageBtn').prop('disabled', false);
                 }
             });

@@ -71,20 +71,20 @@
                                 <div class="productdetails productdetailnew mb-3">
                                     <ul class="product-bar">
                                         <li>
-                                            <h4>Item name / ITEMS</h4>
-                                            <h6 class="manitorygreen">Product name — "Item name" or "ITEMS"</h6>
+                                            <h4>Item name / Name / ITEMS</h4>
+                                            <h6 class="manitorygreen">Same Name rows with Color/Size become one parent product with variants</h6>
                                         </li>
                                         <li>
-                                            <h4>Item code (Barcode)</h4>
-                                            <h6 class="manitorygreen">Excel: "Item code" — used as barcode</h6>
+                                            <h4>Barcode / Item code</h4>
+                                            <h6 class="manitorygreen">Each variant row barcode is saved on that variant</h6>
                                         </li>
                                         <li>
-                                            <h4>Description / Wholesale</h4>
-                                            <h6 class="manitorygreen">Description starting with 11 (e.g. 11243) or a Wholesale column is saved as wholesale rate</h6>
+                                            <h4>Color / Variant + Size</h4>
+                                            <h6 class="manitorygreen">Columns "Color/ Variant" and "Size" create product variants in preview &amp; import</h6>
                                         </li>
                                         <li>
                                             <h4>Category / Prices / Stock</h4>
-                                            <h6 class="manitoryblue">Category, HSN, Default MRP, Sale price, Purchase rate, Opening stock, Tax, Unit</h6>
+                                            <h6 class="manitoryblue">Category, Brand, MRP, Net Sale, Purchase Rate, Qty, Wholesale, Tax, Unit</h6>
                                         </li>
                                     </ul>
                                 </div>
