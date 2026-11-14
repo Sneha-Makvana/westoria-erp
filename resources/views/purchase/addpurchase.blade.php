@@ -92,7 +92,8 @@
             background: #FF9F43;
         }
 
-        #addVendorBtn .vendor-add-icon {
+        #addVendorBtn .vendor-add-icon,
+        #addProductInlineBtn .product-add-icon {
             display: none;
         }
 
@@ -180,7 +181,8 @@
         }
 
         @media screen and (max-width: 768px) {
-            #addVendorBtn {
+            #addVendorBtn,
+            #addProductInlineBtn {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
@@ -192,11 +194,13 @@
                 line-height: 1;
             }
 
-            #addVendorBtn .vendor-add-icon {
+            #addVendorBtn .vendor-add-icon,
+            #addProductInlineBtn .product-add-icon {
                 display: inline-block;
             }
 
-            #addVendorBtn .vendor-add-text {
+            #addVendorBtn .vendor-add-text,
+            #addProductInlineBtn .product-add-text {
                 display: none;
             }
 
@@ -647,7 +651,15 @@
                     </div>
                     <div class="col-lg-2 col-sm-12 col-6">
                         <div class="form-group">
-                            <label>{{ $itemLabel }}</label>
+                            <label>{{ $itemLabel }}
+                                <button type="button" class="btn btn-sm manage_btn ms-2" id="addProductInlineBtn"
+                                    aria-label="{{ $isRowMaterialPurchase ? 'Add Row Material' : 'Add Product' }}"
+                                    title="{{ $isRowMaterialPurchase ? 'Add Row Material' : 'Add Product' }}"
+                                    style="padding: 3px 8px; font-size: 12px;">
+                                    <i class="fas fa-plus product-add-icon" aria-hidden="true"></i>
+                                    <span class="product-add-text">{{ $isRowMaterialPurchase ? 'Add Row Material' : 'Add Product' }}</span>
+                                </button>
+                            </label>
                             <select id="product_name" name="product_name[]" class="form-control select2 product-select"
                                 disabled>
                                 <option value="">{{ $itemLabel }}</option>
@@ -1011,8 +1023,10 @@
                         </div>
                         <div class="form-group">
                             <label>GST Number</label>
-                            <input type="text" id="gst_number_input" name="gst_number" class="form-control" placeholder="Enter GST Number">
+                            <input type="text" id="gst_number_input" name="gst_number" class="form-control"
+                                maxlength="15" placeholder="Enter GST Number (auto-fill)" autocomplete="off">
                             <span class="text-danger" id="gst_number_error"></span>
+                            <small class="text-muted">Enter 15-digit GSTIN and leave the field to auto-fill vendor details</small>
                         </div>
                         <div class="form-group vendor-full-width">
                             <label>Address</label>
@@ -1726,14 +1740,15 @@
                 }
             });
 
-            // Add Product Modal Logic
-            $('#openAddProductModalBtn').on('click', function() {
+            // Add Product Modal Logic (search bar + Product Name label button)
+            function openAddProductModal() {
                 $('#addProductForm')[0].reset();
                 $('.modal-field-error').hide();
                 $('.modal-required-field').removeClass('is-invalid');
                 $('#modal_gst_container').hide();
                 $('#modal_availablility').val('out_stock');
-                
+                $("input[name='item_type'][value='normal']").prop('checked', true).trigger('change');
+
                 // Initialize Select2 if not already
                 if (!$('#modal_category_id').hasClass('select2-hidden-accessible')) {
                     $('#modal_category_id, #modal_brand_id, #modal_unit_id, #modal_product_gst').select2({
@@ -1741,10 +1756,12 @@
                         width: '100%'
                     });
                 }
-                
+
                 fetchModalDropdowns();
                 $('#addProductModal').modal('show');
-            });
+            }
+
+            $('#openAddProductModalBtn, #addProductInlineBtn').on('click', openAddProductModal);
 
             $('#modal_quantity').on('input change', function() {
                 let qty = parseFloat($(this).val());
@@ -1974,6 +1991,80 @@
                 $('#addVendorModal').modal('show');
                 $('#addVendorForm')[0].reset();
                 $('#addVendorForm .text-danger').text('');
+                $('#gst_number_input').prop('readonly', false);
+            });
+
+            function fetchVendorGstDetails() {
+                var $gstInput = $('#gst_number_input');
+                var gst = ($gstInput.val() || '').trim().toUpperCase().replace(/\s+/g, '');
+                var $errorDiv = $('#gst_number_error');
+
+                $gstInput.val(gst);
+                if (!gst) {
+                    return;
+                }
+
+                if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/.test(gst)) {
+                    $errorDiv.html('<span class="text-danger">Please enter a valid 15-digit GST number.</span>');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/api/fetch-gst-details',
+                    method: 'POST',
+                    dataType: 'json',
+                    data: { gst_number: gst },
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || "{{ csrf_token() }}",
+                        Authorization: 'Bearer ' + (authToken || localStorage.getItem('authToken') || '')
+                    },
+                    beforeSend: function() {
+                        $gstInput.prop('readonly', true);
+                        $errorDiv.html('<span style="color:#1B2850;"><i class="fas fa-spinner fa-spin"></i> Fetching GST details...</span>');
+                    },
+                    success: function(res) {
+                        $errorDiv.html('');
+                        if (res.error) {
+                            $errorDiv.html('<span class="text-danger">' + res.error + '</span>');
+                            return;
+                        }
+                        if (res.partial && res.message) {
+                            $errorDiv.html('<span class="text-warning">' + res.message + '</span>');
+                        }
+
+                        if (!$('#vendor_name_input').val().trim()) {
+                            $('#vendor_name_input').val(res.legal_name || res.company_name || '');
+                        }
+                        if (res.primary_address) {
+                            $('#vendor_address_input').val(res.primary_address);
+                        }
+                        if (res.city) {
+                            $('#city_input').val(res.city);
+                        }
+                        $('#country_input').val(res.country || $('#country_input').val() || 'India');
+                        if (res.state_code) {
+                            $('#state_code_input').val(res.state_code);
+                        }
+                        $('#pan_number_input').val(res.pan || gst.substring(2, 12));
+                    },
+                    error: function(xhr) {
+                        var msg = (xhr.responseJSON && (xhr.responseJSON.error || xhr.responseJSON.message))
+                            ? (xhr.responseJSON.error || xhr.responseJSON.message)
+                            : 'Failed to fetch GST details.';
+                        $errorDiv.html('<span class="text-danger">' + msg + '</span>');
+                    },
+                    complete: function() {
+                        $gstInput.prop('readonly', false);
+                    }
+                });
+            }
+
+            $('#gst_number_input').off('blur.vendorGst input.vendorGst').on('blur.vendorGst', fetchVendorGstDetails);
+            $('#gst_number_input').on('input.vendorGst', function() {
+                this.value = this.value.toUpperCase().replace(/[^0-9A-Z]/g, '').substring(0, 15);
+                if (this.value.length === 15) {
+                    fetchVendorGstDetails();
+                }
             });
 
             // Save Vendor

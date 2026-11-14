@@ -42,4 +42,17 @@ return [
         'url' => env('BG_REMOVAL_URL'),
     ],
 
+    /*
+    | GSTIN auto-fill (Add Vendor / Customer). Same providers as erp-acshop.
+    | ClearTax free lookup by default; optional Clear API token / Appyflow.
+    */
+    'gst_lookup' => [
+        'clear_api_url' => env('GST_CLEAR_API_URL', 'https://api.clear.in/gst/api/v0.2/taxable_entities/123456/gstin_verification'),
+        'clear_api_token' => env('GST_CLEAR_API_TOKEN', '3.ebf2623c-44a2-49c8-8e11-aefa342f60f3_a1cfc03847ba734d20b6f9c1f80018474999aec0809348357afe263a98a99267'),
+        'cleartax_url' => env('GST_CLEARTAX_URL', 'https://cleartax.in/f/compliance-report'),
+        'use_appyflow' => filter_var(env('GST_USE_APPYFLOW', false), FILTER_VALIDATE_BOOLEAN),
+        'url' => env('GST_LOOKUP_URL', 'https://appyflow.in/api/verifyGST'),
+        'appyflow_key' => env('GST_APPYFLOW_KEY_SECRET', ''),
+    ],
+
 ];

@@ -442,100 +442,637 @@ class SupplierController extends Controller
     
     public function fetch(Request $request)
     {
-        $gst = $request->input('gst_number');
+        $gst = strtoupper(preg_replace('/\s+/', '', (string) $request->input('gst_number', '')));
 
-        if (!$gst) {
+        if ($gst === '') {
             return response()->json(['error' => 'GST number is required'], 400);
         }
 
-        // Example API: Replace URL with your actual API provider
-        $apiUrl = "https://cleartax.in/f/compliance-report/{$gst}";
-        // $apiKey = "YOUR_API_KEY_HERE";
-
-        $response = Http::withHeaders([
-            // 'Authorization' => "Bearer {$apiKey}",
-            'Accept' => 'application/json',
-        ])->get($apiUrl);
-
-        if ($response->failed()) {
-            return response()->json(['error' => 'API request failed'], 500);
+        if (! preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/', $gst)) {
+            return response()->json(['error' => 'Invalid GST number format'], 400);
         }
 
-        $data = $response->json();
-
-        if (!isset($data['taxpayerInfo'])) {
-            return response()->json(['error' => 'Invalid GST or no data found'], 404);
+        $cacheKey = 'gst_lookup_' . $gst;
+        $cached = \Cache::get($cacheKey);
+        if (is_array($cached) && $this->isValidGstLookupPayload($cached, $gst)) {
+            $cached['source'] = $cached['source'] ?? 'cache';
+            return response()->json($cached);
+        }
+        if (is_array($cached)) {
+            // Drop poisoned cache (e.g. Appyflow demo sample stored under wrong GSTIN)
+            \Cache::forget($cacheKey);
         }
 
-        $info = $data['taxpayerInfo'];
+        // 1) External providers (Appyflow / GST portal / ClearTax)
+        $remote = $this->fetchGstFromRemoteProvider($gst);
+        if ($remote !== null && $this->isValidGstLookupPayload($remote, $gst)) {
+            \Cache::put($cacheKey, $remote, now()->addDays(7));
+            return response()->json($remote);
+        }
 
-        // Company / Business Details
-        $companyName = $info['tradeNam'] ?? ($info['lgnm'] ?? '');
-        $gstin = $info['gstin'] ?? $gst;
-        $legalName = $info['lgnm'] ?? '';
+        // 2) Local customer/vendor already saved with this GSTIN (must have useful data)
+        $local = $this->fetchGstFromLocalUser($gst);
+        if ($local !== null && ! empty($local['legal_name'])) {
+            return response()->json($local);
+        }
+
+        $useAppyflow = (bool) config('services.gst_lookup.use_appyflow', false);
+        $hasKey = trim((string) config('services.gst_lookup.appyflow_key', '')) !== '';
+        $message = 'Could not fetch full GST details from ClearTax (free lookup). PAN and state are filled from GSTIN — please enter name and address manually.';
+        if ($useAppyflow && $hasKey) {
+            $message = 'GST lookup unavailable (ClearTax blocked and Appyflow did not return valid data). Enter name and address manually, or fix GST_APPYFLOW_KEY_SECRET.';
+        }
+
+        return response()->json($this->gstinStructuralDetails($gst) + [
+            'partial' => true,
+            'message' => $message,
+            'try_browser_cleartax' => true,
+        ]);
+    }
+
+    private function fetchGstFromRemoteProvider(string $gst): ?array
+    {
+        // 0) Clear GSTIN verification API (token based)
+        $clearApi = $this->fetchGstFromClearApi($gst);
+        if ($clearApi !== null) {
+            return $clearApi;
+        }
+
+        // 1) Free ClearTax (original ERP behaviour)
+        $cleartax = $this->fetchGstFromCleartax($gst);
+        if ($cleartax !== null) {
+            return $cleartax;
+        }
+
+        // 2) GST portal public API (no key; often blocked on datacenter IPs)
+        $portal = $this->fetchGstFromGstPortal($gst);
+        if ($portal !== null) {
+            return $portal;
+        }
+
+        // 3) Optional paid Appyflow (off by default — set GST_USE_APPYFLOW=true)
+        return $this->fetchGstFromAppyflow($gst);
+    }
+
+    private function fetchGstFromClearApi(string $gst): ?array
+    {
+        $token = trim((string) config('services.gst_lookup.clear_api_token', ''));
+        $url = trim((string) config('services.gst_lookup.clear_api_url', ''));
+        if ($token === '' || $url === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(20)
+                ->acceptJson()
+                ->withHeaders(['X-Cleartax-Auth-Token' => $token])
+                ->get($url, ['gstin' => $gst]);
+
+            if (! $response->successful()) {
+                \Log::warning('Clear GSTIN API returned error', [
+                    'gst' => $gst,
+                    'status' => $response->status(),
+                    'body' => mb_substr((string) $response->body(), 0, 500),
+                ]);
+
+                return null;
+            }
+
+            $parsed = $this->mapTaxpayerPayload($response->json(), $gst);
+            if ($parsed !== null && $this->isValidGstLookupPayload($parsed, $gst)) {
+                $parsed['source'] = 'clear_api';
+
+                return $parsed;
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Clear GSTIN API lookup failed', [
+                'gst' => $gst,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    private function fetchGstFromCleartax(string $gst): ?array
+    {
+        $base = rtrim((string) config('services.gst_lookup.cleartax_url', 'https://cleartax.in/f/compliance-report'), '/');
+        $urls = ["{$base}/{$gst}", "{$base}/{$gst}/"];
+
+        foreach ($urls as $url) {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders([
+                        'Accept' => 'application/json, text/plain, */*',
+                        'Accept-Language' => 'en-US,en;q=0.9',
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                        'Referer' => 'https://cleartax.in/s/gst-number-search/',
+                        'Origin' => 'https://cleartax.in',
+                    ])
+                    ->get($url);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $json = $response->json();
+                if (! is_array($json) || empty($json['taxpayerInfo'])) {
+                    continue;
+                }
+
+                $parsed = $this->mapTaxpayerPayload($json, $gst);
+                if ($parsed !== null && $this->isValidGstLookupPayload($parsed, $gst)) {
+                    $parsed['source'] = 'cleartax';
+
+                    return $parsed;
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('ClearTax GST lookup failed', [
+                    'gst' => $gst,
+                    'url' => $url,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return null;
+    }
+
+    private function fetchGstFromGstPortal(string $gst): ?array
+    {
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Accept' => 'application/json, text/plain, */*',
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Referer' => 'https://services.gst.gov.in/',
+                    'Origin' => 'https://services.gst.gov.in',
+                ])
+                ->get("https://services.gst.gov.in/services/api/search/taxpayerDetails/{$gst}");
+
+            if ($response->successful() && str_contains((string) $response->header('Content-Type'), 'json')) {
+                $parsed = $this->mapTaxpayerPayload($response->json(), $gst);
+                if ($parsed !== null && $this->isValidGstLookupPayload($parsed, $gst)) {
+                    $parsed['source'] = 'gst_portal';
+
+                    return $parsed;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('GST portal lookup failed', [
+                'gst' => $gst,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    private function fetchGstFromAppyflow(string $gst): ?array
+    {
+        if (! (bool) config('services.gst_lookup.use_appyflow', false)) {
+            return null;
+        }
+
+        $key = trim((string) config('services.gst_lookup.appyflow_key', ''));
+        $url = trim((string) config('services.gst_lookup.url', 'https://appyflow.in/api/verifyGST'));
+        if ($key === '') {
+            return null;
+        }
+
+        try {
+            $payload = ['gstNo' => $gst, 'key_secret' => $key];
+            $attempts = [
+                fn () => Http::timeout(20)->acceptJson()->get($url, $payload),
+                fn () => Http::timeout(20)->acceptJson()->asForm()->post($url, $payload),
+                fn () => Http::timeout(20)->acceptJson()->asJson()->post($url, $payload),
+            ];
+
+            foreach ($attempts as $attempt) {
+                $response = $attempt();
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $body = $this->normalizeGstApiResponse($response->json());
+                if ($body === null) {
+                    continue;
+                }
+
+                $parsed = $this->mapTaxpayerPayload($body, $gst);
+                if ($parsed !== null && $this->isValidGstLookupPayload($parsed, $gst)) {
+                    $parsed['source'] = 'appyflow';
+
+                    return $parsed;
+                }
+
+                \Log::warning('GST Appyflow returned mismatched / demo payload', [
+                    'requested' => $gst,
+                    'returned' => $parsed['gstin'] ?? null,
+                    'legal_name' => $parsed['legal_name'] ?? null,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('GST Appyflow lookup failed', [
+                'gst' => $gst,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    private function fetchGstFromLocalUser(string $gst): ?array
+    {
+        try {
+            $user = User::with('userDetail')
+                ->where('isDeleted', 0)
+                ->whereRaw("UPPER(REPLACE(gst_number, ' ', '')) = ?", [$gst])
+                ->orderByDesc('id')
+                ->first();
+        } catch (\Throwable $e) {
+            \Log::warning('Local GST lookup failed', [
+                'gst' => $gst,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        if (! $user) {
+            return null;
+        }
+
+        $detail = $user->userDetail;
+        $structural = $this->gstinStructuralDetails($gst);
+        $stateName = trim((string) ($user->state_name ?: ($structural['state'] ?? '')));
+        $address = trim((string) ($detail->address ?? ''));
+
+        // Skip empty / incomplete local records (name alone without address is not enough for new GST fill)
+        $name = trim((string) ($user->name ?? ''));
+        if ($name === '') {
+            return null;
+        }
+
+        // Prefer remote for full GST address; local only if address looks real (not just state)
+        $looksLikeStateOnly = $address === ''
+            || strcasecmp($address, $stateName) === 0
+            || in_array(strtolower($address), ['india', 'gujarat', 'maharashtra'], true);
+        if ($looksLikeStateOnly && trim((string) ($detail->city ?? '')) === '') {
+            return null;
+        }
+
+        return [
+            'gstin' => $gst,
+            'company_name' => $user->company_name ?: $name,
+            'legal_name' => $name,
+            'business_type' => '',
+            'taxpayer_type' => '',
+            'status' => '',
+            'registration_date' => '',
+            'nature_of_business' => [],
+            'primary_address' => $address,
+            'city' => $detail->city ?? '',
+            'state' => $stateName,
+            'pincode' => trim((string) ($detail->pin_code ?? '')),
+            'state_code' => $user->state_code ?: ($structural['state_code'] ?? ''),
+            'country' => $detail->country ?? 'India',
+            'last_updated' => '',
+            'frequency' => '',
+            'additional_addresses' => [],
+            'pan' => $user->pan_number ?: ($structural['pan'] ?? ''),
+            'source' => 'local',
+        ];
+    }
+
+    private function normalizeGstApiResponse($data): ?array
+    {
+        if (! is_array($data)) {
+            return null;
+        }
+
+        if (
+            (! empty($data['error']) && $data['error'] !== false)
+            || (! empty($data['message']) && empty($data['taxpayerInfo']) && empty($data['data']['taxpayerInfo']))
+        ) {
+            $message = strtolower((string) ($data['message'] ?? ''));
+            if ($message !== '' && (str_contains($message, 'key') || str_contains($message, 'secret') || str_contains($message, 'quota'))) {
+                return null;
+            }
+        }
+
+        if (isset($data['taxpayerInfo']) && is_array($data['taxpayerInfo'])) {
+            return $data;
+        }
+
+        if (isset($data['data']['taxpayerInfo']) && is_array($data['data']['taxpayerInfo'])) {
+            return ['taxpayerInfo' => $data['data']['taxpayerInfo']] + $data;
+        }
+
+        if (isset($data['result']['taxpayerInfo']) && is_array($data['result']['taxpayerInfo'])) {
+            return ['taxpayerInfo' => $data['result']['taxpayerInfo']] + $data;
+        }
+
+        return $data;
+    }
+
+    private function normalizeGstPradrAddr(array $pradr): array
+    {
+        if ($pradr === []) {
+            return [];
+        }
+
+        $addr = $pradr['addr'] ?? $pradr;
+        if (! is_array($addr)) {
+            return [];
+        }
+
+        foreach (['pncd', 'pincode', 'pin_code', 'pin', 'zip', 'dst', 'city', 'stcd', 'state', 'country'] as $key) {
+            if (empty($addr[$key]) && ! empty($pradr[$key])) {
+                $addr[$key] = $pradr[$key];
+            }
+        }
+
+        return $addr;
+    }
+
+    private function extractGstPincode(array $addr): string
+    {
+        foreach (['pncd', 'pincode', 'pin_code', 'pin', 'zip', 'zipcode'] as $key) {
+            $value = trim((string) ($addr[$key] ?? ''));
+            if ($value !== '' && preg_match('/(\d{6})/', $value, $matches)) {
+                return $matches[1];
+            }
+        }
+
+        foreach ($addr as $value) {
+            if (! is_scalar($value)) {
+                continue;
+            }
+            $text = trim((string) $value);
+            if ($text !== '' && preg_match('/\b(\d{6})\b/', $text, $matches)) {
+                return $matches[1];
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Build full postal address from GSTN / Appyflow addr object (all non-empty parts).
+     *
+     * @return array{primary_address:string,city:string,state:string,pincode:string,country:string}
+     */
+    private function formatGstRegisteredAddress(array $addr): array
+    {
+        $city = trim((string) ($addr['dst'] ?? $addr['city'] ?? ''));
+        $state = trim((string) ($addr['stcd'] ?? $addr['state'] ?? ''));
+        $pincode = $this->extractGstPincode($addr);
+        $country = trim((string) ($addr['country'] ?? 'India'));
+
+        $segments = [];
+        foreach (['flno', 'bno', 'bnm', 'st', 'loc', 'landMark', 'landmark', 'locality', 'street'] as $key) {
+            $value = trim((string) ($addr[$key] ?? ''));
+            if ($value !== '') {
+                $segments[] = $value;
+            }
+        }
+
+        // City + pin in address line; state stays in the separate State field.
+        $tailParts = [];
+        if ($city !== '') {
+            $tailParts[] = $city;
+        }
+        if ($pincode !== '') {
+            $tailParts[] = $pincode;
+        }
+
+        foreach ($tailParts as $tail) {
+            if ($tail === '') {
+                continue;
+            }
+            $already = false;
+            foreach ($segments as $seg) {
+                if (strcasecmp($seg, $tail) === 0 || stripos($seg, $tail) !== false) {
+                    $already = true;
+                    break;
+                }
+            }
+            if (! $already) {
+                $segments[] = $tail;
+            }
+        }
+
+        $primaryAddress = implode(', ', $segments);
+        $primaryAddress = preg_replace('/,\s*,+/', ', ', $primaryAddress);
+        $primaryAddress = trim((string) $primaryAddress);
+
+        return [
+            'primary_address' => $primaryAddress,
+            'city' => $city,
+            'state' => $state,
+            'pincode' => $pincode,
+            'country' => $country !== '' ? $country : 'India',
+        ];
+    }
+
+    private function mapTaxpayerPayload($data, string $gst): ?array
+    {
+        if (! is_array($data)) {
+            return null;
+        }
+
+        $gst = strtoupper(preg_replace('/\s+/', '', $gst));
+
+        // Appyflow nests under taxpayerInfo; GST portal returns fields at root.
+        $info = $data['taxpayerInfo']
+            ?? $data['data']['taxpayerInfo']
+            ?? $data['result']['taxpayerInfo']
+            ?? null;
+
+        if (! is_array($info) && ! empty($data['lgnm'])) {
+            $info = $data;
+        }
+
+        if (! is_array($info)) {
+            return null;
+        }
+
+        $responseGstin = strtoupper(preg_replace('/\s+/', '', (string) ($info['gstin'] ?? '')));
+        // Appyflow demo / wrong key often returns sample GSTIN 03DOXPM4071K1ZE — never accept mismatch
+        if ($responseGstin !== '' && $responseGstin !== $gst) {
+            return null;
+        }
+
+        $companyName = trim((string) ($info['tradeNam'] ?? ($info['trade_name'] ?? ($info['lgnm'] ?? ''))));
+        $legalName = trim((string) ($info['lgnm'] ?? ($info['legal_name'] ?? '')));
+        if ($legalName === '' && $companyName === '') {
+            return null;
+        }
+
+        // Known Appyflow documentation sample (always reject unless requested GSTIN is that sample)
+        if ($this->isAppyflowDemoTaxpayer($legalName, $companyName, $responseGstin !== '' ? $responseGstin : $gst)
+            && $gst !== '03DOXPM4071K1ZE') {
+            return null;
+        }
+
         $businessType = $info['ctb'] ?? '';
         $status = $info['sts'] ?? '';
         $registrationDate = $info['rgdt'] ?? '';
         $taxpayerType = $info['dty'] ?? '';
-        $natureOfBusiness = $info['nba'] ?? []; // array of business types
-        $lastUpdated = $info['lstupdt'] ?? '';
-        $frequency = $info['frequencyType'] ?? '';
+        $natureOfBusiness = $info['nba'] ?? [];
+        $lastUpdated = $info['lstupdt'] ?? ($info['lastUpdated'] ?? '');
+        $frequency = $info['frequencyType'] ?? ($info['filingFreq'] ?? ($data['compliance']['filingFrequency'] ?? ''));
         $pradr = $info['pradr'] ?? [];
 
-        // Primary Address
-        $primaryAddr = $pradr['addr'] ?? [];
-        $address = trim(
-            ($primaryAddr['bnm'] ?? '') . ', ' .
-            ($primaryAddr['st'] ?? '') . ', ' .
-            ($primaryAddr['loc'] ?? '') . ', ' .
-            ($primaryAddr['dst'] ?? '') . ', ' .
-            ($primaryAddr['stcd'] ?? '') . ' - ' .
-            ($primaryAddr['pncd'] ?? ''),
-            ', -'
-        );
+        // Appyflow: pradr.addr{...} | GST portal: pradr{bno,bnm,...} flat
+        $primaryAddr = $this->normalizeGstPradrAddr(is_array($pradr) ? $pradr : []);
+        $formatted = $this->formatGstRegisteredAddress($primaryAddr);
 
-        // Additional Addresses
         $additionalAddresses = [];
         if (isset($info['adadr']) && is_array($info['adadr'])) {
             foreach ($info['adadr'] as $addrItem) {
-                $addr = $addrItem['addr'] ?? [];
+                $addr = $this->normalizeGstPradrAddr(is_array($addrItem) ? $addrItem : []);
+                $formattedExtra = $this->formatGstRegisteredAddress($addr);
                 $additionalAddresses[] = [
                     'name' => $addr['bnm'] ?? '',
-                    'address' => trim(
-                        ($addr['bnm'] ?? '') . ', ' .
-                        ($addr['st'] ?? '') . ', ' .
-                        ($addr['loc'] ?? '') . ', ' .
-                        ($addr['dst'] ?? '') . ', ' .
-                        ($addr['stcd'] ?? '') . ' - ' .
-                        ($addr['pncd'] ?? ''),
-                        ', -'
-                    ),
-                    'city' => $addr['dst'] ?? '',
-                    'state' => $addr['stcd'] ?? '',
+                    'address' => $formattedExtra['primary_address'],
+                    'city' => $formattedExtra['city'],
+                    'state' => $formattedExtra['state'],
+                    'pincode' => $formattedExtra['pincode'],
                     'nature' => $addrItem['ntr'] ?? '',
                 ];
             }
         }
 
-        $country = $primaryAddr['country'] ?? ($info['country'] ?? 'India');
+        // Always derive PAN / state from the REQUESTED GSTIN (never from a mismatched sample)
+        $structural = $this->gstinStructuralDetails($gst);
+        $stateName = trim((string) ($structural['state'] ?? ''));
+        $addrState = trim((string) ($formatted['state'] ?? ''));
+        if ($addrState !== '' && (strcasecmp($addrState, $stateName) === 0 || stripos($addrState, $stateName) !== false || stripos($stateName, $addrState) !== false)) {
+            $stateName = $addrState;
+        } elseif ($addrState !== '' && $stateName !== '' && strcasecmp($addrState, $stateName) !== 0) {
+            // Address state contradicts GSTIN state code — treat as bad payload
+            return null;
+        }
 
-        return response()->json([
-            'gstin' => $gstin,
-            'company_name' => $companyName,
-            'legal_name' => $legalName,
+        $city = $formatted['city'];
+        if ($city === '') {
+            $city = trim((string) ($primaryAddr['loc'] ?? ''));
+        }
+
+        return [
+            'gstin' => $gst,
+            'company_name' => $companyName !== '' ? $companyName : $legalName,
+            'legal_name' => $legalName !== '' ? $legalName : $companyName,
             'business_type' => $businessType,
             'taxpayer_type' => $taxpayerType,
             'status' => $status,
             'registration_date' => $registrationDate,
             'nature_of_business' => $natureOfBusiness,
-            'primary_address' => $address,
-            'city' => $primaryAddr['dst'] ?? '',
-            'state' => $primaryAddr['stcd'] ?? '',
-            'country' => $country,
+            'primary_address' => $formatted['primary_address'],
+            'city' => $city,
+            'state' => $stateName,
+            'pincode' => $formatted['pincode'],
+            'pin_code' => $formatted['pincode'],
+            'state_code' => $structural['state_code'] ?? '',
+            'country' => $formatted['country'] ?: ($info['country'] ?? 'India'),
             'last_updated' => $lastUpdated,
             'frequency' => $frequency,
             'additional_addresses' => $additionalAddresses,
-        ]);
+            'pan' => $structural['pan'] ?? '',
+            'source' => 'remote',
+            'partial' => false,
+        ];
+    }
+
+    /**
+     * Ensure payload belongs to the GSTIN the user typed (blocks Appyflow demo sample).
+     */
+    private function isValidGstLookupPayload(array $payload, string $gst): bool
+    {
+        $gst = strtoupper(preg_replace('/\s+/', '', $gst));
+        if ($gst === '' || empty($payload['legal_name'])) {
+            return false;
+        }
+
+        $returnedGstin = strtoupper(preg_replace('/\s+/', '', (string) ($payload['gstin'] ?? '')));
+        if ($returnedGstin !== '' && $returnedGstin !== $gst) {
+            return false;
+        }
+
+        $pan = strtoupper(preg_replace('/\s+/', '', (string) ($payload['pan'] ?? '')));
+        $expectedPan = substr($gst, 2, 10);
+        if ($pan !== '' && $pan !== $expectedPan) {
+            return false;
+        }
+
+        $stateCode = preg_replace('/\D+/', '', (string) ($payload['state_code'] ?? ''));
+        $expectedState = substr($gst, 0, 2);
+        if ($stateCode !== '' && str_pad($stateCode, 2, '0', STR_PAD_LEFT) !== $expectedState) {
+            return false;
+        }
+
+        if ($this->isAppyflowDemoTaxpayer(
+            (string) ($payload['legal_name'] ?? ''),
+            (string) ($payload['company_name'] ?? ''),
+            $returnedGstin !== '' ? $returnedGstin : $gst
+        ) && $gst !== '03DOXPM4071K1ZE') {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function isAppyflowDemoTaxpayer(string $legalName, string $companyName, string $gstin): bool
+    {
+        $gstin = strtoupper(preg_replace('/\s+/', '', $gstin));
+        if ($gstin === '03DOXPM4071K1ZE') {
+            return true;
+        }
+
+        $legal = strtoupper(trim($legalName));
+        $company = strtoupper(trim($companyName));
+
+        return $legal === 'DISHANT MAHAJAN'
+            || str_contains($company, 'APPYFLOW');
+    }
+
+    private function gstinStructuralDetails(string $gst): array
+    {
+        $stateCode = substr($gst, 0, 2);
+        $pan = substr($gst, 2, 10);
+        $stateNames = [
+            '01' => 'Jammu and Kashmir', '02' => 'Himachal Pradesh', '03' => 'Punjab',
+            '04' => 'Chandigarh', '05' => 'Uttarakhand', '06' => 'Haryana', '07' => 'Delhi',
+            '08' => 'Rajasthan', '09' => 'Uttar Pradesh', '10' => 'Bihar', '11' => 'Sikkim',
+            '12' => 'Arunachal Pradesh', '13' => 'Nagaland', '14' => 'Manipur',
+            '15' => 'Mizoram', '16' => 'Tripura', '17' => 'Meghalaya', '18' => 'Assam',
+            '19' => 'West Bengal', '20' => 'Jharkhand', '21' => 'Odisha', '22' => 'Chhattisgarh',
+            '23' => 'Madhya Pradesh', '24' => 'Gujarat', '26' => 'Dadra and Nagar Haveli and Daman and Diu',
+            '27' => 'Maharashtra', '29' => 'Karnataka', '30' => 'Goa', '32' => 'Kerala',
+            '33' => 'Tamil Nadu', '34' => 'Puducherry', '36' => 'Telangana', '37' => 'Andhra Pradesh',
+        ];
+
+        return [
+            'gstin' => $gst,
+            'company_name' => '',
+            'legal_name' => '',
+            'business_type' => '',
+            'taxpayer_type' => '',
+            'status' => '',
+            'registration_date' => '',
+            'nature_of_business' => [],
+            'primary_address' => '',
+            'city' => '',
+            'state' => $stateNames[$stateCode] ?? '',
+            'state_code' => $stateCode,
+            'country' => 'India',
+            'last_updated' => '',
+            'frequency' => '',
+            'additional_addresses' => [],
+            'pan' => $pan,
+        ];
     }
 
     public function importVendors(Request $request)
