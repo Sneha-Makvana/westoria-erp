@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\PaymentStore;
 use App\Models\Product;
 use App\Models\ProductInventory;
+use App\Models\ProductVariant;
 use App\Models\PurchaseInvoice;
 use App\Models\Purchases;
 use App\Models\RowMaterial;
@@ -114,6 +115,7 @@ class PurchaseController extends Controller
             'products.*.category_id' => 'required',
             'products.*.price'       => 'required|numeric|min:0',
             'products.*.selling_rate_price' => 'nullable|numeric|min:0',
+            'products.*.product_variant_id' => 'nullable|integer|exists:product_variants,id',
             'products.*.quantity'    => 'required|numeric|min:1',
             'products.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'products.*.discount_amount'  => 'nullable|numeric|min:0',
@@ -257,33 +259,70 @@ class PurchaseController extends Controller
                         'updated_at'    => $now,
                     ];
                 } else {
-                    // Existing product — stock is added to the selected selling rate.
+                    // Existing product — variant stock and/or selling-rate stock.
                     $existingProduct = $existingProducts->get($product['id']);
                     if ($existingProduct) {
                         $ratePrice = $product['selling_rate_price'] ?? null;
                         if ($ratePrice === '') {
                             $ratePrice = null;
                         }
-                        $stockBefore = $existingProduct->rateStockValue($ratePrice);
-                        $existingProduct->adjustRateStock((float) $product['quantity'], $ratePrice);
-                        $existingProduct->category_id = $category_id;
-                        if ((float) $existingProduct->quantity > 0) {
-                            $existingProduct->availablility = 'in_stock';
-                        }
-                        $productUpdates[$existingProduct->id] = $existingProduct->id;
+                        $variantId = ! empty($product['product_variant_id']) ? (int) $product['product_variant_id'] : null;
+                        $qtyAdd = (float) $product['quantity'];
                         $product_id = $existingProduct->id;
 
-                        $inventoryData[] = [
-                            'product_id'    => $product_id,
-                            'initial_stock' => $stockBefore,
-                            'current_stock' => $existingProduct->rateStockValue($ratePrice),
-                            'branch_id'     => $userBranchId ?? $userId,
-                            'create_by'     => $userId,
-                            'type'          => 'Purchase',
-                            'date'          => $now,
-                            'created_at'    => $now,
-                            'updated_at'    => $now,
-                        ];
+                        if ($variantId) {
+                            $variant = ProductVariant::where('id', $variantId)
+                                ->where('product_id', $product_id)
+                                ->lockForUpdate()
+                                ->first();
+                            if (! $variant) {
+                                throw new \RuntimeException('Selected color/size variant was not found for this product.');
+                            }
+                            $stockBefore = (float) $variant->qty;
+                            $variant->qty = $stockBefore + $qtyAdd;
+                            $variant->save();
+
+                            // Keep parent/rate stock in sync with POS dual bookkeeping.
+                            $existingProduct->adjustRateStock($qtyAdd, $ratePrice);
+                            $existingProduct->category_id = $category_id;
+                            if ((float) $existingProduct->quantity > 0) {
+                                $existingProduct->availablility = 'in_stock';
+                            }
+                            $productUpdates[$existingProduct->id] = $existingProduct->id;
+
+                            $inventoryData[] = [
+                                'product_id'         => $product_id,
+                                'product_variant_id' => $variantId,
+                                'initial_stock'      => $stockBefore,
+                                'current_stock'      => (float) $variant->qty,
+                                'branch_id'          => $userBranchId ?? $userId,
+                                'create_by'          => $userId,
+                                'type'               => 'Purchase',
+                                'date'               => $now,
+                                'created_at'         => $now,
+                                'updated_at'         => $now,
+                            ];
+                        } else {
+                            $stockBefore = $existingProduct->rateStockValue($ratePrice);
+                            $existingProduct->adjustRateStock($qtyAdd, $ratePrice);
+                            $existingProduct->category_id = $category_id;
+                            if ((float) $existingProduct->quantity > 0) {
+                                $existingProduct->availablility = 'in_stock';
+                            }
+                            $productUpdates[$existingProduct->id] = $existingProduct->id;
+
+                            $inventoryData[] = [
+                                'product_id'    => $product_id,
+                                'initial_stock' => $stockBefore,
+                                'current_stock' => $existingProduct->rateStockValue($ratePrice),
+                                'branch_id'     => $userBranchId ?? $userId,
+                                'create_by'     => $userId,
+                                'type'          => 'Purchase',
+                                'date'          => $now,
+                                'created_at'    => $now,
+                                'updated_at'    => $now,
+                            ];
+                        }
                     } else {
                         continue; // Skip if product not found
                     }
@@ -291,6 +330,7 @@ class PurchaseController extends Controller
 
                 $processedProducts[] = [
                     'product_id'         => $product_id,
+                    'product_variant_id' => ! empty($product['product_variant_id']) ? (int) $product['product_variant_id'] : null,
                     'price'              => $product['price'],
                     'selling_rate_price' => ($product['selling_rate_price'] ?? '') === '' ? null : $product['selling_rate_price'],
                     'quantity'           => $product['quantity'],
@@ -409,6 +449,7 @@ class PurchaseController extends Controller
                 $purchasesData[] = [
                     'invoice_id'          => $purchaseInvoice->id,
                     'item'                => $product_id,
+                    'product_variant_id'  => $item['product_variant_id'] ?? null,
                     'quantity'            => $quantity,
                     'price'               => $price,
                     'selling_rate_price'  => $item['selling_rate_price'] ?? null,

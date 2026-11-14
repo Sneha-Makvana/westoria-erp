@@ -36,6 +36,9 @@ class PurchaseController extends Controller
         $banks = \App\Models\BankMaster::where('branch_id', $branch_id)->where('isDeleted', 0)->where('status', 1)->get();
         $products = Product::where('isDeleted', 0)
             ->where('status', 'active')
+            ->with(['variants' => function ($q) {
+                $q->orderBy('size')->orderBy('color');
+            }])
             ->get();
         $rowMaterials = RowMaterial::where('isDeleted', 0)
             ->where('status', 'active')
@@ -53,6 +56,17 @@ class PurchaseController extends Controller
                 'product_gst' => $product->product_gst,
                 'gst_option'  => $product->gst_option,
                 'barcode'     => $product->barcode,
+                'variants'    => $product->variants->map(function ($variant) {
+                    return [
+                        'id' => $variant->id,
+                        'size' => $variant->size,
+                        'color' => $variant->color,
+                        'qty' => (float) $variant->qty,
+                        'price' => (float) $variant->price,
+                        'purchase_price' => $variant->purchase_price !== null ? (float) $variant->purchase_price : null,
+                        'barcode' => $variant->barcode,
+                    ];
+                })->values(),
             ];
         });
 

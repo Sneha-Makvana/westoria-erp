@@ -676,6 +676,13 @@
                             <span class="error text-danger product-error"></span>
                             @unless ($isRowMaterialPurchase)
                                 <div class="row-material-hint"></div>
+                                <div class="purchase-variant-wrap mt-1" style="display:none;">
+                                    <label class="mb-0" style="font-size:12px;">Color / Size</label>
+                                    <select class="form-control purchase-variant-select" style="font-size:12px;">
+                                        <option value="">Select variant</option>
+                                    </select>
+                                    <small class="text-muted purchase-variant-stock" style="font-size:11px;"></small>
+                                </div>
                                 <div class="purchase-rate-wrap mt-1" style="display:none;">
                                     <label class="mb-0" style="font-size:12px;">Add stock to</label>
                                     <select class="form-control purchase-rate-select" style="font-size:12px;"></select>
@@ -1491,6 +1498,68 @@
                 if (match) $select.val(String(match.price));
             }
             $wrap.show();
+        }
+
+        function productVariantsList(product) {
+            if (!product || !Array.isArray(product.variants)) return [];
+            return product.variants;
+        }
+
+        function variantLabel(variant) {
+            const parts = [];
+            if (variant.size) parts.push(variant.size);
+            if (variant.color) parts.push(variant.color);
+            const name = parts.length ? parts.join(' / ') : ('Variant #' + variant.id);
+            return name + ' · Stock ' + (variant.qty || 0);
+        }
+
+        function fillPurchaseVariantSelect($row, selectedVariantId) {
+            const $wrap = $row.find('.purchase-variant-wrap');
+            const $select = $row.find('.purchase-variant-select');
+            const $stock = $row.find('.purchase-variant-stock');
+            if (!$wrap.length || (typeof isRowMaterialPurchase !== 'undefined' && isRowMaterialPurchase)) {
+                $wrap.hide();
+                return;
+            }
+            const productId = $row.find('.product-select').val();
+            const product = (typeof products !== 'undefined' ? products : []).find(function(p) {
+                return String(p.id) === String(productId);
+            });
+            const variants = productVariantsList(product);
+            if (!variants.length) {
+                $wrap.hide();
+                $select.empty().append('<option value="">Select variant</option>');
+                $stock.text('');
+                $row.removeData('requires-variant');
+                return;
+            }
+            $select.empty().append('<option value="">Select color / size</option>');
+            variants.forEach(function(variant) {
+                $select.append($('<option>', {
+                    value: variant.id,
+                    text: variantLabel(variant),
+                    'data-price': variant.purchase_price != null ? variant.purchase_price : variant.price,
+                    'data-qty': variant.qty || 0
+                }));
+            });
+            if (selectedVariantId) {
+                $select.val(String(selectedVariantId));
+            }
+            $row.data('requires-variant', true);
+            $wrap.show();
+            updatePurchaseVariantStockHint($row);
+        }
+
+        function updatePurchaseVariantStockHint($row) {
+            const $select = $row.find('.purchase-variant-select');
+            const $stock = $row.find('.purchase-variant-stock');
+            const selected = $select.find('option:selected');
+            if (!$select.val()) {
+                $stock.text('Choose the color/size to add stock into');
+                return;
+            }
+            const qty = selected.data('qty');
+            $stock.text('Current stock for this variant: ' + (qty != null ? qty : 0));
         }
 
         $(document).ready(function() {
@@ -2597,6 +2666,13 @@
                                                         <span class="error text-danger product-error"></span>
                                                         @unless ($isRowMaterialPurchase)
                                                             <div class="row-material-hint"></div>
+                                                            <div class="purchase-variant-wrap mt-1" style="display:none;">
+                                                                <label class="mb-0" style="font-size:12px;">Color / Size</label>
+                                                                <select class="form-control purchase-variant-select" style="font-size:12px;">
+                                                                    <option value="">Select variant</option>
+                                                                </select>
+                                                                <small class="text-muted purchase-variant-stock" style="font-size:11px;"></small>
+                                                            </div>
                                                             <div class="purchase-rate-wrap mt-1" style="display:none;">
                                                                 <label class="mb-0" style="font-size:12px;">Add stock to</label>
                                                                 <select class="form-control purchase-rate-select" style="font-size:12px;"></select>
@@ -2888,6 +2964,7 @@
                     updateProductGstInfo($row);
 
                     fillPurchaseRateSelect($row);
+                    fillPurchaseVariantSelect($row);
 
                     // recalc discount & gst properly
                     $row.find(".product-discount-input").trigger("input");
@@ -2895,6 +2972,20 @@
                     // update grand total
                     calculateTotal();
                 });
+
+                $(document).on('change', '.purchase-variant-select', function() {
+                    const $row = $(this).closest('.form-row');
+                    const $opt = $(this).find('option:selected');
+                    updatePurchaseVariantStockHint($row);
+                    if (!$(this).val()) return;
+                    const vPrice = parseFloat($opt.data('price'));
+                    if (!isNaN(vPrice) && vPrice > 0) {
+                        $row.find('.price-input').val(vPrice.toFixed(2));
+                        $row.find('.product-discount-input').trigger('input');
+                        calculateTotal();
+                    }
+                });
+
                 $(document).on("input", ".price-input", function() {
                     let val = this.value;
 
@@ -3181,6 +3272,11 @@
                             discount_amount: itemDiscountAmount,
                             total: finalRowTotal,
                         };
+                        let $variantWrap = $(this).find('.purchase-variant-wrap');
+                        let variantId = $(this).find('.purchase-variant-select').val();
+                        if ($variantWrap.is(':visible') && variantId) {
+                            line.product_variant_id = parseInt(variantId, 10);
+                        }
                         let $rateWrap = $(this).find('.purchase-rate-wrap');
                         let ratePrice = $(this).find('.purchase-rate-select').val();
                         if ($rateWrap.is(':visible') && ratePrice !== undefined && ratePrice !== '') {
@@ -3415,6 +3511,12 @@
 
                     if (productSelect.val() === "") {
                         productSelect.closest(".form-group").find(".error").text("Product is required.");
+                        isValid = false;
+                    }
+                    let $variantWrap = $(this).find('.purchase-variant-wrap');
+                    let variantSelect = $(this).find('.purchase-variant-select');
+                    if ($variantWrap.is(':visible') && !variantSelect.val()) {
+                        productSelect.closest(".form-group").find(".error").text("Select color / size variant.");
                         isValid = false;
                     }
                     if (categorySelect.val() === "") {
