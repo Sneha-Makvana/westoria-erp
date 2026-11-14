@@ -3729,7 +3729,7 @@ class ProductController extends Controller
         }
 
         $price = $this->parseImportMoney($row['price'] ?? null) ?? 0;
-        $purchasePrice = $this->parseImportMoney($row['purchase_price'] ?? null);
+        $purchasePrice = $this->parseImportMoney($row['purchase_price'] ?? null) ?? 0;
         $landingCost = $this->parseImportMoney($row['landing_cost'] ?? null);
         $mrp = $this->parseImportMoney($row['mrp'] ?? null);
         $onlinePrice = $this->parseImportMoney($row['online_price'] ?? null);
@@ -3753,6 +3753,7 @@ class ProductController extends Controller
         $existingVariant = $this->findImportVariantByBarcode($variantBarcode);
         $product = null;
         $action = 'created';
+        $createdNewVariant = false;
 
         if ($existingVariant) {
             $product = $this->findImportProductModelById((int) $existingVariant->product_id)
@@ -3761,10 +3762,8 @@ class ProductController extends Controller
         }
 
         if (!$product) {
+            // Same product name reuses the parent; later color/size rows still create new variants.
             $product = $this->findExistingImportProductByName($name, $branchId);
-            if ($product) {
-                $action = 'updated';
-            }
         }
 
         $extraRates = [];
@@ -3894,6 +3893,8 @@ class ProductController extends Controller
                 'purchase_price' => $purchasePrice,
                 'barcode'        => $variantBarcode,
             ]);
+            $createdNewVariant = true;
+            $action = 'created';
 
             ProductInventory::create([
                 'product_id'         => $product->id,
@@ -3910,7 +3911,7 @@ class ProductController extends Controller
         $this->syncImportedProductQuantityFromVariants($product->fresh());
         $this->rememberImportProductInCache((int) $branchId, $variantBarcode, $product);
 
-        return $action;
+        return $createdNewVariant ? 'created' : $action;
     }
 
     private function upsertImportedProduct(array $row, $branchId, $userId): string
@@ -4488,7 +4489,21 @@ class ProductController extends Controller
             return false;
         }
 
-        $itemCode     = $this->sanitizeImportBarcode((string) ($mapped['item_code'] ?? ''));
+        $itemCode = $this->sanitizeImportBarcode((string) ($mapped['item_code'] ?? ''));
+
+        // Same rule as preview action: variant rows update only when that barcode exists.
+        if ($this->rowHasVariantAttributes($mapped)) {
+            if ($itemCode === '') {
+                return false;
+            }
+
+            if (is_array(self::$importJobLookupMaps) && isset(self::$importJobLookupMaps['by_code'][strtoupper($itemCode)])) {
+                return true;
+            }
+
+            return $this->findImportVariantByBarcode($itemCode) !== null;
+        }
+
         $categoryName = trim((string) ($mapped['category_name'] ?? '')) ?: 'General';
         $categoryId   = null;
         $cacheKey     = (int) $branchId . '|' . strtolower($categoryName);
@@ -4751,6 +4766,18 @@ class ProductController extends Controller
         }
 
         $itemCode = strtoupper($this->sanitizeImportBarcode((string) ($mapped['item_code'] ?? '')));
+
+        // Variant rows must be classified by barcode only.
+        // Matching parent product name as "update" causes later same-name
+        // color/size rows to be skipped mid-import when only Insert New is selected.
+        if ($this->rowHasVariantAttributes($mapped)) {
+            if ($itemCode !== '' && isset($lookups['by_code'][$itemCode])) {
+                return 'update';
+            }
+
+            return 'create';
+        }
+
         if ($itemCode !== '' && isset($lookups['by_code'][$itemCode])) {
             return 'update';
         }
