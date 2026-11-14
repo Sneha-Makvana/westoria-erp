@@ -4172,6 +4172,11 @@ class ProductController extends Controller
         return 'temp/product-imports/' . $token . '.jsonl';
     }
 
+    private function importGroupsDiskPath(string $token): string
+    {
+        return 'temp/product-imports/' . $token . '_groups.jsonl';
+    }
+
     private function storeImportPreviewSession(string $token, $userId, $branchId, string $fileName, string $rowsFile, int $totalCount, int $validCount, array $lookups): void
     {
         $this->patchImportPreviewCache($token, [
@@ -4235,6 +4240,9 @@ class ProductController extends Controller
         if (is_array($cached)) {
             if (!empty($cached['rows_file'])) {
                 Storage::delete((string) $cached['rows_file']);
+            }
+            if (!empty($cached['groups_file'])) {
+                Storage::delete((string) $cached['groups_file']);
             }
             if (!empty($cached['upload_file'])) {
                 Storage::delete((string) $cached['upload_file']);
@@ -4543,37 +4551,100 @@ class ProductController extends Controller
         ];
     }
 
-    private function countImportPreviewActions(string $rowsFile, int $branchId): array
+    private function countImportPreviewActions(string $rowsFile, int $branchId, ?string $groupsFile = null): array
     {
         $lookups     = $this->preloadImportPreviewLookups($branchId);
         $createCount = 0;
         $updateCount = 0;
+        $groups      = [];
 
         foreach ($this->iterateImportRowsFromDisk($rowsFile) as $row) {
             $mapped = $row['mapped'] ?? [];
-            if (trim((string) ($mapped['name'] ?? '')) === '') {
+            $name   = trim((string) ($mapped['name'] ?? ''));
+            if ($name === '') {
                 continue;
             }
 
-            if ($this->resolveImportPreviewAction($mapped, $lookups) === 'update') {
+            $item   = $this->buildImportPreviewItem($mapped, (int) ($row['row_number'] ?? 0), $lookups);
+            $action = (string) ($item['import_action'] ?? 'skip');
+            if ($action === 'update') {
                 $updateCount++;
-            } else {
+            } elseif ($action === 'create') {
                 $createCount++;
+            } else {
+                continue;
+            }
+
+            $groupKey = strtolower($name);
+            if (!isset($groups[$groupKey])) {
+                $groups[$groupKey] = [
+                    'group_key'          => $groupKey,
+                    'name'               => $name,
+                    'import_action'      => $action,
+                    'category_name'      => (string) ($item['category_name'] ?? 'General'),
+                    'brand_name'         => (string) ($item['brand_name'] ?? ''),
+                    'is_variant_product' => !empty($item['is_variant']),
+                    'variant_count'      => 0,
+                    'row_numbers'        => [],
+                    'variants'           => [],
+                ];
+            }
+
+            if (!empty($item['is_variant'])) {
+                $groups[$groupKey]['is_variant_product'] = true;
+            }
+            if (($groups[$groupKey]['import_action'] ?? 'create') === 'create' && $action === 'update') {
+                $groups[$groupKey]['import_action'] = 'update';
+            }
+
+            $groups[$groupKey]['variant_count']++;
+            $groups[$groupKey]['row_numbers'][] = (int) $item['row_number'];
+            $groups[$groupKey]['variants'][]    = $item;
+        }
+
+        $productCreateCount = 0;
+        $productUpdateCount = 0;
+        foreach ($groups as $group) {
+            if (($group['import_action'] ?? '') === 'update') {
+                $productUpdateCount++;
+            } else {
+                $productCreateCount++;
+            }
+        }
+
+        $groupsRelative = null;
+        if ($groupsFile !== null && $groupsFile !== '') {
+            Storage::makeDirectory('temp/product-imports');
+            $handle = fopen(Storage::path($groupsFile), 'wb');
+            if ($handle !== false) {
+                foreach ($groups as $group) {
+                    fwrite($handle, json_encode($group, JSON_UNESCAPED_UNICODE) . "\n");
+                }
+                fclose($handle);
+                $groupsRelative = $groupsFile;
             }
         }
 
         return [
-            'create_count' => $createCount,
-            'update_count' => $updateCount,
+            'create_count'         => $createCount,
+            'update_count'         => $updateCount,
+            'product_create_count' => $productCreateCount,
+            'product_update_count' => $productUpdateCount,
+            'lookups'              => $lookups,
+            'groups_file'          => $groupsRelative,
         ];
     }
 
     private function ensureImportPreviewActionCounts(string $token, array $cached): array
     {
-        if (isset($cached['create_count'], $cached['update_count'])
+        $groupsFile = (string) ($cached['groups_file'] ?? '');
+        $groupsOk   = $groupsFile !== '' && Storage::exists($groupsFile);
+
+        if (isset($cached['create_count'], $cached['update_count'], $cached['product_create_count'], $cached['product_update_count'])
             && is_array($cached['lookups'] ?? null)
             && isset($cached['lookups']['by_name'])
-            && $this->importLookupMapsHaveProductIds($cached['lookups'])) {
+            && $this->importLookupMapsHaveProductIds($cached['lookups'])
+            && $groupsOk) {
             return $cached;
         }
 
@@ -4582,10 +4653,78 @@ class ProductController extends Controller
             return $cached;
         }
 
-        $counts = $this->countImportPreviewActions((string) $cached['rows_file'], $branchId);
+        $groupsPath = $this->importGroupsDiskPath($token);
+        $counts     = $this->countImportPreviewActions((string) $cached['rows_file'], $branchId, $groupsPath);
         $this->patchImportPreviewCache($token, $counts);
 
         return array_merge($cached, $counts);
+    }
+
+    /**
+     * @return array{groups: array, total_matches: int}
+     */
+    private function readImportGroupsPage(
+        string $relativePath,
+        string $search,
+        string $actionFilter,
+        int $page,
+        int $perPage
+    ): array {
+        $path = Storage::path($relativePath);
+        if (!is_file($path)) {
+            return ['groups' => [], 'total_matches' => 0];
+        }
+
+        $search       = strtolower(trim($search));
+        $offset       = max(0, ($page - 1) * $perPage);
+        $groups       = [];
+        $totalMatches = 0;
+
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            return ['groups' => [], 'total_matches' => 0];
+        }
+
+        while (($line = fgets($handle)) !== false) {
+            $decoded = json_decode(trim($line), true);
+            if (!is_array($decoded)) {
+                continue;
+            }
+
+            $groupAction = strtolower((string) ($decoded['import_action'] ?? ''));
+            if ($actionFilter !== '' && $groupAction !== $actionFilter) {
+                continue;
+            }
+
+            if ($search !== '') {
+                $haystack = strtolower(implode(' ', array_filter([
+                    (string) ($decoded['name'] ?? ''),
+                    (string) ($decoded['category_name'] ?? ''),
+                    (string) ($decoded['brand_name'] ?? ''),
+                ])));
+                $matched = str_contains($haystack, $search);
+                if (!$matched) {
+                    foreach ($decoded['variants'] ?? [] as $variant) {
+                        if ($this->importRowMatchesSearch($variant, (int) ($variant['row_number'] ?? 0), $search)) {
+                            $matched = true;
+                            break;
+                        }
+                    }
+                }
+                if (!$matched) {
+                    continue;
+                }
+            }
+
+            if ($totalMatches >= $offset && count($groups) < $perPage) {
+                $groups[] = $decoded;
+            }
+            $totalMatches++;
+        }
+
+        fclose($handle);
+
+        return ['groups' => $groups, 'total_matches' => $totalMatches];
     }
 
     private function preloadImportPreviewLookups($branchId): array
@@ -4859,12 +4998,14 @@ class ProductController extends Controller
             $cached = $this->ensureImportPreviewActionCounts($token, $cached);
 
             return response()->json([
-                'status'         => true,
-                'process_status' => 'complete',
-                'total_count'    => (int) ($cached['total_count'] ?? 0),
-                'valid_count'    => (int) ($cached['valid_count'] ?? 0),
-                'create_count'   => (int) ($cached['create_count'] ?? 0),
-                'update_count'   => (int) ($cached['update_count'] ?? 0),
+                'status'               => true,
+                'process_status'       => 'complete',
+                'total_count'          => (int) ($cached['total_count'] ?? 0),
+                'valid_count'          => (int) ($cached['valid_count'] ?? 0),
+                'create_count'         => (int) ($cached['create_count'] ?? 0),
+                'update_count'         => (int) ($cached['update_count'] ?? 0),
+                'product_create_count' => (int) ($cached['product_create_count'] ?? 0),
+                'product_update_count' => (int) ($cached['product_update_count'] ?? 0),
             ]);
         }
 
@@ -4974,11 +5115,16 @@ class ProductController extends Controller
             return;
         }
 
-        $extension  = strtolower(pathinfo($uploadFile, PATHINFO_EXTENSION));
-        if (in_array($extension, ['xlsx', 'csv'], true) && !class_exists(\OpenSpout\Reader\XLSX\Reader::class)) {
+        $extension = strtolower(pathinfo($uploadFile, PATHINFO_EXTENSION));
+        // Prefer OpenSpout when present; ProductImportStreamParser falls back to PhpSpreadsheet.
+        if (
+            in_array($extension, ['xlsx', 'xls', 'csv'], true)
+            && !class_exists(\OpenSpout\Reader\XLSX\Reader::class)
+            && !class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class)
+        ) {
             $this->patchImportPreviewCache($token, [
                 'status' => 'failed',
-                'error'  => 'Server is missing the OpenSpout library. Run composer install --no-dev on the server, then try again.',
+                'error'  => 'Server is missing Excel/CSV import libraries. Run composer install --no-dev on the server, then try again.',
             ]);
 
             return;
@@ -5064,7 +5210,6 @@ class ProductController extends Controller
         }
 
         $page    = max(1, (int) $request->query('page', 1));
-        $perPage = min(200, max(25, (int) $request->query('per_page', 100)));
         $search  = trim((string) $request->query('search', ''));
         $actionFilter = strtolower(trim((string) $request->query('action', '')));
         if (!in_array($actionFilter, ['create', 'update'], true)) {
@@ -5076,49 +5221,81 @@ class ProductController extends Controller
             $branchId = (int) ($cached['branch_id'] ?? 0);
             $lookups  = $this->preloadImportPreviewLookups($branchId);
             $this->patchImportPreviewCache($token, [
-                'lookups'      => $lookups,
-                'create_count' => null,
-                'update_count' => null,
+                'lookups'              => $lookups,
+                'create_count'         => null,
+                'update_count'         => null,
+                'product_create_count' => null,
+                'product_update_count' => null,
+                'groups_file'          => null,
             ]);
-            unset($cached['create_count'], $cached['update_count']);
+            unset(
+                $cached['create_count'],
+                $cached['update_count'],
+                $cached['product_create_count'],
+                $cached['product_update_count'],
+                $cached['groups_file']
+            );
         }
 
         $cached = $this->ensureImportPreviewActionCounts($token, $cached);
+        $groupsFile = (string) ($cached['groups_file'] ?? '');
+        // Grouped view pages by product, so keep page size smaller.
+        $defaultPerPage = ($groupsFile !== '' && Storage::exists($groupsFile)) ? 25 : 100;
+        $perPage = min(100, max(10, (int) $request->query('per_page', $defaultPerPage)));
 
-        if ($actionFilter !== '') {
+        $groups = [];
+        $items  = [];
+        if ($groupsFile !== '' && Storage::exists($groupsFile)) {
+            $grouped     = $this->readImportGroupsPage($groupsFile, $search, $actionFilter, $page, $perPage);
+            $groups      = $grouped['groups'];
+            $resultTotal = (int) $grouped['total_matches'];
+            foreach ($groups as $group) {
+                foreach ($group['variants'] ?? [] as $variant) {
+                    $items[] = $variant;
+                }
+            }
+        } elseif ($actionFilter !== '') {
             $filtered    = $this->filterImportRowsPage((string) $cached['rows_file'], $search, $actionFilter, $page, $perPage, $lookups);
             $rows        = $filtered['rows'];
             $resultTotal = (int) $filtered['total_matches'];
+            foreach ($rows as $row) {
+                $items[] = $this->buildImportPreviewItem($row['mapped'] ?? [], (int) ($row['row_number'] ?? 0), $lookups);
+            }
         } elseif ($search !== '') {
             $searchResult = $this->searchImportRowsPage((string) $cached['rows_file'], $search, $page, $perPage);
             $rows         = $searchResult['rows'];
             $resultTotal  = (int) $searchResult['total_matches'];
-                    } else {
+            foreach ($rows as $row) {
+                $items[] = $this->buildImportPreviewItem($row['mapped'] ?? [], (int) ($row['row_number'] ?? 0), $lookups);
+            }
+        } else {
             $rows        = $this->readImportRowsPage((string) $cached['rows_file'], $page, $perPage);
             $resultTotal = (int) ($cached['total_count'] ?? 0);
-        }
-
-        $items = [];
-        foreach ($rows as $row) {
-            $items[] = $this->buildImportPreviewItem($row['mapped'] ?? [], (int) ($row['row_number'] ?? 0), $lookups);
+            foreach ($rows as $row) {
+                $items[] = $this->buildImportPreviewItem($row['mapped'] ?? [], (int) ($row['row_number'] ?? 0), $lookups);
+            }
         }
 
         $totalCount = (int) ($cached['total_count'] ?? 0);
         $lastPage   = max(1, (int) ceil($resultTotal / $perPage));
 
         return response()->json([
-            'status'         => true,
-            'items'          => $items,
-            'page'           => $page,
-            'per_page'       => $perPage,
-            'total_count'    => $totalCount,
-            'filtered_count' => $resultTotal,
-            'valid_count'    => (int) ($cached['valid_count'] ?? 0),
-            'create_count'   => (int) ($cached['create_count'] ?? 0),
-            'update_count'   => (int) ($cached['update_count'] ?? 0),
-            'last_page'      => $lastPage,
-            'search'         => $search,
-            'file_name'      => (string) ($cached['file_name'] ?? ''),
+            'status'               => true,
+            'view_mode'            => ($groupsFile !== '' && Storage::exists($groupsFile)) ? 'grouped' : 'flat',
+            'groups'               => $groups,
+            'items'                => $items,
+            'page'                 => $page,
+            'per_page'             => $perPage,
+            'total_count'          => $totalCount,
+            'filtered_count'       => $resultTotal,
+            'valid_count'          => (int) ($cached['valid_count'] ?? 0),
+            'create_count'         => (int) ($cached['create_count'] ?? 0),
+            'update_count'         => (int) ($cached['update_count'] ?? 0),
+            'product_create_count' => (int) ($cached['product_create_count'] ?? 0),
+            'product_update_count' => (int) ($cached['product_update_count'] ?? 0),
+            'last_page'            => $lastPage,
+            'search'               => $search,
+            'file_name'            => (string) ($cached['file_name'] ?? ''),
         ]);
     }
 

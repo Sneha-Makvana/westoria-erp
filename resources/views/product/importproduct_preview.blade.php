@@ -103,6 +103,7 @@
     .import-action-create { background: #e7f8ef; color: #1e7e34; }
     .import-action-update { background: #fff4e5; color: #b26a00; }
     .import-action-skip { background: #fdecea; color: #c0392b; }
+    .import-action-variant { background: #eef2ff; color: #3730a3; }
 
     .import-variant-badge {
         display: inline-block;
@@ -118,18 +119,57 @@
         vertical-align: middle;
     }
 
+    .import-product-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #027a48;
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+
     .import-variant-meta {
         font-size: 12px;
         color: #637381;
         margin-top: 2px;
     }
 
-    .import-preview-table tr.is-variant-row td {
+    .import-preview-table tr.is-product-group-row td {
+        background: #fff8f1;
+        font-weight: 600;
+    }
+
+    .import-preview-table tr.is-product-group-row td:first-child {
+        box-shadow: inset 3px 0 0 #ff9f43;
+    }
+
+    .import-preview-table tr.is-variant-child-row td {
         background: #fcfcff;
     }
 
-    .import-preview-table tr.is-variant-row td:first-child {
+    .import-preview-table tr.is-variant-child-row td:first-child {
         box-shadow: inset 3px 0 0 #6366f1;
+    }
+
+    .import-variant-indent {
+        padding-left: 18px;
+        position: relative;
+    }
+
+    .import-variant-indent::before {
+        content: '';
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        bottom: 2px;
+        width: 2px;
+        background: #c7d2fe;
+        border-radius: 2px;
     }
 
     .import-preview-actions {
@@ -235,10 +275,10 @@
                                 <input type="checkbox" id="importSelectAllTable" checked>
                             </th>
                             <th class="col-row">Row</th>
-                            <th>Item Name</th>
+                            <th>Product / Variant</th>
                             <th>Type</th>
                             <th>Color / Size</th>
-                            <th>Item Code</th>
+                            <th>Barcode</th>
                             <th>Category</th>
                             <th>Brand</th>
                             <th>Sale Price</th>
@@ -281,6 +321,8 @@
         var totalCount = {{ (int) $total_count }};
         var createCount = 0;
         var updateCount = 0;
+        var productCreateCount = 0;
+        var productUpdateCount = 0;
         var activeTab = 'create';
         var selectAllCreates = true;
         var deselectedCreateRows = new Set();
@@ -324,10 +366,43 @@
             return Number(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         }
 
-        function actionBadge(action) {
-            if (action === 'create') return '<span class="import-action-badge import-action-create">New</span>';
-            if (action === 'update') return '<span class="import-action-badge import-action-update">Update</span>';
+        function actionBadge(action, kind) {
+            if (kind === 'variant') {
+                return '<span class="import-action-badge import-action-variant">Variant</span>';
+            }
+            if (action === 'create') return '<span class="import-action-badge import-action-create">New Product</span>';
+            if (action === 'update') return '<span class="import-action-badge import-action-update">Update Product</span>';
             return '<span class="import-action-badge import-action-skip">Skip</span>';
+        }
+
+        function isGroupFullySelected(group) {
+            var variants = group.variants || [];
+            if (!variants.length) return false;
+            return variants.every(function(item) { return isRowSelected(item); });
+        }
+
+        function toggleGroupSelection(group, checked) {
+            (group.variants || []).forEach(function(item) {
+                if (!item.valid) return;
+                var rowNumber = item.row_number;
+                if (item.import_action === 'update') {
+                    if (checked) {
+                        deselectedUpdateRows.delete(rowNumber);
+                        if (!selectAllUpdates) manuallySelectedUpdateRows.add(rowNumber);
+                    } else {
+                        manuallySelectedUpdateRows.delete(rowNumber);
+                        if (selectAllUpdates) deselectedUpdateRows.add(rowNumber);
+                    }
+                } else if (item.import_action === 'create') {
+                    if (checked) {
+                        deselectedCreateRows.delete(rowNumber);
+                        if (!selectAllCreates) manuallySelectedCreateRows.add(rowNumber);
+                    } else {
+                        manuallySelectedCreateRows.delete(rowNumber);
+                        if (selectAllCreates) deselectedCreateRows.add(rowNumber);
+                    }
+                }
+            });
         }
 
         function selectedCreateCount() {
@@ -366,12 +441,18 @@
                 ? (selectAllUpdates && deselectedUpdateRows.size === 0)
                 : (selectAllCreates && deselectedCreateRows.size === 0);
             $('#importSelectAll, #importSelectAllTable').prop('checked', checked);
-            $('#importSelectAllLabel').text(activeTab === 'update' ? 'Select all update rows' : 'Select all new rows');
+            $('#importSelectAllLabel').text(activeTab === 'update' ? 'Select all update products' : 'Select all new products');
         }
 
         function updateTabLabels() {
-            $('#importTabCreate').text('Insert New (' + createCount.toLocaleString('en-IN') + ')');
-            $('#importTabUpdate').text('Update (' + updateCount.toLocaleString('en-IN') + ')');
+            var createLabel = productCreateCount > 0
+                ? ('Insert New (' + productCreateCount.toLocaleString('en-IN') + ' products / ' + createCount.toLocaleString('en-IN') + ' variants)')
+                : ('Insert New (' + createCount.toLocaleString('en-IN') + ')');
+            var updateLabel = productUpdateCount > 0
+                ? ('Update (' + productUpdateCount.toLocaleString('en-IN') + ' products / ' + updateCount.toLocaleString('en-IN') + ' variants)')
+                : ('Update (' + updateCount.toLocaleString('en-IN') + ')');
+            $('#importTabCreate').text(createLabel);
+            $('#importTabUpdate').text(updateLabel);
         }
 
         function setSubmitEnabled(enabled) {
@@ -388,16 +469,24 @@
             var createSelected = selectedCreateCount();
             var updateSelected = selectedUpdateCount();
             var selected = createSelected + updateSelected;
-            var summary = createSelected.toLocaleString('en-IN') + ' of ' + createCount.toLocaleString('en-IN') + ' new row(s) selected.';
+            var summary = '';
+
+            if (productCreateCount > 0) {
+                summary = productCreateCount.toLocaleString('en-IN') + ' new product(s) will be created from '
+                    + createSelected.toLocaleString('en-IN') + '/' + createCount.toLocaleString('en-IN')
+                    + ' selected color/size variant row(s). Same product name = 1 product.';
+            } else {
+                summary = createSelected.toLocaleString('en-IN') + ' of ' + createCount.toLocaleString('en-IN') + ' new row(s) selected.';
+            }
 
             if (updateSelected > 0) {
-                summary += ' ' + updateSelected.toLocaleString('en-IN') + ' of ' + updateCount.toLocaleString('en-IN') + ' update row(s) selected.';
+                summary += ' ' + updateSelected.toLocaleString('en-IN') + ' of ' + updateCount.toLocaleString('en-IN') + ' update variant row(s) selected.';
             } else if (updateCount > 0) {
-                summary += ' Update rows (' + updateCount.toLocaleString('en-IN') + ') stay skipped until you select them on the Update tab.';
+                summary += ' Update products (' + (productUpdateCount || updateCount).toLocaleString('en-IN') + ') stay skipped until you select them on the Update tab.';
             }
 
             if (searchQuery) {
-                summary += ' Showing ' + filteredCount.toLocaleString('en-IN') + ' match(es) for "' + searchQuery + '".';
+                summary += ' Showing ' + filteredCount.toLocaleString('en-IN') + ' product group(s) for "' + searchQuery + '".';
             }
 
             summary += ' Page ' + currentPage + ' of ' + lastPage + '.';
@@ -427,6 +516,111 @@
             $('#importPreviewSummary').text('Processed ' + (processed || 0).toLocaleString('en-IN') + ' rows so far...');
         }
 
+        function renderVariantChildRow(item) {
+            var checked = isRowSelected(item);
+            var wholesaleText = item.wholesale_price !== null && item.wholesale_price !== undefined
+                ? formatMoney(item.wholesale_price) : '-';
+            var variantLabel = item.variant_label || [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
+
+            return '<tr class="is-variant-child-row">' +
+                '<td class="col-check">' +
+                    '<input type="checkbox" class="import-row-check" data-row="' + item.row_number + '" data-valid="' + (item.valid ? '1' : '0') + '" data-action="' + escapeHtml(item.import_action || '') + '"' +
+                    (item.valid ? '' : ' disabled') + (checked ? ' checked' : '') + '>' +
+                '</td>' +
+                '<td class="col-row">' + item.row_number + '</td>' +
+                '<td><div class="import-variant-indent text-truncate-cell" title="' + escapeHtml(item.name) + '">' + escapeHtml(variantLabel || item.name || '-') + '</div></td>' +
+                '<td><span class="import-variant-badge">Variant</span></td>' +
+                '<td><div class="text-truncate-cell" title="' + escapeHtml(variantLabel) + '">' + escapeHtml(variantLabel || '-') + '</div></td>' +
+                '<td><div class="text-truncate-cell" title="' + escapeHtml(item.item_code) + '">' + escapeHtml(item.item_code || '-') + '</div></td>' +
+                '<td><div class="text-truncate-cell" title="' + escapeHtml(item.category_name) + '">' + escapeHtml(item.category_name || '-') + '</div></td>' +
+                '<td><div class="text-truncate-cell" title="' + escapeHtml(item.brand_name) + '">' + escapeHtml(item.brand_name || '-') + '</div></td>' +
+                '<td>' + formatMoney(item.price) + '</td>' +
+                '<td>' + formatMoney(item.mrp) + '</td>' +
+                '<td>' + wholesaleText + '</td>' +
+                '<td>' + (item.qty !== null && item.qty !== undefined && item.qty !== '' ? escapeHtml(String(item.qty)) : '-') + '</td>' +
+                '<td>' + actionBadge(item.import_action, 'variant') + '</td>' +
+            '</tr>';
+        }
+
+        function renderGroupedRows(groups) {
+            var $body = $('#importPreviewBody');
+            $body.empty();
+            var colCount = 13;
+
+            if (!groups.length) {
+                var emptyText = searchQuery
+                    ? 'No products match "' + escapeHtml(searchQuery) + '".'
+                    : (activeTab === 'update' ? 'No existing products to update.' : 'No new products to insert.');
+                $body.append('<tr><td colspan="' + colCount + '" class="text-center py-4">' + emptyText + '</td></tr>');
+                return;
+            }
+
+            groups.forEach(function(group) {
+                var variants = group.variants || [];
+                var isVariantProduct = !!group.is_variant_product || variants.length > 1 || (variants[0] && variants[0].is_variant);
+                var groupChecked = isGroupFullySelected(group);
+                var variantCount = group.variant_count || variants.length || 0;
+                var first = variants[0] || {};
+                var groupAction = group.import_action || first.import_action || 'create';
+
+                if (isVariantProduct) {
+                    $body.append(
+                        '<tr class="is-product-group-row" data-group-key="' + escapeHtml(group.group_key || '') + '">' +
+                            '<td class="col-check">' +
+                                '<input type="checkbox" class="import-group-check" data-group-key="' + escapeHtml(group.group_key || '') + '"' +
+                                (groupChecked ? ' checked' : '') + '>' +
+                            '</td>' +
+                            '<td class="col-row">-</td>' +
+                            '<td>' +
+                                '<div class="text-truncate-cell" title="' + escapeHtml(group.name) + '">' + escapeHtml(group.name || '-') + '</div>' +
+                                '<div class="import-variant-meta">' + variantCount + ' color/size variant(s) → 1 product</div>' +
+                            '</td>' +
+                            '<td><span class="import-product-badge">Product</span></td>' +
+                            '<td><div class="import-variant-meta">' + variantCount + ' options</div></td>' +
+                            '<td>-</td>' +
+                            '<td><div class="text-truncate-cell" title="' + escapeHtml(group.category_name) + '">' + escapeHtml(group.category_name || '-') + '</div></td>' +
+                            '<td><div class="text-truncate-cell" title="' + escapeHtml(group.brand_name) + '">' + escapeHtml(group.brand_name || '-') + '</div></td>' +
+                            '<td>' + formatMoney(first.price) + '</td>' +
+                            '<td>' + formatMoney(first.mrp) + '</td>' +
+                            '<td>' + (first.wholesale_price !== null && first.wholesale_price !== undefined ? formatMoney(first.wholesale_price) : '-') + '</td>' +
+                            '<td>-</td>' +
+                            '<td>' + actionBadge(groupAction) + '</td>' +
+                        '</tr>'
+                    );
+
+                    variants.forEach(function(item) {
+                        $body.append(renderVariantChildRow(item));
+                    });
+                    return;
+                }
+
+                // Normal single product row
+                variants.forEach(function(item) {
+                    var checked = isRowSelected(item);
+                    $body.append(
+                        '<tr>' +
+                            '<td class="col-check">' +
+                                '<input type="checkbox" class="import-row-check" data-row="' + item.row_number + '" data-valid="' + (item.valid ? '1' : '0') + '" data-action="' + escapeHtml(item.import_action || '') + '"' +
+                                (item.valid ? '' : ' disabled') + (checked ? ' checked' : '') + '>' +
+                            '</td>' +
+                            '<td class="col-row">' + item.row_number + '</td>' +
+                            '<td><div class="text-truncate-cell" title="' + escapeHtml(item.name) + '">' + escapeHtml(item.name || '-') + '</div></td>' +
+                            '<td><span class="text-muted">Normal</span></td>' +
+                            '<td>-</td>' +
+                            '<td><div class="text-truncate-cell" title="' + escapeHtml(item.item_code) + '">' + escapeHtml(item.item_code || '-') + '</div></td>' +
+                            '<td><div class="text-truncate-cell" title="' + escapeHtml(item.category_name) + '">' + escapeHtml(item.category_name || '-') + '</div></td>' +
+                            '<td><div class="text-truncate-cell" title="' + escapeHtml(item.brand_name) + '">' + escapeHtml(item.brand_name || '-') + '</div></td>' +
+                            '<td>' + formatMoney(item.price) + '</td>' +
+                            '<td>' + formatMoney(item.mrp) + '</td>' +
+                            '<td>' + (item.wholesale_price !== null && item.wholesale_price !== undefined ? formatMoney(item.wholesale_price) : '-') + '</td>' +
+                            '<td>' + (item.qty !== null && item.qty !== undefined && item.qty !== '' ? escapeHtml(String(item.qty)) : '-') + '</td>' +
+                            '<td>' + actionBadge(item.import_action) + '</td>' +
+                        '</tr>'
+                    );
+                });
+            });
+        }
+
         function renderRows(items) {
             var $body = $('#importPreviewBody');
             $body.empty();
@@ -441,43 +635,26 @@
             }
 
             items.forEach(function(item) {
-                var checked = isRowSelected(item);
-                var wholesaleText = item.wholesale_price !== null && item.wholesale_price !== undefined
-                    ? formatMoney(item.wholesale_price) : '-';
-                var isVariant = !!item.is_variant;
-                var variantLabel = item.variant_label || [item.variant_color, item.variant_size].filter(Boolean).join(' / ');
-                var typeCell = isVariant
-                    ? '<span class="import-variant-badge">Variant</span>'
-                    : '<span class="text-muted">Normal</span>';
-                var variantCell = isVariant
-                    ? ('<div class="text-truncate-cell" title="' + escapeHtml(variantLabel) + '">' + escapeHtml(variantLabel || '-') + '</div>' +
-                        '<div class="import-variant-meta">Same name = one product</div>')
-                    : '-';
-                var nameCell = '<div class="text-truncate-cell" title="' + escapeHtml(item.name) + '">' + escapeHtml(item.name || '-') + '</div>';
-                if (isVariant) {
-                    nameCell += '<div class="import-variant-meta">Parent product + color/size options</div>';
-                }
-
-                $body.append(
-                    '<tr class="' + (isVariant ? 'is-variant-row' : '') + '">' +
+                $body.append(item.is_variant ? renderVariantChildRow(item) : (
+                    '<tr>' +
                         '<td class="col-check">' +
                             '<input type="checkbox" class="import-row-check" data-row="' + item.row_number + '" data-valid="' + (item.valid ? '1' : '0') + '" data-action="' + escapeHtml(item.import_action || '') + '"' +
-                            (item.valid ? '' : ' disabled') + (checked ? ' checked' : '') + '>' +
+                            (item.valid ? '' : ' disabled') + (isRowSelected(item) ? ' checked' : '') + '>' +
                         '</td>' +
                         '<td class="col-row">' + item.row_number + '</td>' +
-                        '<td>' + nameCell + '</td>' +
-                        '<td>' + typeCell + '</td>' +
-                        '<td>' + variantCell + '</td>' +
+                        '<td><div class="text-truncate-cell" title="' + escapeHtml(item.name) + '">' + escapeHtml(item.name || '-') + '</div></td>' +
+                        '<td><span class="text-muted">Normal</span></td>' +
+                        '<td>-</td>' +
                         '<td><div class="text-truncate-cell" title="' + escapeHtml(item.item_code) + '">' + escapeHtml(item.item_code || '-') + '</div></td>' +
                         '<td><div class="text-truncate-cell" title="' + escapeHtml(item.category_name) + '">' + escapeHtml(item.category_name || '-') + '</div></td>' +
                         '<td><div class="text-truncate-cell" title="' + escapeHtml(item.brand_name) + '">' + escapeHtml(item.brand_name || '-') + '</div></td>' +
                         '<td>' + formatMoney(item.price) + '</td>' +
                         '<td>' + formatMoney(item.mrp) + '</td>' +
-                        '<td>' + wholesaleText + '</td>' +
+                        '<td>' + (item.wholesale_price !== null && item.wholesale_price !== undefined ? formatMoney(item.wholesale_price) : '-') + '</td>' +
                         '<td>' + (item.qty !== null && item.qty !== undefined && item.qty !== '' ? escapeHtml(String(item.qty)) : '-') + '</td>' +
                         '<td>' + actionBadge(item.import_action) + '</td>' +
                     '</tr>'
-                );
+                ));
             });
         }
 
@@ -516,11 +693,18 @@
                     validCount = response.valid_count || validCount;
                     createCount = response.create_count || createCount;
                     updateCount = response.update_count || updateCount;
+                    productCreateCount = response.product_create_count || productCreateCount;
+                    productUpdateCount = response.product_update_count || productUpdateCount;
                     totalCount = response.total_count || totalCount;
                     filteredCount = response.filtered_count || totalCount;
                     currentPage = response.page || page;
 
-                    renderRows(response.items || []);
+                    window.__importPreviewGroups = response.groups || [];
+                    if (response.view_mode === 'grouped' && window.__importPreviewGroups.length) {
+                        renderGroupedRows(window.__importPreviewGroups);
+                    } else {
+                        renderRows(response.items || []);
+                    }
                     $('#importPageInfo').text('Page ' + currentPage + ' of ' + lastPage);
                     $('#importPrevPageBtn').prop('disabled', currentPage <= 1);
                     $('#importNextPageBtn').prop('disabled', currentPage >= lastPage);
@@ -555,6 +739,8 @@
                         validCount = response.valid_count || 0;
                         createCount = response.create_count || 0;
                         updateCount = response.update_count || 0;
+                        productCreateCount = response.product_create_count || 0;
+                        productUpdateCount = response.product_update_count || 0;
                         totalCount = response.total_count || 0;
                         showPreviewTable();
                         loadPreviewPage(1);
@@ -585,6 +771,8 @@
                         validCount = response.valid_count || 0;
                         createCount = response.create_count || 0;
                         updateCount = response.update_count || 0;
+                        productCreateCount = response.product_create_count || 0;
+                        productUpdateCount = response.product_update_count || 0;
                         totalCount = response.total_count || 0;
                         showPreviewTable();
                         loadPreviewPage(1);
@@ -654,6 +842,20 @@
                 manuallySelectedCreateRows.delete(rowNumber);
             }
 
+            updatePreviewSummary();
+        });
+
+        $(document).on('change', '.import-group-check', function() {
+            var groupKey = String($(this).data('group-key') || '');
+            var checked = $(this).is(':checked');
+            var groups = window.__importPreviewGroups || [];
+            var group = groups.find(function(g) { return String(g.group_key || '') === groupKey; });
+            if (!group) return;
+            toggleGroupSelection(group, checked);
+            // Refresh only checkbox states in this group without full reload
+            (group.variants || []).forEach(function(item) {
+                $('.import-row-check[data-row="' + item.row_number + '"]').prop('checked', isRowSelected(item));
+            });
             updatePreviewSummary();
         });
 
